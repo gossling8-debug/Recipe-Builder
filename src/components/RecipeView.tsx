@@ -8,6 +8,16 @@ import { formatIngredient, unusedIngredients, type ScannedRecipe } from "../lib/
 export default function RecipeView({ recipe }: { recipe: ScannedRecipe }) {
   const [have, setHave] = useState<Set<number>>(new Set());
   const [done, setDone] = useState<Set<number>>(new Set());
+  // Ingredient mentions crossed off in the steps, keyed "step-segment".
+  const [added, setAdded] = useState<Set<string>>(new Set());
+
+  const toggleAdded = (key: string) =>
+    setAdded((s) => {
+      const next = new Set(s);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const toggle = (set: Set<number>, i: number) => {
     const next = new Set(set);
@@ -65,7 +75,7 @@ export default function RecipeView({ recipe }: { recipe: ScannedRecipe }) {
 
       <section>
         <h3>Instructions</h3>
-        <p className="muted small">Amounts are shown in each step. Tap a step to mark it done.</p>
+        <p className="muted small">Tap an ingredient to cross it off as you add it. Tap anywhere else in a step to mark the whole step done.</p>
         <ol className="steps">
           {recipe.steps.map((step, si) => (
             <li
@@ -81,10 +91,13 @@ export default function RecipeView({ recipe }: { recipe: ScannedRecipe }) {
                   seg.ingredient_index === null ? (
                     <span key={k}>{seg.text}</span>
                   ) : (
-                    <span key={k} className="ing-mention">
-                      {seg.text}
-                      {seg.amount && <span className="amount">{seg.amount}</span>}
-                    </span>
+                    <IngredientMention
+                      key={k}
+                      text={seg.text}
+                      amount={seg.amount}
+                      crossed={added.has(`${si}-${k}`)}
+                      onToggle={() => toggleAdded(`${si}-${k}`)}
+                    />
                   ),
                 )}
               </p>
@@ -106,5 +119,36 @@ export default function RecipeView({ recipe }: { recipe: ScannedRecipe }) {
         </section>
       )}
     </article>
+  );
+}
+
+/**
+ * An ingredient inside a step, e.g. "the flour [2 cups]". Tapping it crosses it
+ * off without marking the whole step done. It's a span (not a <button>) so long
+ * names still wrap naturally across lines.
+ */
+function IngredientMention(props: { text: string; amount: string | null; crossed: boolean; onToggle: () => void }) {
+  const { text, amount, crossed, onToggle } = props;
+  return (
+    <span
+      className={crossed ? "ing-mention crossed" : "ing-mention"}
+      role="checkbox"
+      aria-checked={crossed}
+      tabIndex={0}
+      onClick={(e) => {
+        e.stopPropagation(); // don't also toggle the step
+        onToggle();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggle();
+        }
+      }}
+    >
+      {text}
+      {amount && <span className="amount">{amount}</span>}
+    </span>
   );
 }
