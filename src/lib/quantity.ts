@@ -69,6 +69,7 @@ export function scaleAmount(text: string, factor: number): string {
 
   const scaled = text.replace(NUMBER, (token, offset: number) => {
     if (protectedRange && offset >= protectedRange[0] && offset < protectedRange[1]) return token;
+    if (isNotAnAmount(text.slice(0, offset), text.slice(offset + token.length))) return token;
     const leadingSpace = token.match(/^\s*/)![0];
     const value = parseNumber(token) * factor;
     return leadingSpace + formatNumber(value, /\./.test(token));
@@ -87,6 +88,16 @@ export function fixPlurals(text: string): string {
     const suffix = !plural ? "" : /(ch|sh)$/i.test(unit) || /box$/i.test(unit) ? "es" : "s";
     return `${num}${space}${unit}${suffix}`;
   });
+}
+
+// Numbers that label something rather than measure it: "step 1", "#2",
+// "15 minutes", "350°F", "9x13 pan", "8-inch". These never scale.
+const LABEL_BEFORE = /\b(?:steps?|stage|part|no\.?|number)\s*$|#\s*$/i;
+const NOT_AMOUNT_AFTER = /^\s*(?:°|degrees?\b|minutes?\b|mins?\b|hours?\b|hrs?\b|seconds?\b|secs?\b|-?\s?inch(?:es)?\b|in\.|"|\s*[x×]\s*\d)/i;
+const NOT_AMOUNT_BEFORE = /\d\s*[x×]\s*$/i;
+
+function isNotAnAmount(before: string, after: string): boolean {
+  return LABEL_BEFORE.test(before) || NOT_AMOUNT_AFTER.test(after) || NOT_AMOUNT_BEFORE.test(before);
 }
 
 /** Splits "1 1/2 cups" into quantity "1 1/2" and unit "cups" (for the recipe editor). */
