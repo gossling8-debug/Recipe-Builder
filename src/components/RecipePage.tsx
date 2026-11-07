@@ -7,6 +7,7 @@ import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
 import { deleteRecipe, getRecipe, saveRecipe } from "../lib/db";
 import { href, navigate } from "../lib/route";
 import { recipeToText, shareText } from "../lib/share";
+import { recipeLink } from "../lib/link";
 import { removeFromShopping } from "../lib/shopping";
 import { useToast } from "./Toast";
 import type { SavedRecipe } from "../lib/schema";
@@ -55,7 +56,13 @@ export default function RecipePage({ id }: { id: string }) {
 
   async function share() {
     if (!recipe) return;
-    const result = await shareText(recipe.title, recipeToText(recipe, loadProgress(recipe.id).scale));
+    let text = recipeToText(recipe, loadProgress(recipe.id).scale);
+    try {
+      text += `\n\nOpen this recipe in Recipe Builder:\n${await recipeLink(recipe)}`;
+    } catch {
+      /* share the text alone */
+    }
+    const result = await shareText(recipe.title, text);
     if (result === "copied") showToast("Recipe copied — paste it anywhere");
     if (result === "failed") showToast("Sharing isn't available in this browser");
   }

@@ -25,7 +25,7 @@ function ingredientLine(ing: Ingredient, scale: number): string {
  * each ingredient's amount shown right where it's added. Checkmarks, crossed-off
  * ingredients and the chosen size are saved until "Start over".
  */
-export default function RecipeView({ recipe, recipeId }: { recipe: ScannedRecipe; recipeId: string }) {
+export default function RecipeView({ recipe, recipeId, preview = false }: { recipe: ScannedRecipe; recipeId: string; preview?: boolean }) {
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
   const have = new Set(progress.have);
@@ -111,6 +111,7 @@ export default function RecipeView({ recipe, recipeId }: { recipe: ScannedRecipe
         ))}
       </section>
 
+      {!preview && (
       <div className="list-row">
         {listed && listed.scale === scale ? (
           <>
@@ -139,6 +140,7 @@ export default function RecipeView({ recipe, recipeId }: { recipe: ScannedRecipe
           </button>
         )}
       </div>
+      )}
 
       <section>
         <h3>Instructions</h3>
