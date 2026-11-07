@@ -16,7 +16,7 @@ import { href, navigate } from "../lib/route";
 import { recipeToText, shareText } from "../lib/share";
 import { recipeLink } from "../lib/link";
 import { money } from "../lib/usage";
-import { removeFromShopping } from "../lib/shopping";
+import { loadShopping, removeFromShopping } from "../lib/shopping";
 import { useToast } from "./Toast";
 import type { SavedRecipe } from "../lib/schema";
 
@@ -28,6 +28,13 @@ export default function RecipePage({ id }: { id: string }) {
   // Bumped when cooking mode closes, so the recipe view re-reads progress made there.
   const [viewKey, setViewKey] = useState(0);
   const timers = useTimers();
+  // Shopping list count for the bag button; refreshes when the list changes.
+  const [onList, setOnList] = useState(() => loadShopping().recipes.length);
+  useEffect(() => {
+    const update = () => setOnList(loadShopping().recipes.length);
+    window.addEventListener("shopping-changed", update);
+    return () => window.removeEventListener("shopping-changed", update);
+  }, []);
   // "I made this": the pantry snapshot before subtracting, kept 12 h so it can be undone.
   const madeKey = `recipe-builder.made.${id}`;
   const [made, setMade] = useState<{ at: number; undo: Record<string, PantryItem | null> } | null>(() => {
@@ -138,6 +145,14 @@ export default function RecipePage({ id }: { id: string }) {
               >
                 <Icon name="star" filled={!!recipe.favorite} />
               </button>
+              <a
+                className="icon-btn badge-host"
+                href={href({ name: "shopping" })}
+                aria-label={`Shopping list${onList ? `, ${onList} recipes` : ""}`}
+              >
+                <Icon name="bag" />
+                {onList > 0 && <span className="badge">{onList}</span>}
+              </a>
               <button className="icon-btn" onClick={share} aria-label="Share recipe">
                 <Icon name="share" />
               </button>

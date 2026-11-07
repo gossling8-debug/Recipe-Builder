@@ -158,6 +158,7 @@ export default function ShoppingList() {
       <Header
         title="Shopping list"
         back={href({ name: "library" })}
+        returnToPrevious
         actions={
           items.length > 0 ? (
             <button className="icon-btn" onClick={share} aria-label="Share shopping list">

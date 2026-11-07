@@ -31,7 +31,7 @@ export default function PantryPage() {
 
   return (
     <>
-      <Header title="Pantry" back={href({ name: "library" })} />
+      <Header title="Pantry" back={href({ name: "library" })} returnToPrevious />
       <main className="page">
         <p className="muted small">
           What you should have on hand. Ticking items on your shopping list adds them; making a recipe uses them up. Amounts

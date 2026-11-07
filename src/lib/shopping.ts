@@ -28,6 +28,7 @@ export function loadShopping(): ShoppingState {
 
 export function saveShopping(s: ShoppingState): void {
   memory = s;
+  queueMicrotask(() => window.dispatchEvent(new Event("shopping-changed")));
   try {
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {

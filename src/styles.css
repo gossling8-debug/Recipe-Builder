@@ -528,3 +528,8 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 
 .made-row { margin: 16px 0 0; }
 .made-row .small { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* Size buttons: fit narrow screens at the largest text size (label wraps above if needed). */
+.scale-row { flex-wrap: wrap; row-gap: 6px; }
+.scale-row .segmented { max-width: 100%; }
+.scale-row .chip { min-width: 40px; padding: 4px 8px; }
