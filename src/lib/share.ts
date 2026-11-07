@@ -32,11 +32,11 @@ export function recipeToText(r: ScannedRecipe, scale = 1): string {
 
 export type ShareResult = "shared" | "copied" | "cancelled" | "failed";
 
-/** Opens the phone's share sheet; falls back to copying the text. */
-export async function shareText(title: string, text: string): Promise<ShareResult> {
+/** Opens the phone's share sheet; falls back to copying the text (and link). */
+export async function shareText(title: string, text: string, url?: string): Promise<ShareResult> {
   if (navigator.share) {
     try {
-      await navigator.share({ title, text });
+      await navigator.share(url ? { title, text, url } : { title, text });
       return "shared";
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return "cancelled";
@@ -44,7 +44,7 @@ export async function shareText(title: string, text: string): Promise<ShareResul
     }
   }
   try {
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(url ? `${text}\n${url}` : text);
     return "copied";
   } catch {
     return "failed";

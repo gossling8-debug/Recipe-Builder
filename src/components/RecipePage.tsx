@@ -64,10 +64,12 @@ export default function RecipePage({ id }: { id: string }) {
 
   async function share() {
     if (!recipe) return;
-    let text = recipeToText(recipe, loadProgress(recipe.id).scale);
-    if (link) text += `\n\nOpen this recipe in Recipe Builder:\n${link}`;
-    const result = await shareText(recipe.title, text);
-    if (result === "copied") showToast("Recipe copied — paste it anywhere");
+    // A short message with a link that opens this recipe in the app. If the
+    // link couldn't be made, send the full recipe as text instead.
+    const result = link
+      ? await shareText(recipe.title, `${recipe.title}\nOpen the recipe in Recipe Builder:`, link)
+      : await shareText(recipe.title, recipeToText(recipe, loadProgress(recipe.id).scale));
+    if (result === "copied") showToast("Link copied — paste it in a message");
     if (result === "failed") showToast("Sharing isn't available in this browser");
   }
 
