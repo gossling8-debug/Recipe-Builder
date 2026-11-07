@@ -106,6 +106,9 @@ export default function Library() {
         title=""
         actions={
           <>
+            <a className="icon-btn" href={href({ name: "pantry" })} aria-label="Pantry">
+              <Icon name="jar" />
+            </a>
             <a className="icon-btn badge-host" href={href({ name: "shopping" })} aria-label={`Shopping list${onList ? `, ${onList} recipes` : ""}`}>
               <Icon name="bag" />
               {onList > 0 && <span className="badge">{onList}</span>}

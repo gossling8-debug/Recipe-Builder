@@ -37,6 +37,8 @@ export default function RecipeView({
   onUndoSwap,
   onStartCooking,
   top,
+  onMade,
+  made,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
@@ -48,6 +50,10 @@ export default function RecipeView({
   onUndoSwap?: (index: number) => void;
   /** Opens cooking mode (one step at a time). */
   onStartCooking?: () => void;
+  /** "I made this" — subtracts the recipe from the pantry. */
+  onMade?: () => void;
+  /** Set when the pantry was already updated for this recipe recently (offers Undo). */
+  made?: { at: number; onUndo: () => void } | null;
   /** Shown under the size control (the meal planner). */
   top?: ReactNode;
 }) {
@@ -253,6 +259,23 @@ export default function RecipeView({
           ))}
         </ol>
       </section>
+
+      {onMade && (
+        <div className="made-row">
+          {made ? (
+            <span className="small">
+              <Icon name="check" size={16} /> Pantry updated for this meal ·{" "}
+              <button className="link-btn small" onClick={made.onUndo}>
+                Undo
+              </button>
+            </span>
+          ) : (
+            <button className="btn" onClick={onMade}>
+              <Icon name="jar" size={18} /> I made this — update my pantry
+            </button>
+          )}
+        </div>
+      )}
 
       {started && (
         <div className="button-row">

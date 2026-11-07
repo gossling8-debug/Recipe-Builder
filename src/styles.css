@@ -506,3 +506,25 @@ html[data-text-size="largest"] body { zoom: 1.3; }
   width: 34px; height: 34px; margin-right: -4px; border-radius: 50%;
   border: 1px solid var(--line); background: var(--accent-soft); color: var(--accent); cursor: pointer;
 }
+
+/* ---------- Pantry ---------- */
+.pantry-note { display: block; font-size: 13px; color: var(--accent); margin-top: 2px; }
+.pantry-note.ok { color: var(--muted); }
+.bought-line { flex-basis: 100%; padding: 0 0 10px 34px; }
+.bought-line form { display: flex; gap: 8px; }
+.bought-line .text-input { min-height: 40px; flex: 1; min-width: 0; }
+.shop-row { flex-wrap: wrap; }
+
+.pantry-list { list-style: none; padding: 0; margin: 8px 0; border-top: 1px solid var(--line); }
+.pantry-list li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.pantry-main { flex: 1; min-width: 0; }
+.pantry-name { font-family: var(--serif); font-size: 18px; font-weight: 600; }
+.pantry-amount { padding: 2px 0; color: var(--accent); font-weight: 600; text-decoration: none; }
+.pantry-edit { display: flex; gap: 8px; margin: 4px 0; }
+.pantry-edit .text-input { min-height: 40px; flex: 1; min-width: 0; }
+.pantry-used { min-height: 38px; padding: 6px 12px; font-size: 14px; flex: none; }
+.pantry-add { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pantry-add .btn { grid-column: 1 / -1; }
+
+.made-row { margin: 16px 0 0; }
+.made-row .small { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }

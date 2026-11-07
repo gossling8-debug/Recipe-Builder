@@ -36,6 +36,11 @@ where it's added, so you don't have to flip back and forth between the steps and
 - **Cost control**: choose the recipe reader in Settings (Best / Balanced / Budget), see what each
   recipe cost to read and a monthly spending total.
 - **Share your version**: shared links include the substitutes you chose.
+- **Pantry**: ticking shopping-list items adds them (tap "Change" to enter the package you bought, e.g.
+  "4 lb bag"); "I made this" or finishing in cooking mode subtracts what the recipe used. The next
+  shopping list shows "≈ 3½ lb left — enough" or "buy ≈ ½ cup more", and moves items you already have
+  into their own section. Cups/tbsp/ml, oz/lb/g and package sizes like "2 (8 oz) blocks" are
+  understood, and common staples convert between cups and pounds.
 - **Plan a meal time**: pick when you want to eat; the app says when to start (from your own past
   times for that recipe, else the recipe's stated times, else an estimate from its steps), adds a
   calendar reminder (alerts 15 min before and at start time) and shows a banner if the app is open.
