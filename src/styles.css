@@ -148,6 +148,7 @@ h1, h2, h3, h4 { line-height: 1.25; }
   display: flex; gap: 12px; padding: 14px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
   cursor: pointer; transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
 }
 .steps li p { margin: 0; font-size: 18px; line-height: 1.6; }
 .steps li.done { opacity: 0.45; }
@@ -156,7 +157,14 @@ h1, h2, h3, h4 { line-height: 1.25; }
   background: var(--accent); color: var(--accent-text);
   display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;
 }
-.ing-mention { font-weight: 650; }
+.ing-mention {
+  font-weight: 650; cursor: pointer; border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+  /* Slightly larger tap area without shifting the text */
+  padding: 4px 0; margin: -4px 0;
+}
+.ing-mention.crossed { text-decoration: line-through; text-decoration-thickness: 2px; opacity: 0.45; }
+.ing-mention.crossed .amount { text-decoration: line-through; }
 .amount {
   display: inline-block; margin: 0 0 0 6px; padding: 0 8px;
   border-radius: 999px; background: var(--amount-bg); color: var(--amount-text);
