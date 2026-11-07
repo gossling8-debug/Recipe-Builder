@@ -2,7 +2,9 @@ import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/s
 import { scaleAmount } from "../lib/quantity";
 import { toggleIn, useProgress } from "../lib/progress";
 import Icon from "./Icon";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { findAvoided, loadAvoid } from "../lib/avoid";
+import { conversionsFor } from "../lib/conversions";
 import { addToShopping, loadShopping, removeFromShopping } from "../lib/shopping";
 import { href } from "../lib/route";
 
@@ -25,7 +27,18 @@ function ingredientLine(ing: Ingredient, scale: number): string {
  * each ingredient's amount shown right where it's added. Checkmarks, crossed-off
  * ingredients and the chosen size are saved until "Start over".
  */
-export default function RecipeView({ recipe, recipeId, preview = false }: { recipe: ScannedRecipe; recipeId: string; preview?: boolean }) {
+export default function RecipeView({
+  recipe,
+  recipeId,
+  preview = false,
+  extra,
+}: {
+  recipe: ScannedRecipe;
+  recipeId: string;
+  preview?: boolean;
+  /** Shown after the notes, before the conversions (the substitutes section). */
+  extra?: ReactNode;
+}) {
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
   const have = new Set(progress.have);
@@ -43,6 +56,9 @@ export default function RecipeView({ recipe, recipeId, preview = false }: { reci
   });
 
   const unused = unusedIngredients(recipe);
+  const avoided = findAvoided(recipe.ingredients, loadAvoid());
+  const avoidedAt = new Map(avoided.map((m) => [m.index, m.reasons]));
+  const conversions = conversionsFor(recipe.ingredients, scale);
 
   return (
     <article className="recipe">
@@ -77,6 +93,14 @@ export default function RecipeView({ recipe, recipeId, preview = false }: { reci
         </p>
       )}
 
+      {avoided.length > 0 && (
+        <div className="callout error">
+          <strong>Contains items you avoid:</strong>{" "}
+          {avoided.map((m) => `${recipe.ingredients[m.index].name} (${m.reasons.join(", ")})`).join("; ")}.{" "}
+          {!preview && <a href="#substitutes">See substitutes</a>}
+        </div>
+      )}
+
       {recipe.warnings.length > 0 && (
         <div className="callout warn">
           <strong>Double-check against the card:</strong>
@@ -102,7 +126,10 @@ export default function RecipeView({ recipe, recipeId, preview = false }: { reci
                       checked={have.has(i)}
                       onChange={() => update((p) => ({ ...p, have: toggleIn(p.have, i) }))}
                     />
-                    <span>{ingredientLine(recipe.ingredients[i], scale)}</span>
+                    <span>
+                      {ingredientLine(recipe.ingredients[i], scale)}
+                      {avoidedAt.has(i) && <span className="avoid-flag">Avoid · {avoidedAt.get(i)!.join(", ")}</span>}
+                    </span>
                   </label>
                 </li>
               ))}
@@ -202,6 +229,31 @@ export default function RecipeView({ recipe, recipeId, preview = false }: { reci
         <section>
           <h3>Notes</h3>
           <p className="notes">{recipe.notes}</p>
+        </section>
+      )}
+
+      {extra}
+
+      {conversions.length > 0 && (
+        <section>
+          <h3>Conversions</h3>
+          <p className="muted small">
+            Using a different form of an ingredient? Amounts are for the size shown above and are approximate — garlic
+            cloves and onions vary.
+          </p>
+          <ul className="conversions">
+            {conversions.map((c, i) => (
+              <li key={i}>
+                <div className="conv-title">{c.title}</div>
+                {c.lines.map((l, j) => (
+                  <div key={j} className="conv-line">
+                    {l}
+                  </div>
+                ))}
+                <p className="conv-note">{c.note}</p>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </article>

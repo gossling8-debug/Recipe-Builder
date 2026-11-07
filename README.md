@@ -28,6 +28,12 @@ where it's added, so you don't have to flip back and forth between the steps and
 - **Tags, filters and sorting**: Claude suggests tags when scanning; edit them in the editor; filter
   the list by Favorites or any tag and sort by newest or A–Z.
 - **Text size**: Standard, Large or Largest, in Settings.
+- **Conversions** at the bottom of a recipe when an ingredient comes in other forms: fresh garlic ↔
+  jarred minced ↔ garlic powder, onion ↔ dried minced ↔ powder, fresh ↔ dried herbs, ginger, lemon/lime
+  juice, salted ↔ unsalted butter, and DIY buttermilk — worked out for the recipe's amount and size.
+- **Allergies & ingredients to avoid** (Settings): common allergens plus your own words. Recipes are
+  flagged, the list can be filtered to "Fits my avoid list", and each recipe can ask Claude for
+  substitutes rated Nearly identical / Close / Noticeably different, saved with the recipe.
 - **Library saved on your phone**, with search, and it works offline once loaded.
 - **Backup / restore** to a file, because clearing the site's data in your browser erases saved recipes.
 

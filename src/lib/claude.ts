@@ -72,7 +72,7 @@ export async function scanRecipe(apiKey: string, photos: string[]): Promise<Scan
   return sanitizeRecipe(parsed);
 }
 
-function describeApiError(err: unknown): string {
+export function describeApiError(err: unknown): string {
   if (err instanceof Anthropic.AuthenticationError) return "Your API key was rejected. Check it in Settings.";
   if (err instanceof Anthropic.PermissionDeniedError) return "This API key isn't allowed to use this model. Check your Anthropic Console.";
   if (err instanceof Anthropic.RateLimitError) return "Too many scans at once (or your API credit ran out). Wait a minute, and check your balance in the Anthropic Console.";

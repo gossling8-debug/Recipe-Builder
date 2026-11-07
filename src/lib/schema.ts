@@ -72,6 +72,13 @@ export interface SavedRecipe extends ScannedRecipe {
   photos: string[];
   /** Starred by the cook; shown in the Favorites section. */
   favorite?: boolean;
+  /** Claude's substitute suggestions for the avoid list, saved so they're only paid for once. */
+  substitutions?: {
+    avoidKey: string; // which avoid list they were made for
+    ingredientsKey: string; // which ingredients (so edits mark them out of date)
+    createdAt: number;
+    result: import("./substitutes").Substitutions;
+  };
 }
 
 /** Formats an ingredient line for the ingredient list, e.g. "2 cups flour, sifted". */
