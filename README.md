@@ -13,8 +13,12 @@ where it's added, so you don't have to flip back and forth between the steps and
   including split ingredients ("divided" → `1/2 cup`, then `remaining`).
 - **Double-check notes** when something on the card was smudged or had to be guessed, plus
   the original photo one tap away.
-- **Cooking aids**: check off ingredients, tap steps to mark them done, and the screen stays on
-  while a recipe is open.
+- **Cooking aids**: check off ingredients, tap ingredients inside a step to cross them off as you add
+  them, tap steps to mark them done, and the screen stays on while a recipe is open. Progress is kept
+  until you tap "Start over".
+- **Resize a recipe** (½× to 3×): amounts in the list and in every step update, including metric
+  conversions, while package sizes like "2 (8 oz) blocks" stay as they are.
+- **Edit a recipe** to fix anything misread. Steps use `[ingredient: amount]` tags.
 - **Library saved on your phone**, with search, and it works offline once loaded.
 - **Backup / restore** to a file, because clearing the site's data in your browser erases saved recipes.
 

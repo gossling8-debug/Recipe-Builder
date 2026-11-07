@@ -173,3 +173,39 @@ h1, h2, h3, h4 { line-height: 1.25; }
 .notes { white-space: pre-wrap; }
 .original { margin-top: 28px; }
 .original img { width: 100%; border-radius: 12px; margin-top: 12px; display: block; }
+
+/* Recipe size */
+.scale-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0; }
+.scale-row .small { margin-right: 4px; }
+.chip {
+  min-height: 36px; min-width: 48px; padding: 4px 12px;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--text); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.chip.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+
+/* Editor */
+.editor h3 { font-size: 20px; margin: 28px 0 6px; }
+.field { display: block; flex: 1; margin: 10px 0; }
+.field > span { display: block; font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.field-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.field-row .field { min-width: 140px; }
+.edit-list { list-style: none; padding: 0; margin: 8px 0 12px; display: grid; gap: 8px; }
+/* Each ingredient: amount on top, name below, remove button on the right,
+   so long amounts like "2 (8 oz/227 g) blocks" are fully visible on a phone. */
+.ing-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center;
+  padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface);
+}
+.ing-row .amount-input { grid-column: 1; grid-row: 1; }
+.ing-row .text-input:not(.amount-input) { grid-column: 1; grid-row: 2; }
+.ing-row .small-btn { grid-column: 2; grid-row: 1 / span 2; }
+.ing-row .text-input { min-width: 0; min-height: 42px; }
+.small-btn { width: 40px; height: 40px; font-size: 18px; flex: none; }
+.small-btn:disabled { opacity: 0.3; }
+.step-edit-head { display: flex; justify-content: space-between; align-items: center; }
+textarea.text-input { resize: vertical; line-height: 1.5; }
+.check-line { display: flex; gap: 10px; align-items: flex-start; margin: 16px 0; }
+.check-line input { width: 22px; height: 22px; accent-color: var(--accent); flex: none; margin-top: 2px; }
+code { background: var(--amount-bg); color: var(--amount-text); padding: 1px 5px; border-radius: 6px; font-size: 0.95em; }
+.fab-bar > .button-row { margin: 0; }

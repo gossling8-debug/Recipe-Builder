@@ -1,30 +1,33 @@
-import { useState } from "react";
-import { formatIngredient, unusedIngredients, type ScannedRecipe } from "../lib/schema";
+import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/schema";
+import { scaleAmount } from "../lib/quantity";
+import { toggleIn, useProgress } from "../lib/progress";
+
+const SCALES: [number, string][] = [
+  [0.5, "½×"],
+  [1, "1×"],
+  [1.5, "1½×"],
+  [2, "2×"],
+  [3, "3×"],
+];
+
+function ingredientLine(ing: Ingredient, scale: number): string {
+  const amount = scaleAmount([ing.quantity, ing.unit].map((s) => s.trim()).filter(Boolean).join(" "), scale);
+  const head = [amount, ing.name.trim()].filter(Boolean).join(" ");
+  return ing.preparation ? `${head}, ${ing.preparation}` : head;
+}
 
 /**
  * The cook-friendly view: the usual ingredient list on top, then steps with
- * each ingredient's amount shown right where it's added.
+ * each ingredient's amount shown right where it's added. Checkmarks, crossed-off
+ * ingredients and the chosen size are saved until "Start over".
  */
-export default function RecipeView({ recipe }: { recipe: ScannedRecipe }) {
-  const [have, setHave] = useState<Set<number>>(new Set());
-  const [done, setDone] = useState<Set<number>>(new Set());
-  // Ingredient mentions crossed off in the steps, keyed "step-segment".
-  const [added, setAdded] = useState<Set<string>>(new Set());
-
-  const toggleAdded = (key: string) =>
-    setAdded((s) => {
-      const next = new Set(s);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-
-  const toggle = (set: Set<number>, i: number) => {
-    const next = new Set(set);
-    if (next.has(i)) next.delete(i);
-    else next.add(i);
-    return next;
-  };
+export default function RecipeView({ recipe, recipeId }: { recipe: ScannedRecipe; recipeId: string }) {
+  const [progress, update] = useProgress(recipeId);
+  const { scale } = progress;
+  const have = new Set(progress.have);
+  const done = new Set(progress.done);
+  const added = new Set(progress.added);
+  const started = have.size + done.size + added.size > 0;
 
   // Group ingredients under their card sub-headings, keeping card order.
   const groups: { section: string | null; items: number[] }[] = [];
@@ -40,7 +43,31 @@ export default function RecipeView({ recipe }: { recipe: ScannedRecipe }) {
     <article className="recipe">
       <h2 className="recipe-title">{recipe.title}</h2>
       {(recipe.servings || recipe.time) && (
-        <p className="meta">{[recipe.servings, recipe.time].filter(Boolean).join(" · ")}</p>
+        <p className="meta">
+          {[recipe.servings && scaleAmount(recipe.servings, scale), recipe.time]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      )}
+
+      <div className="scale-row" role="group" aria-label="Recipe size">
+        <span className="small muted">Size</span>
+        {SCALES.map(([value, label]) => (
+          <button
+            key={value}
+            className={value === scale ? "chip active" : "chip"}
+            aria-pressed={value === scale}
+            onClick={() => update((p) => ({ ...p, scale: value }))}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {scale !== 1 && (
+        <p className="small muted">
+          Amounts are {scale < 1 ? "reduced" : "multiplied"} ×{scaleLabel(scale)}. Cooking times and pan sizes aren't changed —
+          use your judgment.
+        </p>
       )}
 
       {recipe.warnings.length > 0 && (
@@ -63,8 +90,12 @@ export default function RecipeView({ recipe }: { recipe: ScannedRecipe }) {
               {g.items.map((i) => (
                 <li key={i}>
                   <label className={have.has(i) ? "checked" : ""}>
-                    <input type="checkbox" checked={have.has(i)} onChange={() => setHave((s) => toggle(s, i))} />
-                    <span>{formatIngredient(recipe.ingredients[i])}</span>
+                    <input
+                      type="checkbox"
+                      checked={have.has(i)}
+                      onChange={() => update((p) => ({ ...p, have: toggleIn(p.have, i) }))}
+                    />
+                    <span>{ingredientLine(recipe.ingredients[i], scale)}</span>
                   </label>
                 </li>
               ))}
@@ -75,13 +106,15 @@ export default function RecipeView({ recipe }: { recipe: ScannedRecipe }) {
 
       <section>
         <h3>Instructions</h3>
-        <p className="muted small">Tap an ingredient to cross it off as you add it. Tap anywhere else in a step to mark the whole step done.</p>
+        <p className="muted small">
+          Tap an ingredient to cross it off as you add it. Tap anywhere else in a step to mark the whole step done.
+        </p>
         <ol className="steps">
           {recipe.steps.map((step, si) => (
             <li
               key={si}
               className={done.has(si) ? "done" : ""}
-              onClick={() => setDone((s) => toggle(s, si))}
+              onClick={() => update((p) => ({ ...p, done: toggleIn(p.done, si) }))}
             >
               <span className="step-num" aria-hidden>
                 {done.has(si) ? "✓" : si + 1}
@@ -94,9 +127,9 @@ export default function RecipeView({ recipe }: { recipe: ScannedRecipe }) {
                     <IngredientMention
                       key={k}
                       text={seg.text}
-                      amount={seg.amount}
+                      amount={seg.amount && scaleAmount(seg.amount, scale)}
                       crossed={added.has(`${si}-${k}`)}
-                      onToggle={() => toggleAdded(`${si}-${k}`)}
+                      onToggle={() => update((p) => ({ ...p, added: toggleIn(p.added, `${si}-${k}`) }))}
                     />
                   ),
                 )}
@@ -105,6 +138,21 @@ export default function RecipeView({ recipe }: { recipe: ScannedRecipe }) {
           ))}
         </ol>
       </section>
+
+      {started && (
+        <div className="button-row">
+          <button
+            className="btn"
+            onClick={() => {
+              if (confirm("Clear all checkmarks and crossed-off ingredients?")) {
+                update((p) => ({ ...p, have: [], done: [], added: [] }));
+              }
+            }}
+          >
+            ↺ Start over
+          </button>
+        </div>
+      )}
 
       {unused.length > 0 && recipe.steps.length > 0 && (
         <p className="muted small">
@@ -120,6 +168,10 @@ export default function RecipeView({ recipe }: { recipe: ScannedRecipe }) {
       )}
     </article>
   );
+}
+
+function scaleLabel(scale: number): string {
+  return SCALES.find(([v]) => v === scale)?.[1].replace("×", "") ?? String(scale);
 }
 
 /**
