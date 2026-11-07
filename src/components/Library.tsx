@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
-import { listRecipes } from "../lib/db";
+import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 import { href } from "../lib/route";
 import { getApiKey } from "../lib/settings";
 import type { SavedRecipe } from "../lib/schema";
@@ -9,9 +9,11 @@ export default function Library() {
   const [recipes, setRecipes] = useState<SavedRecipe[] | null>(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [mode, setMode] = useState<StorageMode | null>(null);
 
   useEffect(() => {
-    listRecipes().then(setRecipes, (e) => setError(String(e?.message ?? e)));
+    listRecipes().then(setRecipes, (e) => setError(storageErrorMessage(e)));
+    storageMode().then(setMode, () => {});
   }, []);
 
   const q = query.trim().toLowerCase();
@@ -30,13 +32,15 @@ export default function Library() {
         }
       />
       <main className="page">
-        {!getApiKey() && (
+        {!getApiKey() && !error && (
           <div className="callout">
             <strong>Welcome!</strong> To scan cards, add your Anthropic API key first.{" "}
             <a href={href({ name: "settings" })}>Open Settings</a>
           </div>
         )}
-        {error && <div className="callout error">Couldn't load your recipes: {error}</div>}
+        {error && <div className="callout error">{error}</div>}
+        {mode === "memory" && <div className="callout error">{STORAGE_MODE_TEXT.memory}</div>}
+        {mode === "local" && <div className="callout warn small">{STORAGE_MODE_TEXT.local}</div>}
         {recipes && recipes.length > 3 && (
           <input
             className="search"
