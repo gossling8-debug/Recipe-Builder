@@ -17,6 +17,14 @@ export default function RecipePage({ id }: { id: string }) {
   const [showPhotos, setShowPhotos] = useState(false);
   const [editing, setEditing] = useState(false);
   const [toast, showToast] = useToast();
+  // Built ahead of time: iPhones only allow the share sheet to open straight
+  // after a tap, so nothing slow may happen between the tap and share().
+  const [link, setLink] = useState("");
+
+  useEffect(() => {
+    setLink("");
+    if (recipe) recipeLink(recipe).then(setLink, () => setLink(""));
+  }, [recipe]);
 
   useEffect(() => {
     getRecipe(id).then((r) => setRecipe(r ?? null), () => setRecipe(null));
@@ -57,11 +65,7 @@ export default function RecipePage({ id }: { id: string }) {
   async function share() {
     if (!recipe) return;
     let text = recipeToText(recipe, loadProgress(recipe.id).scale);
-    try {
-      text += `\n\nOpen this recipe in Recipe Builder:\n${await recipeLink(recipe)}`;
-    } catch {
-      /* share the text alone */
-    }
+    if (link) text += `\n\nOpen this recipe in Recipe Builder:\n${link}`;
     const result = await shareText(recipe.title, text);
     if (result === "copied") showToast("Recipe copied — paste it anywhere");
     if (result === "failed") showToast("Sharing isn't available in this browser");

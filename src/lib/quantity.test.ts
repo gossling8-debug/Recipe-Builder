@@ -28,6 +28,11 @@ describe("scaleAmount", () => {
   it("singularizes", () => expect(scaleAmount("2 cups", 0.5)).toBe("1 cup"));
   it("pluralizes pinch", () => expect(scaleAmount("1 pinch", 2)).toBe("2 pinches"));
   it("leaves abbreviations", () => expect(scaleAmount("1 tsp", 2)).toBe("2 tsp"));
+  it("doesn't scale step numbers", () =>
+    expect(scaleAmount("all of the bacon cooked in step 1 (2 slices)", 1.5)).toBe("all of the bacon cooked in step 1 (3 slices)"));
+  it("doesn't scale times or temperatures", () =>
+    expect(scaleAmount("2 cups, simmered 15 minutes at 350°F", 2)).toBe("4 cups, simmered 15 minutes at 350°F"));
+  it("doesn't scale pan sizes", () => expect(scaleAmount("1 9x13 pan", 2)).toBe("2 9x13 pan"));
   it("leaves text without numbers", () => expect(scaleAmount("to taste", 2)).toBe("to taste"));
 });
 
