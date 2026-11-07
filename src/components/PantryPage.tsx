@@ -31,7 +31,16 @@ export default function PantryPage() {
 
   return (
     <>
-      <Header title="Pantry" back={href({ name: "library" })} returnToPrevious />
+      <Header
+        title="Pantry"
+        back={href({ name: "library" })}
+        returnToPrevious
+        actions={
+          <a className="icon-btn" href={href({ name: "shopping" })} aria-label="Shopping list">
+            <Icon name="bag" />
+          </a>
+        }
+      />
       <main className="page">
         <p className="muted small">
           What you should have on hand. Ticking items on your shopping list adds them; making a recipe uses them up. Amounts
