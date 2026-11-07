@@ -1,6 +1,7 @@
 import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/schema";
 import { scaleAmount } from "../lib/quantity";
 import { toggleIn, useProgress } from "../lib/progress";
+import Icon from "./Icon";
 
 const SCALES: [number, string][] = [
   [0.5, "½×"],
@@ -52,6 +53,7 @@ export default function RecipeView({ recipe, recipeId }: { recipe: ScannedRecipe
 
       <div className="scale-row" role="group" aria-label="Recipe size">
         <span className="small muted">Size</span>
+        <div className="segmented">
         {SCALES.map(([value, label]) => (
           <button
             key={value}
@@ -62,6 +64,7 @@ export default function RecipeView({ recipe, recipeId }: { recipe: ScannedRecipe
             {label}
           </button>
         ))}
+        </div>
       </div>
       {scale !== 1 && (
         <p className="small muted">
@@ -117,7 +120,7 @@ export default function RecipeView({ recipe, recipeId }: { recipe: ScannedRecipe
               onClick={() => update((p) => ({ ...p, done: toggleIn(p.done, si) }))}
             >
               <span className="step-num" aria-hidden>
-                {done.has(si) ? "✓" : si + 1}
+                {done.has(si) ? <Icon name="check" size={16} /> : si + 1}
               </span>
               <p>
                 {step.segments.map((seg, k) =>
@@ -149,7 +152,7 @@ export default function RecipeView({ recipe, recipeId }: { recipe: ScannedRecipe
               }
             }}
           >
-            ↺ Start over
+            <Icon name="reset" size={18} /> Start over
           </button>
         </div>
       )}
