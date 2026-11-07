@@ -38,8 +38,11 @@ export default function Library() {
   }
 
   useEffect(() => {
-    listRecipes().then(setRecipes, (e) => setError(storageErrorMessage(e)));
+    const load = () => listRecipes().then(setRecipes, (e) => setError(storageErrorMessage(e)));
+    load();
+    window.addEventListener("recipes-synced", load);
     storageMode().then(setMode, () => {});
+    return () => window.removeEventListener("recipes-synced", load);
   }, []);
 
   const all = recipes ?? [];

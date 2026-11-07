@@ -58,6 +58,23 @@ A web app (PWA) you add to your home screen: React + TypeScript, built with Vite
 - There is no server. Each person enters their own Anthropic API key in Settings, and it is stored only
   on that phone. Each scan costs roughly 5–15 cents in API usage.
 
+## Cloud backup (optional)
+
+Recipes can be backed up and synced across devices with a free Firebase project (Spark plan, no card).
+Each person signs in with email and password; the phone's own storage stays the main copy, so the app
+works offline, and the newest version of each recipe wins when devices sync. `firestore.rules` lets a
+signed-in user read and write only `users/{their uid}/…`. The Anthropic API key is never uploaded.
+
+Setup: create a Firebase project and a web app, put its config in `src/lib/firebaseConfig.ts`, enable
+Authentication → Email/Password, create a Firestore database, and publish `firestore.rules`.
+
+To test locally with the Firebase emulators (needs Java):
+
+```bash
+npx firebase-tools emulators:start --only auth,firestore --project demo-recipe-builder
+VITE_FIREBASE_EMULATOR=1 npm run dev
+```
+
 ## Develop
 
 ```bash

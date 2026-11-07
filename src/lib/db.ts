@@ -131,8 +131,26 @@ export async function getRecipe(id: string): Promise<SavedRecipe | undefined> {
   return (await (await backend()).list()).find((r) => r.id === id);
 }
 
-export const saveRecipe = async (r: SavedRecipe) => (await backend()).put(r);
-export const deleteRecipe = async (id: string) => (await backend()).remove(id);
+// ---------- change notifications (used by cloud sync) ----------
+type ChangeListener = (change: { type: "save"; recipe: SavedRecipe } | { type: "delete"; id: string; at: number }) => void;
+let listener: ChangeListener | null = null;
+export const onRecipeChange = (fn: ChangeListener | null) => (listener = fn);
+
+/** Saves a change the cook made: stamps the time and lets cloud sync know. */
+export async function saveRecipe(r: SavedRecipe): Promise<void> {
+  const stamped = { ...r, updatedAt: Date.now() };
+  await (await backend()).put(stamped);
+  listener?.({ type: "save", recipe: stamped });
+}
+
+export async function deleteRecipe(id: string): Promise<void> {
+  await (await backend()).remove(id);
+  listener?.({ type: "delete", id, at: Date.now() });
+}
+
+/** Writes a recipe that came from the cloud, exactly as received (no stamp, no notification). */
+export const saveRecipeFromCloud = async (r: SavedRecipe) => (await backend()).put(r);
+export const deleteRecipeFromCloud = async (id: string) => (await backend()).remove(id);
 
 /** Asks the browser not to evict our data under storage pressure. Returns whether it agreed. */
 export async function requestPersistentStorage(): Promise<boolean> {

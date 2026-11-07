@@ -7,12 +7,14 @@ import Settings from "./components/Settings";
 import RecipePage from "./components/RecipePage";
 import ShoppingList from "./components/ShoppingList";
 import PlanWatcher from "./components/PlanWatcher";
+import { startCloud } from "./lib/cloud";
 import ImportPage from "./components/ImportPage";
 
 function Screen() {
   const route = useRoute();
   useEffect(() => {
     requestPersistentStorage().catch(() => {});
+    startCloud().catch(() => {});
   }, []);
 
   switch (route.name) {
