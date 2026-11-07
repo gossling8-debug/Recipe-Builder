@@ -7,6 +7,7 @@ import { href } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
 import { shareText } from "../lib/share";
 import { applySwaps } from "../lib/swaps";
+import { walmartSearchUrl } from "../lib/shopping";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
 
 const scaleLabel = (s: number) => (s === 1 ? "" : ` · ×${s === 0.5 ? "½" : s === 1.5 ? "1½" : s}`);
@@ -52,8 +53,9 @@ export default function ShoppingList() {
     if (r === "failed") showToast("Sharing isn't available in this browser");
   }
 
+  const opened = new Set(state.opened ?? []);
   const row = (it: (typeof items)[number]) => (
-    <li key={it.key}>
+    <li key={it.key} className="shop-row">
       <label className={checked.has(it.key) ? "checked" : ""}>
         <input type="checkbox" checked={checked.has(it.key)} onChange={() => toggle(it.key)} />
         <span>
@@ -62,6 +64,18 @@ export default function ShoppingList() {
           {entries.length > 1 && <span className="shop-for">{it.recipes.join(", ")}</span>}
         </span>
       </label>
+      {!checked.has(it.key) && (
+        <a
+          className={opened.has(it.key) ? "store-btn opened" : "store-btn"}
+          href={walmartSearchUrl(it.name)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Find ${it.name} at Walmart`}
+          onClick={() => update({ ...state, opened: [...new Set([...(state.opened ?? []), it.key])] })}
+        >
+          {opened.has(it.key) && <Icon name="check" size={14} />} Walmart
+        </a>
+      )}
     </li>
   );
 
@@ -107,6 +121,12 @@ export default function ShoppingList() {
             </ul>
 
             <h3>To buy · {remaining.length}</h3>
+            {remaining.length > 0 && (
+              <p className="muted small">
+                Tap <strong>Walmart</strong> to find an item in the Walmart app (signed into your Walmart+ account), add
+                it to your cart, then come back and tick it off.
+              </p>
+            )}
             {remaining.length === 0 ? <p className="muted">All done.</p> : <ul className="ingredients">{remaining.map(row)}</ul>}
 
             {got.length > 0 && (
@@ -120,7 +140,7 @@ export default function ShoppingList() {
               <button
                 className="btn"
                 onClick={() => {
-                  if (confirm("Clear the whole shopping list?")) update({ recipes: [], checked: [] });
+                  if (confirm("Clear the whole shopping list?")) update({ recipes: [], checked: [], opened: [] });
                 }}
               >
                 Clear list

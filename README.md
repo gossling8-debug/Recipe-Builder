@@ -23,7 +23,8 @@ where it's added, so you don't have to flip back and forth between the steps and
   at the top of the list.
 - **Share** a recipe (at the chosen size) or the shopping list through the phone's share sheet;
   falls back to copying the text.
-- **Shopping list**: add recipes at any size; matching ingredients are added up (1 cup + 2 cups sugar
+- **Shopping list** (with a Walmart button on each item that opens a Walmart search for it, e.g. for a
+  Walmart+ order): add recipes at any size; matching ingredients are added up (1 cup + 2 cups sugar
   → 3 cups), items can be ticked off, and the list can be shared.
 - **Tags, filters and sorting**: Claude suggests tags when scanning; edit them in the editor; filter
   the list by Favorites or any tag and sort by newest or A–Z.

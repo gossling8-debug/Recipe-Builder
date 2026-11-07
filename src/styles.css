@@ -486,3 +486,15 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .cloud-form .link-btn { justify-self: start; padding: 4px 0; }
 .cloud-status { color: var(--muted); }
 .cloud-status.error { color: var(--error); }
+
+/* ---------- Shopping at a store ---------- */
+.shop-row { display: flex; align-items: center; gap: 10px; }
+.shop-row label { flex: 1; min-width: 0; }
+.store-btn {
+  flex: none; display: inline-flex; align-items: center; gap: 4px;
+  min-height: 34px; padding: 4px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--text); font-size: 14px; font-weight: 600; text-decoration: none;
+}
+.store-btn:active { opacity: 0.6; }
+.store-btn.opened { color: var(--muted); }
