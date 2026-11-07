@@ -6,6 +6,7 @@ import Scanner from "./components/Scanner";
 import Settings from "./components/Settings";
 import RecipePage from "./components/RecipePage";
 import ShoppingList from "./components/ShoppingList";
+import ImportPage from "./components/ImportPage";
 
 export default function App() {
   const route = useRoute();
@@ -18,6 +19,8 @@ export default function App() {
       return <Scanner />;
     case "settings":
       return <Settings />;
+    case "import":
+      return <ImportPage data={route.data} />;
     case "shopping":
       return <ShoppingList />;
     case "recipe":

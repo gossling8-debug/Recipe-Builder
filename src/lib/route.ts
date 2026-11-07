@@ -5,6 +5,7 @@ export type Route =
   | { name: "scan" }
   | { name: "settings" }
   | { name: "shopping" }
+  | { name: "import"; data: string }
   | { name: "recipe"; id: string };
 
 export function parseRoute(hash: string): Route {
@@ -12,12 +13,15 @@ export function parseRoute(hash: string): Route {
   if (path === "scan") return { name: "scan" };
   if (path === "settings") return { name: "settings" };
   if (path === "shopping") return { name: "shopping" };
+  const imp = path.match(/^import\/(.+)$/);
+  if (imp) return { name: "import", data: imp[1] };
   const m = path.match(/^recipe\/(.+)$/);
   if (m) return { name: "recipe", id: decodeURIComponent(m[1]) };
   return { name: "library" };
 }
 
 export function href(route: Route): string {
+  if (route.name === "import") return `#/import/${route.data}`;
   return route.name === "recipe" ? `#/recipe/${encodeURIComponent(route.id)}` : route.name === "library" ? "#/" : `#/${route.name}`;
 }
 
