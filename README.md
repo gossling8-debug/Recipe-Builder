@@ -28,6 +28,13 @@ where it's added, so you don't have to flip back and forth between the steps and
 - **Tags, filters and sorting**: Claude suggests tags when scanning; edit them in the editor; filter
   the list by Favorites or any tag and sort by newest or A–Z.
 - **Text size**: Standard, Large or Largest, in Settings.
+- **Add from anywhere**: scan card photos, paste a recipe web address (Claude reads the page and skips
+  the story and ads), or paste/type the text.
+- **Cooking mode**: one step at a time in large text, the ingredients that step needs, one-tap timers
+  for any time a step mentions (with a chime), and big Back/Next buttons or swipes.
+- **Cost control**: choose the recipe reader in Settings (Best / Balanced / Budget), see what each
+  recipe cost to read and a monthly spending total.
+- **Share your version**: shared links include the substitutes you chose.
 - **Conversions** at the bottom of a recipe when an ingredient comes in other forms: fresh garlic ↔
   jarred minced ↔ garlic powder, onion ↔ dried minced ↔ powder, fresh ↔ dried herbs, ginger, lemon/lime
   juice, salted ↔ unsalted butter, and DIY buttermilk — worked out for the recipe's amount and size.

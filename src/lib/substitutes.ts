@@ -1,6 +1,8 @@
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import * as z from "zod/v4";
-import { describeApiError, makeClient, MODEL, ScanError } from "./claude";
+import { describeApiError, makeClient, requestOptions, ScanError } from "./claude";
+import { getModel } from "./models";
+import { recordUsage } from "./usage";
 import { recipeToText } from "./share";
 import type { ScannedRecipe } from "./schema";
 
@@ -57,6 +59,7 @@ export async function suggestSubstitutes(
   avoidLabels: string[],
 ): Promise<Substitutions> {
   const client = makeClient(apiKey);
+  const m = getModel();
   const prompt = [
     `Avoid list: ${avoidLabels.join(", ")}`,
     "",
@@ -70,17 +73,16 @@ export async function suggestSubstitutes(
   let response;
   try {
     response = await client.beta.messages.parse({
-      model: MODEL,
+      ...requestOptions(m),
       max_tokens: 8000,
       output_config: { effort: "medium", format: betaZodOutputFormat(SubstitutionsSchema) },
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
       system: SYSTEM,
       messages: [{ role: "user", content: prompt }],
     });
   } catch (err) {
     throw new ScanError(describeApiError(err));
   }
+  recordUsage("substitutes", m.id, response.usage);
   if (response.stop_reason === "refusal") throw new ScanError("Claude couldn't answer this one. Try again later.");
   if (!response.parsed_output) throw new ScanError("Claude's answer couldn't be read. Please try again.");
   return response.parsed_output;

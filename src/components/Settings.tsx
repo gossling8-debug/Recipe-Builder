@@ -5,6 +5,8 @@ import { applyTextSize, getTextSize, TEXT_SIZES, type TextSize } from "../lib/te
 import { getApiKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
 import { ALLERGEN_GROUPS, loadAvoid, saveAvoid, type AvoidList } from "../lib/avoid";
+import { costOf, getModel, MODELS, setModel } from "../lib/models";
+import { loadUsage, money } from "../lib/usage";
 import { exportBackup, importBackup } from "../lib/backup";
 import { storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 
@@ -14,6 +16,14 @@ export default function Settings() {
   const [keyError, setKeyError] = useState("");
   const [textSize, setTextSize] = useState<TextSize>(getTextSize());
   const [avoid, setAvoid] = useState<AvoidList>(loadAvoid);
+  const [modelId, setModelId] = useState(getModel().id);
+  const usage = loadUsage();
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+  const thisMonth = usage.filter((u) => u.at >= monthStart);
+  const avgFor = (id: string) => {
+    const scans = usage.filter((u) => u.model === id && u.kind !== "substitutes");
+    return scans.length ? { avg: scans.reduce((s, u) => s + u.cost, 0) / scans.length, n: scans.length } : null;
+  };
   const [newAvoid, setNewAvoid] = useState("");
   const updateAvoid = (a: AvoidList) => {
     setAvoid(a);
@@ -139,10 +149,80 @@ export default function Settings() {
         </section>
 
         <section>
+          <h3>Recipe reader</h3>
+          <p className="muted small">
+            Which Claude model reads your cards, websites and text, and suggests substitutes. Cheaper models cost far less
+            but may misread messy handwriting — you can always fix a mistake with Edit.
+          </p>
+          <div className="model-list" role="radiogroup" aria-label="Recipe reader">
+            {MODELS.map((m) => {
+              const mine = avgFor(m.id);
+              // Typical card scan: ~3,500 tokens in (photo + instructions), ~4,000 out (reasoning + recipe).
+              const typical = costOf(m, 3500, 4000);
+              return (
+                <button
+                  key={m.id}
+                  role="radio"
+                  aria-checked={modelId === m.id}
+                  className={modelId === m.id ? "model-option on" : "model-option"}
+                  onClick={() => {
+                    setModel(m.id);
+                    setModelId(m.id);
+                  }}
+                >
+                  <span className="model-head">
+                    <strong>{m.label}</strong>
+                    <span className="model-cost">
+                      {mine ? `your average ${money(mine.avg)}` : `≈ ${money(typical)} per card`}
+                    </span>
+                  </span>
+                  <span className="muted small">{m.blurb}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section>
+          <h3>Spending</h3>
+          {usage.length === 0 ? (
+            <p className="muted small">Nothing yet. After your first scan this shows what the app has cost you.</p>
+          ) : (
+            <>
+              <p>
+                This month: <strong>{money(thisMonth.reduce((s, u) => s + u.cost, 0))}</strong>{" "}
+                <span className="muted">
+                  ({thisMonth.length} {thisMonth.length === 1 ? "request" : "requests"})
+                </span>
+              </p>
+              <ul className="usage-list small">
+                {usage
+                  .slice(-5)
+                  .reverse()
+                  .map((u, i) => (
+                    <li key={i}>
+                      <span>
+                        {{ scan: "Card scan", website: "Website", text: "Pasted text", substitutes: "Substitutes" }[u.kind]} ·{" "}
+                        {MODELS.find((m) => m.id === u.model)?.label ?? u.model}
+                      </span>
+                      <span>{money(u.cost)}</span>
+                    </li>
+                  ))}
+              </ul>
+            </>
+          )}
+          <p className="muted small">
+            Estimates from Anthropic's list prices and the size of each request. Your exact bill is in the Anthropic
+            Console. Cheapest to most expensive: pasted text, websites, card photos.
+          </p>
+        </section>
+
+        <section>
           <h3>Anthropic API key</h3>
           <p className="muted small">
-            Scanning sends the card photo to Claude. Create a key at console.anthropic.com → API Keys. Each scan costs
-            roughly 5–15 cents, billed to your Anthropic account. The key is stored only on this phone.
+            Reading recipes sends the photo, page or text to Claude. Create a key at console.anthropic.com → API Keys.
+            Each request is billed to your Anthropic account (see Recipe reader for typical costs). The key is stored only
+            on this phone.
           </p>
           <input
             className="text-input"

@@ -72,6 +72,10 @@ export interface SavedRecipe extends ScannedRecipe {
   photos: string[];
   /** Starred by the cook; shown in the Favorites section. */
   favorite?: boolean;
+  /** Web page the recipe was imported from. */
+  source?: string;
+  /** Estimated cost (US dollars) of reading this recipe with Claude. */
+  importCost?: number;
   /** Claude's substitute suggestions for the avoid list, saved so they're only paid for once. */
   substitutions?: {
     avoidKey: string; // which avoid list they were made for

@@ -4,12 +4,15 @@ import Icon from "./Icon";
 import RecipeView from "./RecipeView";
 import RecipeEditor from "./RecipeEditor";
 import Substitutes from "./Substitutes";
+import CookMode from "./CookMode";
+import { TimerBar, useTimers } from "./Timers";
 import { activeSwaps, applySwaps } from "../lib/swaps";
 import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
 import { deleteRecipe, getRecipe, saveRecipe } from "../lib/db";
 import { href, navigate } from "../lib/route";
 import { recipeToText, shareText } from "../lib/share";
 import { recipeLink } from "../lib/link";
+import { money } from "../lib/usage";
 import { removeFromShopping } from "../lib/shopping";
 import { useToast } from "./Toast";
 import type { SavedRecipe } from "../lib/schema";
@@ -18,6 +21,10 @@ export default function RecipePage({ id }: { id: string }) {
   const [recipe, setRecipe] = useState<SavedRecipe | null | undefined>(undefined);
   const [showPhotos, setShowPhotos] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [cooking, setCooking] = useState(false);
+  // Bumped when cooking mode closes, so the recipe view re-reads progress made there.
+  const [viewKey, setViewKey] = useState(0);
+  const timers = useTimers();
   const [toast, showToast] = useToast();
   // Built ahead of time: iPhones only allow the share sheet to open straight
   // after a tap, so nothing slow may happen between the tap and share().
@@ -25,7 +32,8 @@ export default function RecipePage({ id }: { id: string }) {
 
   useEffect(() => {
     setLink("");
-    if (recipe) recipeLink(recipe).then(setLink, () => setLink(""));
+    // Share the version you cook: chosen substitutes included.
+    if (recipe) recipeLink(applySwaps(recipe)).then(setLink, () => setLink(""));
   }, [recipe]);
 
   useEffect(() => {
@@ -69,8 +77,12 @@ export default function RecipePage({ id }: { id: string }) {
     // A short message with a link that opens this recipe in the app. If the
     // link couldn't be made, send the full recipe as text instead.
     const result = link
-      ? await shareText(recipe.title, `${recipe.title}\nOpen the recipe in Recipe Builder:`, link)
-      : await shareText(recipe.title, recipeToText(recipe, loadProgress(recipe.id).scale));
+      ? await shareText(
+          recipe.title,
+          `${recipe.title}${activeSwaps(recipe).size ? " (my version, with substitutions)" : ""}\nOpen the recipe in Recipe Builder:`,
+          link,
+        )
+      : await shareText(recipe.title, recipeToText(applySwaps(recipe), loadProgress(recipe.id).scale));
     if (result === "copied") showToast("Link copied — paste it in a message");
     if (result === "failed") showToast("Sharing isn't available in this browser");
   }
@@ -121,8 +133,10 @@ export default function RecipePage({ id }: { id: string }) {
         )}
         {recipe && !editing && (
           <>
+            <TimerBar {...timers} />
             <RecipeView
-              key={recipe.id}
+              key={`${recipe.id}-${viewKey}`}
+              onStartCooking={() => setCooking(true)}
               recipe={applySwaps(recipe)}
               recipeId={recipe.id}
               swaps={activeSwaps(recipe)}
@@ -143,6 +157,20 @@ export default function RecipePage({ id }: { id: string }) {
                 />
               }
             />
+            {(recipe.source || recipe.importCost !== undefined) && (
+              <p className="muted small source-line">
+                {recipe.source && (
+                  <>
+                    From{" "}
+                    <a href={recipe.source} target="_blank" rel="noopener noreferrer">
+                      {new URL(recipe.source).hostname.replace(/^www\./, "")}
+                    </a>
+                  </>
+                )}
+                {recipe.source && recipe.importCost !== undefined && " · "}
+                {recipe.importCost !== undefined && <>Reading it cost ≈ {money(recipe.importCost)}</>}
+              </p>
+            )}
             {recipe.photos.length > 0 && (
               <section className="original">
                 <button className="btn" onClick={() => setShowPhotos((s) => !s)}>
@@ -154,6 +182,17 @@ export default function RecipePage({ id }: { id: string }) {
           </>
         )}
       </main>
+      {recipe && cooking && (
+        <CookMode
+          recipe={applySwaps(recipe)}
+          recipeId={recipe.id}
+          timers={timers}
+          onClose={() => {
+            setCooking(false);
+            setViewKey((k) => k + 1);
+          }}
+        />
+      )}
       {toast}
     </>
   );

@@ -35,6 +35,7 @@ export default function RecipeView({
   extra,
   swaps = new Map(),
   onUndoSwap,
+  onStartCooking,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
@@ -44,6 +45,8 @@ export default function RecipeView({
   /** Substitutes the cook chose, by ingredient index (recipe already has them applied). */
   swaps?: Map<number, Swap>;
   onUndoSwap?: (index: number) => void;
+  /** Opens cooking mode (one step at a time). */
+  onStartCooking?: () => void;
 }) {
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
@@ -208,6 +211,11 @@ export default function RecipeView({
 
       <section>
         <h3>Instructions</h3>
+        {onStartCooking && (
+          <button className="btn primary cook-btn" onClick={onStartCooking}>
+            Start cooking — one step at a time
+          </button>
+        )}
         <p className="muted small">
           Tap an ingredient to cross it off as you add it. Tap anywhere else in a step to mark the whole step done.
         </p>
@@ -307,7 +315,7 @@ function scaleLabel(scale: number): string {
  * off without marking the whole step done. It's a span (not a <button>) so long
  * names still wrap naturally across lines.
  */
-function IngredientMention(props: { text: string; amount: string | null; crossed: boolean; avoid?: boolean; onToggle: () => void }) {
+export function IngredientMention(props: { text: string; amount: string | null; crossed: boolean; avoid?: boolean; onToggle: () => void }) {
   const { text, amount, crossed, avoid, onToggle } = props;
   return (
     <span
