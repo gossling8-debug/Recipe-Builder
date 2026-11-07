@@ -7,6 +7,8 @@ import { href } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
 import { shareText } from "../lib/share";
 import { applySwaps } from "../lib/swaps";
+import { boughtWhen, recordPurchase, setItem, statusFor } from "../lib/pantry";
+import { formatQty } from "../lib/qty";
 import { getWalmartTarget, setWalmartTarget, walmartSearchUrl, type WalmartTarget } from "../lib/shopping";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
 
@@ -41,11 +43,39 @@ export default function ShoppingList() {
   );
   const items = useMemo(() => combine(entries), [entries]);
   const checked = new Set(state.checked);
-  const remaining = items.filter((i) => !checked.has(i.key));
+  const notChecked = items.filter((i) => !checked.has(i.key));
+  const status = new Map(notChecked.map((i) => [i.key, statusFor(i.key, i.name, i.need)]));
+  // Enough already on hand → its own section, so the list to buy stays short.
+  const inPantry = notChecked.filter((i) => status.get(i.key)?.kind === "enough");
+  const remaining = notChecked.filter((i) => status.get(i.key)?.kind !== "enough");
   const got = items.filter((i) => checked.has(i.key));
+  const [editing, setEditing] = useState<{ key: string; text: string } | null>(null);
+  const defaultBought = (it: (typeof items)[number]) => (it.need ? formatQty(it.need) : it.amount);
 
-  const toggle = (key: string) =>
-    update({ ...state, checked: checked.has(key) ? state.checked.filter((k) => k !== key) : [...state.checked, key] });
+  // Ticking = bought: it goes into the pantry. Unticking undoes that.
+  const toggle = (key: string) => {
+    const it = items.find((i) => i.key === key)!;
+    const bought = { ...(state.bought ?? {}) };
+    if (checked.has(key)) {
+      if (bought[key]) setItem(key, bought[key].before);
+      delete bought[key];
+      update({ ...state, checked: state.checked.filter((k) => k !== key), bought });
+    } else {
+      const text = defaultBought(it);
+      bought[key] = { text, before: recordPurchase(it.name, text) };
+      update({ ...state, checked: [...state.checked, key], bought });
+    }
+  };
+
+  const changeBought = (key: string, text: string) => {
+    const it = items.find((i) => i.key === key)!;
+    const prev = state.bought?.[key];
+    if (!prev || !text.trim()) return setEditing(null);
+    setItem(key, prev.before); // undo the first guess, then record what was really bought
+    recordPurchase(it.name, text.trim());
+    update({ ...state, bought: { ...state.bought, [key]: { text: text.trim(), before: prev.before } } });
+    setEditing(null);
+  };
 
   async function share() {
     const r = await shareText("Shopping list", shoppingToText(items, checked));
@@ -63,6 +93,7 @@ export default function ShoppingList() {
           {it.amount && <span className="shop-amount">{it.amount} </span>}
           {it.name}
           {entries.length > 1 && <span className="shop-for">{it.recipes.join(", ")}</span>}
+          {!checked.has(it.key) && <PantryNote status={status.get(it.key)} />}
         </span>
       </label>
       {!checked.has(it.key) && opened.has(it.key) && (
@@ -88,6 +119,37 @@ export default function ShoppingList() {
           Walmart
         </a>
       )}
+      {checked.has(it.key) && state.bought?.[it.key] && (
+        <div className="bought-line">
+          {editing?.key === it.key ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                changeBought(it.key, editing.text);
+              }}
+            >
+              <input
+                className="text-input"
+                autoFocus
+                aria-label={`How much ${it.name} did you buy?`}
+                placeholder="e.g. 4 lb bag, 16 oz, 2 cans"
+                value={editing.text}
+                onChange={(e) => setEditing({ key: it.key, text: e.target.value })}
+              />
+              <button className="btn" type="submit">
+                Save
+              </button>
+            </form>
+          ) : (
+            <span className="small muted">
+              Bought {state.bought[it.key].text} ·{" "}
+              <button className="link-btn small" onClick={() => setEditing({ key: it.key, text: state.bought![it.key].text })}>
+                Change
+              </button>
+            </span>
+          )}
+        </div>
+      )}
     </li>
   );
 
@@ -96,6 +158,7 @@ export default function ShoppingList() {
       <Header
         title="Shopping list"
         back={href({ name: "library" })}
+        returnToPrevious
         actions={
           items.length > 0 ? (
             <button className="icon-btn" onClick={share} aria-label="Share shopping list">
@@ -163,9 +226,20 @@ export default function ShoppingList() {
             )}
             {remaining.length === 0 ? <p className="muted">All done.</p> : <ul className="ingredients">{remaining.map(row)}</ul>}
 
+            {inPantry.length > 0 && (
+              <>
+                <h3>Already in your pantry · {inPantry.length}</h3>
+                <p className="muted small">
+                  Left over from earlier shopping, so you shouldn't need to buy these. Tick one if you buy more anyway.
+                </p>
+                <ul className="ingredients">{inPantry.map(row)}</ul>
+              </>
+            )}
+
             {got.length > 0 && (
               <>
                 <h3>In the cart · {got.length}</h3>
+                <p className="muted small">Ticked items go into your pantry. Tap “Change” to enter the size you actually bought.</p>
                 <ul className="ingredients">{got.map(row)}</ul>
               </>
             )}
@@ -185,5 +259,26 @@ export default function ShoppingList() {
       </main>
       {toast}
     </>
+  );
+}
+
+/** "You should have ≈ ½ cup left from Nov 7 — buy ≈ ½ cup more." */
+function PantryNote({ status }: { status: ReturnType<typeof statusFor> | undefined }) {
+  if (!status || status.kind === "none") return null;
+  const when = boughtWhen(status.item);
+  const from = when ? ` from ${when}` : "";
+  if (status.kind === "enough")
+    return <span className="pantry-note ok">Pantry: ≈ {formatQty(status.item.qty!)} left{from} — enough</span>;
+  if (status.kind === "some")
+    return (
+      <span className="pantry-note">
+        Pantry: ≈ {formatQty(status.item.qty!)} left{from} — buy ≈ {formatQty(status.short)} more
+      </span>
+    );
+  return (
+    <span className="pantry-note">
+      Pantry: you should have {status.item.qty ? `≈ ${formatQty(status.item.qty)}` : "some"}
+      {from} — check before buying
+    </span>
   );
 }

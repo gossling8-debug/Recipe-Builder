@@ -1,11 +1,36 @@
 import type { ReactNode } from "react";
 import Icon from "./Icon";
 
-export default function Header({ title, back, actions }: { title: string; back?: string; actions?: ReactNode }) {
+/**
+ * back: where the arrow goes. With returnToPrevious, the arrow goes back to the
+ * screen you came from inside the app (e.g. the recipe you opened the shopping
+ * list from), falling back to `back` when there's nothing to go back to.
+ */
+export default function Header({
+  title,
+  back,
+  actions,
+  returnToPrevious = false,
+}: {
+  title: string;
+  back?: string;
+  actions?: ReactNode;
+  returnToPrevious?: boolean;
+}) {
   return (
     <header className="topbar">
       {back ? (
-        <a className="icon-btn" href={back} aria-label="Back">
+        <a
+          className="icon-btn"
+          href={back}
+          aria-label="Back"
+          onClick={(e) => {
+            if (returnToPrevious && cameFromApp()) {
+              e.preventDefault();
+              history.back();
+            }
+          }}
+        >
           <Icon name="back" />
         </a>
       ) : (
@@ -16,3 +41,8 @@ export default function Header({ title, back, actions }: { title: string; back?:
     </header>
   );
 }
+
+// Count in-app screen changes, so "back" only goes back within the app (not to another site).
+let screensVisited = 0;
+window.addEventListener("hashchange", () => screensVisited++);
+const cameFromApp = () => screensVisited > 0 && history.length > 1;

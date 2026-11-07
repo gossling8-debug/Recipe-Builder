@@ -19,6 +19,7 @@ export default function CookMode({
   onClose,
   onLog,
   plannedMinutes,
+  onMade,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
@@ -28,6 +29,8 @@ export default function CookMode({
   onLog: (minutes: number) => Promise<void>;
   /** The plan's estimate, if one was made, to compare against. */
   plannedMinutes?: number;
+  /** Called once when the cook taps Finish (updates the pantry). */
+  onMade?: () => void;
 }) {
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
@@ -64,6 +67,7 @@ export default function CookMode({
     const measured = Math.round((Date.now() - startedAt) / 60000);
     setMinutes(measured >= 2 ? measured : plannedMinutes ?? 30);
     setFinishing(true);
+    onMade?.();
   };
 
   // Swipe left / right to change steps. (All hooks must run before any early return.)

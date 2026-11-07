@@ -7,6 +7,7 @@ import Substitutes from "./Substitutes";
 import CookMode, { clearCookStart, cookStart } from "./CookMode";
 import PlanMeal from "./PlanMeal";
 import { clearPlan, getPlan } from "../lib/plan";
+import { restore, useForRecipe, type PantryItem } from "../lib/pantry";
 import { TimerBar, useTimers } from "./Timers";
 import { activeSwaps, applySwaps } from "../lib/swaps";
 import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
@@ -15,7 +16,7 @@ import { href, navigate } from "../lib/route";
 import { recipeToText, shareText } from "../lib/share";
 import { recipeLink } from "../lib/link";
 import { money } from "../lib/usage";
-import { removeFromShopping } from "../lib/shopping";
+import { loadShopping, removeFromShopping } from "../lib/shopping";
 import { useToast } from "./Toast";
 import type { SavedRecipe } from "../lib/schema";
 
@@ -27,6 +28,42 @@ export default function RecipePage({ id }: { id: string }) {
   // Bumped when cooking mode closes, so the recipe view re-reads progress made there.
   const [viewKey, setViewKey] = useState(0);
   const timers = useTimers();
+  // Shopping list count for the bag button; refreshes when the list changes.
+  const [onList, setOnList] = useState(() => loadShopping().recipes.length);
+  useEffect(() => {
+    const update = () => setOnList(loadShopping().recipes.length);
+    window.addEventListener("shopping-changed", update);
+    return () => window.removeEventListener("shopping-changed", update);
+  }, []);
+  // "I made this": the pantry snapshot before subtracting, kept 12 h so it can be undone.
+  const madeKey = `recipe-builder.made.${id}`;
+  const [made, setMade] = useState<{ at: number; undo: Record<string, PantryItem | null> } | null>(() => {
+    try {
+      const m = JSON.parse(localStorage.getItem(madeKey) ?? "null") as { at: number; undo: Record<string, PantryItem | null> } | null;
+      return m && Date.now() - m.at < 12 * 3600_000 ? m : null;
+    } catch {
+      return null;
+    }
+  });
+  const rememberMade = (m: typeof made) => {
+    setMade(m);
+    try {
+      if (m) localStorage.setItem(madeKey, JSON.stringify(m));
+      else localStorage.removeItem(madeKey);
+    } catch {
+      /* ignore */
+    }
+  };
+  function madeIt() {
+    if (!recipe || made) return;
+    const { changes, undo } = useForRecipe(applySwaps(recipe), loadProgress(recipe.id).scale);
+    rememberMade({ at: Date.now(), undo });
+    showToast(
+      changes.length
+        ? `Pantry: ${changes.map((c) => `${c.name} ${c.left}`).join("; ")}`
+        : "Nothing in your pantry matched this recipe.",
+    );
+  }
   const [toast, showToast] = useToast();
   // Built ahead of time: iPhones only allow the share sheet to open straight
   // after a tap, so nothing slow may happen between the tap and share().
@@ -108,6 +145,14 @@ export default function RecipePage({ id }: { id: string }) {
               >
                 <Icon name="star" filled={!!recipe.favorite} />
               </button>
+              <a
+                className="icon-btn badge-host"
+                href={href({ name: "shopping" })}
+                aria-label={`Shopping list${onList ? `, ${onList} recipes` : ""}`}
+              >
+                <Icon name="bag" />
+                {onList > 0 && <span className="badge">{onList}</span>}
+              </a>
               <button className="icon-btn" onClick={share} aria-label="Share recipe">
                 <Icon name="share" />
               </button>
@@ -145,6 +190,8 @@ export default function RecipePage({ id }: { id: string }) {
                 cookStart(recipe.id); // starts the clock for "how long did it take?"
                 setCooking(true);
               }}
+              onMade={madeIt}
+              made={made && { at: made.at, onUndo: () => (restore(made.undo), rememberMade(null), showToast("Pantry change undone")) }}
               top={<PlanMeal recipe={{ ...applySwaps(recipe), cookLog: recipe.cookLog }} recipeId={recipe.id} />}
               recipe={applySwaps(recipe)}
               recipeId={recipe.id}
@@ -197,6 +244,7 @@ export default function RecipePage({ id }: { id: string }) {
           recipeId={recipe.id}
           timers={timers}
           plannedMinutes={getPlan(recipe.id)?.minutes}
+          onMade={madeIt}
           onLog={async (minutes) => {
             const scale = loadProgress(recipe.id).scale;
             const updated = { ...recipe, cookLog: [...(recipe.cookLog ?? []), { at: Date.now(), minutes, scale }] };

@@ -1,3 +1,5 @@
+import { add, parseQty, type Qty } from "./qty";
+import type { PantryItem } from "./pantry";
 import { fixPlurals, formatNumber, parseNumber, scaleAmount } from "./quantity";
 import type { SavedRecipe } from "./schema";
 
@@ -7,6 +9,8 @@ export interface ShoppingState {
   checked: string[];
   /** Items already opened at the store (so the cook can see what's been looked up). */
   opened?: string[];
+  /** What was bought when each item was ticked, and the pantry before, so unticking can undo it. */
+  bought?: Record<string, { text: string; before: PantryItem | null }>;
 }
 
 const KEY = "recipe-builder.shopping";
@@ -24,6 +28,7 @@ export function loadShopping(): ShoppingState {
 
 export function saveShopping(s: ShoppingState): void {
   memory = s;
+  queueMicrotask(() => window.dispatchEvent(new Event("shopping-changed")));
   try {
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
@@ -46,6 +51,8 @@ export interface ShoppingItem {
   name: string;
   amount: string;
   recipes: string[];
+  /** Total needed as a measurable amount, or null if it can't be added up. */
+  need: Qty | null;
 }
 
 const SINGLE_NUMBER = /^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d*\s?[½⅓⅔¼¾⅛⅜⅝⅞]|\d+(?:\.\d+)?)\s*$/;
@@ -86,7 +93,10 @@ export function nameKey(name: string): string {
  * ("2 cups + 1 tbsp").
  */
 export function combine(entries: { recipe: SavedRecipe; scale: number }[]): ShoppingItem[] {
-  const groups = new Map<string, { name: string; recipes: string[]; sums: Map<string, { total: number; display: string }>; other: string[] }>();
+  const groups = new Map<
+    string,
+    { name: string; recipes: string[]; sums: Map<string, { total: number; display: string }>; other: string[]; need?: Qty | null }
+  >();
   for (const { recipe, scale } of entries) {
     for (const ing of recipe.ingredients) {
       if (!ing.name.trim()) continue;
@@ -97,6 +107,13 @@ export function combine(entries: { recipe: SavedRecipe; scale: number }[]): Shop
         groups.set(key, g);
       }
       if (!g.recipes.includes(recipe.title)) g.recipes.push(recipe.title);
+
+      // A measurable total for the pantry check (null once anything can't be added).
+      const amountText = [ing.quantity.trim(), ing.unit.trim()].filter(Boolean).join(" ");
+      if (amountText) {
+        const parsed = parseQty(scaleAmount(amountText, scale), ing.name);
+        g.need = !parsed || g.need === null ? null : g.need === undefined ? parsed : add(g.need, parsed, ing.name);
+      }
 
       const q = ing.quantity.trim();
       if (q && SINGLE_NUMBER.test(q)) {
@@ -112,7 +129,7 @@ export function combine(entries: { recipe: SavedRecipe; scale: number }[]): Shop
     const parts = [...g.sums.values()].map(({ total, display }) =>
       fixPlurals([formatNumber(total), display].filter(Boolean).join(" ")),
     );
-    return { key, name: g.name, amount: [...parts, ...g.other].join(" + "), recipes: g.recipes };
+    return { key, name: g.name, amount: [...parts, ...g.other].join(" + "), recipes: g.recipes, need: g.need ?? null };
   });
 }
 
