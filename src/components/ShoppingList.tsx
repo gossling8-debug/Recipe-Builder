@@ -160,11 +160,16 @@ export default function ShoppingList() {
         back={href({ name: "library" })}
         returnToPrevious
         actions={
-          items.length > 0 ? (
-            <button className="icon-btn" onClick={share} aria-label="Share shopping list">
-              <Icon name="share" />
-            </button>
-          ) : null
+          <>
+            <a className="icon-btn" href={href({ name: "pantry" })} aria-label="Pantry">
+              <Icon name="jar" />
+            </a>
+            {items.length > 0 && (
+              <button className="icon-btn" onClick={share} aria-label="Share shopping list">
+                <Icon name="share" />
+              </button>
+            )}
+          </>
         }
       />
       <main className="page recipe">
