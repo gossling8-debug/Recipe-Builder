@@ -18,6 +18,16 @@ interface Group {
   except: string[];
 }
 
+/** Words that make a whole ingredient safe for a group ("dairy-free cream cheese"). */
+const FREE_OF: Record<string, RegExp> = {
+  dairy: /\b(dairy[- ]free|non-?dairy|vegan|plant[- ]based)\b/i,
+  eggs: /\b(egg[- ]free|eggless|vegan)\b/i,
+  gluten: /\bgluten[- ]free\b/i,
+  treenuts: /\bnut[- ]free\b/i,
+  peanuts: /\bpeanut[- ]free\b/i,
+  soy: /\bsoy[- ]free\b/i,
+};
+
 export const ALLERGEN_GROUPS: Record<string, Group> = {
   dairy: {
     label: "Dairy",
@@ -91,14 +101,15 @@ export interface Match {
 }
 
 /** Which ingredients hit the avoid list, and why. */
-export function findAvoided(ingredients: Ingredient[], a: AvoidList): Match[] {
+export function findAvoided(ingredients: Ingredient[], a: AvoidList, skip: Set<number> = new Set()): Match[] {
   const out: Match[] = [];
   ingredients.forEach((ing, index) => {
+    if (skip.has(index)) return; // already swapped for a substitute
     const text = `${ing.name} ${ing.preparation ?? ""}`.toLowerCase();
     const reasons: string[] = [];
     for (const key of a.groups) {
       const g = ALLERGEN_GROUPS[key];
-      if (!g) continue;
+      if (!g || FREE_OF[key]?.test(text)) continue;
       // Remove the "safe" phrases first, then look for the allergen words.
       let rest = text;
       for (const e of g.except) rest = rest.replace(new RegExp(escape(e), "gi"), " ");

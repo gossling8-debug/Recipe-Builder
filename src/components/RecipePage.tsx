@@ -4,6 +4,7 @@ import Icon from "./Icon";
 import RecipeView from "./RecipeView";
 import RecipeEditor from "./RecipeEditor";
 import Substitutes from "./Substitutes";
+import { activeSwaps, applySwaps } from "../lib/swaps";
 import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
 import { deleteRecipe, getRecipe, saveRecipe } from "../lib/db";
 import { href, navigate } from "../lib/route";
@@ -122,8 +123,16 @@ export default function RecipePage({ id }: { id: string }) {
           <>
             <RecipeView
               key={recipe.id}
-              recipe={recipe}
+              recipe={applySwaps(recipe)}
               recipeId={recipe.id}
+              swaps={activeSwaps(recipe)}
+              onUndoSwap={async (i) => {
+                const byIndex = { ...recipe.swaps!.byIndex };
+                delete byIndex[i];
+                const updated = { ...recipe, swaps: { ...recipe.swaps!, byIndex } };
+                setRecipe(updated);
+                await saveRecipe(updated);
+              }}
               extra={
                 <Substitutes
                   recipe={recipe}

@@ -6,6 +6,7 @@ import { listRecipes } from "../lib/db";
 import { href } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
 import { shareText } from "../lib/share";
+import { applySwaps } from "../lib/swaps";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
 
 const scaleLabel = (s: number) => (s === 1 ? "" : ` · ×${s === 0.5 ? "½" : s === 1.5 ? "1½" : s}`);
@@ -29,8 +30,11 @@ export default function ShoppingList() {
     () =>
       (all ?? []).length
         ? state.recipes
-            .map(({ id, scale }) => ({ recipe: all!.find((r) => r.id === id)!, scale }))
-            .filter((e) => e.recipe)
+            .map(({ id, scale }) => {
+              const r = all!.find((x) => x.id === id);
+              return { recipe: r && { ...r, ...applySwaps(r) }, scale };
+            })
+            .filter((e): e is { recipe: SavedRecipe; scale: number } => !!e.recipe)
         : [],
     [all, state.recipes],
   );

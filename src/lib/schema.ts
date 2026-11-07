@@ -79,6 +79,8 @@ export interface SavedRecipe extends ScannedRecipe {
     createdAt: number;
     result: import("./substitutes").Substitutions;
   };
+  /** Substitutes the cook chose ("Use this"), applied on top of the original recipe. */
+  swaps?: import("./swaps").Swaps;
 }
 
 /** Formats an ingredient line for the ingredient list, e.g. "2 cups flour, sifted". */

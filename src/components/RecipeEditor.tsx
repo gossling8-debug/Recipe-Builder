@@ -210,7 +210,7 @@ export default function RecipeEditor(props: {
           <Icon name="trash" size={18} /> Delete this recipe
         </button>
       </div>
-      <p className="muted small">Saving clears this recipe's checkmarks, since steps may have changed.</p>
+      <p className="muted small">Saving clears this recipe's checkmarks. If you change the ingredients, chosen substitutes are cleared too.</p>
       <div className="fab-bar">
         <div className="button-row">
           <button className="btn" onClick={props.onCancel} disabled={saving}>

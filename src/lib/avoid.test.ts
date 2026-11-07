@@ -21,6 +21,10 @@ describe("findAvoided", () => {
     expect(hits(["butter", "buttermilk", "unsalted butter", "cilantro leaves"], [], ["butter", "cilantro"])).toEqual([
       "butter", "unsalted butter", "cilantro leaves",
     ]));
+  it("dairy-free and vegan products are safe", () =>
+    expect(hits(["dairy-free cream cheese", "vegan butter", "cream cheese"], ["dairy"])).toEqual(["cream cheese"]));
+  it("skips swapped ingredients", () =>
+    expect(findAvoided([ing("butter"), ing("milk")], { groups: ["dairy"], custom: [] }, new Set([0])).map((m) => m.index)).toEqual([1]));
   it("reports reasons", () =>
     expect(findAvoided([ing("butter")], { groups: ["dairy"], custom: ["butter"] })[0].reasons).toEqual(["Dairy", "butter"]));
 });
