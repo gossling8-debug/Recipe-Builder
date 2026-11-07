@@ -103,7 +103,15 @@ export default function RecipeView({
         <div className="callout error">
           <strong>Contains items you avoid:</strong>{" "}
           {avoided.map((m) => `${recipe.ingredients[m.index].name} (${m.reasons.join(", ")})`).join("; ")}.{" "}
-          {!preview && <a href="#substitutes">Choose substitutes</a>}
+          {!preview && (
+            // A button, not a "#…" link: the part after # picks the screen in this app.
+            <button
+              className="link-btn inline-link"
+              onClick={() => document.getElementById("substitutes")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            >
+              Choose substitutes
+            </button>
+          )}
         </div>
       )}
       {swaps.size > 0 && (
