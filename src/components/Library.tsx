@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { saveRecipe } from "../lib/db";
 import { loadShopping } from "../lib/shopping";
 import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
+import { activeSwaps } from "../lib/swaps";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -39,7 +40,9 @@ export default function Library() {
   const hasFavorites = all.some((r) => r.favorite);
   const avoid = loadAvoid();
   const avoiding = isActive(avoid);
-  const avoidReasons = (r: SavedRecipe) => [...new Set(findAvoided(r.ingredients, avoid).flatMap((m) => m.reasons))];
+  const avoidReasons = (r: SavedRecipe) => [
+    ...new Set(findAvoided(r.ingredients, avoid, new Set(activeSwaps(r).keys())).flatMap((m) => m.reasons)),
+  ];
   // A remembered filter for a tag that no longer exists falls back to All.
   const activeFilter =
     filter === "favorites" ? (hasFavorites ? filter : "all")

@@ -8,11 +8,13 @@ export const SubstitutionsSchema = z.object({
   items: z.array(
     z.object({
       ingredient: z.string().describe('The ingredient as written in the recipe, e.g. "1/2 cup butter".'),
+      ingredient_index: z.number().int().describe("The [number] of the flagged ingredient this is for, from the list given."),
       role: z.string().describe("What it does in THIS recipe, in one short sentence (e.g. adds richness and helps the dip set)."),
       options: z.array(
         z.object({
           substitute: z.string().describe('What to use, e.g. "Vegan butter sticks (e.g. Miyoko\'s, Country Crock Plant Butter)".'),
-          amount: z.string().describe('How much for this recipe as written, e.g. "1/2 cup (same amount)".'),
+          short_name: z.string().describe('How the recipe should name it in the steps, lowercase, no brands, e.g. "vegan butter".'),
+          amount: z.string().describe('Just the amount for this recipe as written, starting with a number, e.g. "1/2 cup" or "16 oz". No extra words.'),
           closeness: z.enum(["Nearly identical", "Close", "Noticeably different"]),
           what_changes: z.string().describe("Honest, specific description of how the result differs: taste, texture, browning, rise, spread, set."),
           tip: z.string().nullable().describe("One practical tip to get the best result, or null."),
@@ -28,7 +30,15 @@ export const SubstitutionsSchema = z.object({
     .array(z.string())
     .describe("Other ingredients in this recipe that often hide the avoided items in packaged versions (e.g. broth, sauces). Empty if none."),
 });
-export type Substitutions = z.infer<typeof SubstitutionsSchema>;
+/** Suggestions saved before ingredient_index / short_name existed lack them. */
+type Fresh = z.infer<typeof SubstitutionsSchema>;
+export type Substitutions = {
+  items: (Omit<Fresh["items"][number], "ingredient_index" | "options"> & {
+    ingredient_index?: number;
+    options: (Omit<Fresh["items"][number]["options"][number], "short_name"> & { short_name?: string })[];
+  })[];
+  label_check: string[];
+};
 
 const SYSTEM = `You are a practical, honest home-cooking advisor. The cook needs to avoid certain ingredients (allergies, intolerances or preferences). For each flagged ingredient in the recipe, suggest 1–3 substitutes that suit the job that ingredient does in THIS recipe — butter that's creamed in cookies needs a different swap than butter melted into a dip.
 
@@ -43,7 +53,7 @@ Rules:
 export async function suggestSubstitutes(
   apiKey: string,
   recipe: ScannedRecipe,
-  flagged: { ingredient: string; reasons: string[] }[],
+  flagged: { index: number; ingredient: string; reasons: string[] }[],
   avoidLabels: string[],
 ): Promise<Substitutions> {
   const client = makeClient(apiKey);
@@ -51,7 +61,7 @@ export async function suggestSubstitutes(
     `Avoid list: ${avoidLabels.join(", ")}`,
     "",
     "Flagged ingredients:",
-    ...flagged.map((f) => `- ${f.ingredient} (matches: ${f.reasons.join(", ")})`),
+    ...flagged.map((f) => `[${f.index}] ${f.ingredient} (matches: ${f.reasons.join(", ")})`),
     "",
     "Recipe:",
     recipeToText(recipe, 1),

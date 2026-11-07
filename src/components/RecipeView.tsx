@@ -7,6 +7,7 @@ import { findAvoided, loadAvoid } from "../lib/avoid";
 import { conversionsFor } from "../lib/conversions";
 import { addToShopping, loadShopping, removeFromShopping } from "../lib/shopping";
 import { href } from "../lib/route";
+import type { Swap } from "../lib/swaps";
 
 const SCALES: [number, string][] = [
   [0.5, "½×"],
@@ -32,12 +33,17 @@ export default function RecipeView({
   recipeId,
   preview = false,
   extra,
+  swaps = new Map(),
+  onUndoSwap,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
   preview?: boolean;
   /** Shown after the notes, before the conversions (the substitutes section). */
   extra?: ReactNode;
+  /** Substitutes the cook chose, by ingredient index (recipe already has them applied). */
+  swaps?: Map<number, Swap>;
+  onUndoSwap?: (index: number) => void;
 }) {
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
@@ -56,7 +62,7 @@ export default function RecipeView({
   });
 
   const unused = unusedIngredients(recipe);
-  const avoided = findAvoided(recipe.ingredients, loadAvoid());
+  const avoided = findAvoided(recipe.ingredients, loadAvoid(), new Set(swaps.keys()));
   const avoidedAt = new Map(avoided.map((m) => [m.index, m.reasons]));
   const conversions = conversionsFor(recipe.ingredients, scale);
 
@@ -97,7 +103,14 @@ export default function RecipeView({
         <div className="callout error">
           <strong>Contains items you avoid:</strong>{" "}
           {avoided.map((m) => `${recipe.ingredients[m.index].name} (${m.reasons.join(", ")})`).join("; ")}.{" "}
-          {!preview && <a href="#substitutes">See substitutes</a>}
+          {!preview && <a href="#substitutes">Choose substitutes</a>}
+        </div>
+      )}
+      {swaps.size > 0 && (
+        <div className="callout small">
+          <strong>Swapped:</strong>{" "}
+          {[...swaps.values()].map((s) => `${s.original} → ${s.name}`).join("; ")}.{" "}
+          {avoided.length === 0 && "This recipe now fits your avoid list."}
         </div>
       )}
 
@@ -129,6 +142,22 @@ export default function RecipeView({
                     <span>
                       {ingredientLine(recipe.ingredients[i], scale)}
                       {avoidedAt.has(i) && <span className="avoid-flag">Avoid · {avoidedAt.get(i)!.join(", ")}</span>}
+                      {swaps.has(i) && (
+                        <span className="swap-note">
+                          instead of {swaps.get(i)!.original}
+                          {onUndoSwap && (
+                            <button
+                              className="link-btn"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                onUndoSwap(i);
+                              }}
+                            >
+                              Undo
+                            </button>
+                          )}
+                        </span>
+                      )}
                     </span>
                   </label>
                 </li>
@@ -191,6 +220,7 @@ export default function RecipeView({
                   ) : (
                     <IngredientMention
                       key={k}
+                      avoid={avoidedAt.has(seg.ingredient_index)}
                       text={seg.text}
                       amount={seg.amount && scaleAmount(seg.amount, scale)}
                       crossed={added.has(`${si}-${k}`)}
@@ -269,11 +299,11 @@ function scaleLabel(scale: number): string {
  * off without marking the whole step done. It's a span (not a <button>) so long
  * names still wrap naturally across lines.
  */
-function IngredientMention(props: { text: string; amount: string | null; crossed: boolean; onToggle: () => void }) {
-  const { text, amount, crossed, onToggle } = props;
+function IngredientMention(props: { text: string; amount: string | null; crossed: boolean; avoid?: boolean; onToggle: () => void }) {
+  const { text, amount, crossed, avoid, onToggle } = props;
   return (
     <span
-      className={crossed ? "ing-mention crossed" : "ing-mention"}
+      className={["ing-mention", crossed && "crossed", avoid && "avoided"].filter(Boolean).join(" ")}
       role="checkbox"
       aria-checked={crossed}
       tabIndex={0}
@@ -291,6 +321,7 @@ function IngredientMention(props: { text: string; amount: string | null; crossed
     >
       {text}
       {amount && <span className="amount">{amount}</span>}
+      {avoid && <span className="avoid-flag step-flag">Avoid</span>}
     </span>
   );
 }
