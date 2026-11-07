@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /** What the cook has done in a recipe so far. Kept until "Start over". */
 export interface Progress {
@@ -43,15 +43,19 @@ export function clearProgress(id: string): void {
 /** Progress for one recipe, saved on every change. */
 export function useProgress(id: string) {
   const [progress, setProgress] = useState<Progress>(() => loadProgress(id));
+  const latest = useRef(progress);
+  latest.current = progress;
   useEffect(() => setProgress(loadProgress(id)), [id]);
 
+  // Save right away (not inside a React state update), so a change made just
+  // before the screen closes — like "Finish" in cooking mode — isn't lost.
   const update = useCallback(
-    (fn: (p: Progress) => Progress) =>
-      setProgress((prev) => {
-        const next = fn(prev);
-        saveProgress(id, next);
-        return next;
-      }),
+    (fn: (p: Progress) => Progress) => {
+      const next = fn(latest.current);
+      latest.current = next;
+      saveProgress(id, next);
+      setProgress(next);
+    },
     [id],
   );
   return [progress, update] as const;

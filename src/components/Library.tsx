@@ -130,7 +130,7 @@ export default function Library() {
         {recipes?.length === 0 && (
           <div className="empty">
             <p className="empty-title">Your recipe box is empty.</p>
-            <p className="muted">Scan a recipe card to add your first recipe.</p>
+            <p className="muted">Add your first recipe: scan a card, paste a website link, or paste the text.</p>
           </div>
         )}
         {all.length > 0 && (hasFavorites || tags.length > 0 || avoiding) && (
@@ -176,7 +176,7 @@ export default function Library() {
       </main>
       <div className="fab-bar">
         <a className="btn primary big" href={href({ name: "scan" })}>
-          <Icon name="camera" /> Scan a recipe card
+          <Icon name="plus" /> Add a recipe
         </a>
       </div>
     </>

@@ -14,6 +14,7 @@ const BackupSchema = z.object({
       // Added in later versions; older backups won't have them.
       tags: z.array(z.string()).optional(),
       favorite: z.boolean().optional(),
+      source: z.string().optional(),
     }),
   ),
 });
@@ -48,6 +49,7 @@ export async function importBackup(file: File): Promise<number> {
     const recipe: SavedRecipe = {
       ...sanitizeRecipe({ ...r, tags: r.tags ?? [] }),
       favorite: r.favorite ?? false,
+      source: r.source && /^https?:\/\//.test(r.source) ? r.source : undefined,
       id: r.id || newId(),
       createdAt: r.createdAt,
       photos: r.photos.filter((p) => p.startsWith("data:image/")),
