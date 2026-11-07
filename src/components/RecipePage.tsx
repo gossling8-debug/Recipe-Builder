@@ -3,6 +3,7 @@ import Header from "./Header";
 import Icon from "./Icon";
 import RecipeView from "./RecipeView";
 import RecipeEditor from "./RecipeEditor";
+import Substitutes from "./Substitutes";
 import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
 import { deleteRecipe, getRecipe, saveRecipe } from "../lib/db";
 import { href, navigate } from "../lib/route";
@@ -119,7 +120,20 @@ export default function RecipePage({ id }: { id: string }) {
         )}
         {recipe && !editing && (
           <>
-            <RecipeView key={recipe.id} recipe={recipe} recipeId={recipe.id} />
+            <RecipeView
+              key={recipe.id}
+              recipe={recipe}
+              recipeId={recipe.id}
+              extra={
+                <Substitutes
+                  recipe={recipe}
+                  onSaved={async (updated) => {
+                    await saveRecipe(updated);
+                    setRecipe(updated);
+                  }}
+                />
+              }
+            />
             {recipe.photos.length > 0 && (
               <section className="original">
                 <button className="btn" onClick={() => setShowPhotos((s) => !s)}>

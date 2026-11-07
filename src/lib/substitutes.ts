@@ -1,0 +1,77 @@
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import * as z from "zod/v4";
+import { describeApiError, makeClient, MODEL, ScanError } from "./claude";
+import { recipeToText } from "./share";
+import type { ScannedRecipe } from "./schema";
+
+export const SubstitutionsSchema = z.object({
+  items: z.array(
+    z.object({
+      ingredient: z.string().describe('The ingredient as written in the recipe, e.g. "1/2 cup butter".'),
+      role: z.string().describe("What it does in THIS recipe, in one short sentence (e.g. adds richness and helps the dip set)."),
+      options: z.array(
+        z.object({
+          substitute: z.string().describe('What to use, e.g. "Vegan butter sticks (e.g. Miyoko\'s, Country Crock Plant Butter)".'),
+          amount: z.string().describe('How much for this recipe as written, e.g. "1/2 cup (same amount)".'),
+          closeness: z.enum(["Nearly identical", "Close", "Noticeably different"]),
+          what_changes: z.string().describe("Honest, specific description of how the result differs: taste, texture, browning, rise, spread, set."),
+          tip: z.string().nullable().describe("One practical tip to get the best result, or null."),
+        }),
+      ),
+      leave_it_out: z
+        .string()
+        .nullable()
+        .describe("If simply leaving it out is reasonable (or the best choice), say what happens. null if it isn't."),
+    }),
+  ),
+  label_check: z
+    .array(z.string())
+    .describe("Other ingredients in this recipe that often hide the avoided items in packaged versions (e.g. broth, sauces). Empty if none."),
+});
+export type Substitutions = z.infer<typeof SubstitutionsSchema>;
+
+const SYSTEM = `You are a practical, honest home-cooking advisor. The cook needs to avoid certain ingredients (allergies, intolerances or preferences). For each flagged ingredient in the recipe, suggest 1–3 substitutes that suit the job that ingredient does in THIS recipe — butter that's creamed in cookies needs a different swap than butter melted into a dip.
+
+Be candid. Rate each option "Nearly identical", "Close" or "Noticeably different", and say plainly what changes: taste, texture, browning, rise, spread, how it sets. Don't oversell. If there is no good substitute, say so, and say whether leaving it out works.
+
+Rules:
+- Never suggest anything that contains an item on the avoid list (for example, no ghee for dairy, no almond flour for tree nuts).
+- Give amounts for the recipe as written.
+- Name a common store-bought option when that's the closest match.
+- Only list label checks that genuinely apply to ingredients in this recipe.`;
+
+export async function suggestSubstitutes(
+  apiKey: string,
+  recipe: ScannedRecipe,
+  flagged: { ingredient: string; reasons: string[] }[],
+  avoidLabels: string[],
+): Promise<Substitutions> {
+  const client = makeClient(apiKey);
+  const prompt = [
+    `Avoid list: ${avoidLabels.join(", ")}`,
+    "",
+    "Flagged ingredients:",
+    ...flagged.map((f) => `- ${f.ingredient} (matches: ${f.reasons.join(", ")})`),
+    "",
+    "Recipe:",
+    recipeToText(recipe, 1),
+  ].join("\n");
+
+  let response;
+  try {
+    response = await client.beta.messages.parse({
+      model: MODEL,
+      max_tokens: 8000,
+      output_config: { effort: "medium", format: betaZodOutputFormat(SubstitutionsSchema) },
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      system: SYSTEM,
+      messages: [{ role: "user", content: prompt }],
+    });
+  } catch (err) {
+    throw new ScanError(describeApiError(err));
+  }
+  if (response.stop_reason === "refusal") throw new ScanError("Claude couldn't answer this one. Try again later.");
+  if (!response.parsed_output) throw new ScanError("Claude's answer couldn't be read. Please try again.");
+  return response.parsed_output;
+}

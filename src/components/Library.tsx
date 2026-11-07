@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { saveRecipe } from "../lib/db";
 import { loadShopping } from "../lib/shopping";
+import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -36,13 +37,24 @@ export default function Library() {
   const all = recipes ?? [];
   const tags = [...new Set(all.flatMap((r) => r.tags ?? []))].sort((a, b) => a.localeCompare(b));
   const hasFavorites = all.some((r) => r.favorite);
+  const avoid = loadAvoid();
+  const avoiding = isActive(avoid);
+  const avoidReasons = (r: SavedRecipe) => [...new Set(findAvoided(r.ingredients, avoid).flatMap((m) => m.reasons))];
   // A remembered filter for a tag that no longer exists falls back to All.
-  const activeFilter = filter === "favorites" ? (hasFavorites ? filter : "all") : filter !== "all" && !tags.includes(filter) ? "all" : filter;
+  const activeFilter =
+    filter === "favorites" ? (hasFavorites ? filter : "all")
+    : filter === "safe" ? (avoiding ? filter : "all")
+    : filter !== "all" && !tags.includes(filter) ? "all" : filter;
 
   const q = query.trim().toLowerCase();
   const shown = all
     .filter((r) => !q || r.title.toLowerCase().includes(q) || r.ingredients.some((i) => i.name.toLowerCase().includes(q)) || (r.tags ?? []).some((t) => t.toLowerCase().includes(q)))
-    .filter((r) => activeFilter === "all" || (activeFilter === "favorites" ? r.favorite : (r.tags ?? []).includes(activeFilter)))
+    .filter((r) =>
+      activeFilter === "all" ? true
+      : activeFilter === "favorites" ? r.favorite
+      : activeFilter === "safe" ? avoidReasons(r).length === 0
+      : (r.tags ?? []).includes(activeFilter),
+    )
     .sort((a, b) => (sort === "az" ? a.title.localeCompare(b.title) : b.createdAt - a.createdAt));
 
   // On the plain "All" view, favorites are pinned in their own section at the top.
@@ -59,6 +71,9 @@ export default function Library() {
           <div className="muted small">
             {(r.tags ?? []).length ? (r.tags ?? []).join(" · ") : `${plural(r.ingredients.length, "ingredient")} · ${plural(r.steps.length, "step")}`}
           </div>
+          {avoiding && avoidReasons(r).length > 0 && (
+            <div className="small avoid-meta">Contains {avoidReasons(r).join(", ").toLowerCase()}</div>
+          )}
         </div>
       </a>
       <button
@@ -115,11 +130,12 @@ export default function Library() {
             <p className="muted">Scan a recipe card to add your first recipe.</p>
           </div>
         )}
-        {all.length > 0 && (hasFavorites || tags.length > 0) && (
+        {all.length > 0 && (hasFavorites || tags.length > 0 || avoiding) && (
           <div className="filters" role="group" aria-label="Show">
             {[
               ["all", "All"],
               ...(hasFavorites ? [["favorites", "Favorites"]] : []),
+              ...(avoiding ? [["safe", "Fits my avoid list"]] : []),
               ...tags.map((t) => [t, t]),
             ].map(([value, label]) => (
               <button

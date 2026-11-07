@@ -4,6 +4,7 @@ import Icon from "./Icon";
 import { applyTextSize, getTextSize, TEXT_SIZES, type TextSize } from "../lib/textSize";
 import { getApiKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
+import { ALLERGEN_GROUPS, loadAvoid, saveAvoid, type AvoidList } from "../lib/avoid";
 import { exportBackup, importBackup } from "../lib/backup";
 import { storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 
@@ -12,6 +13,17 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [keyError, setKeyError] = useState("");
   const [textSize, setTextSize] = useState<TextSize>(getTextSize());
+  const [avoid, setAvoid] = useState<AvoidList>(loadAvoid);
+  const [newAvoid, setNewAvoid] = useState("");
+  const updateAvoid = (a: AvoidList) => {
+    setAvoid(a);
+    saveAvoid(a);
+  };
+  const addAvoidWord = () => {
+    const w = newAvoid.trim().toLowerCase();
+    if (w && !avoid.custom.includes(w)) updateAvoid({ ...avoid, custom: [...avoid.custom, w] });
+    setNewAvoid("");
+  };
   const [mode, setMode] = useState<StorageMode | null>(null);
   const [message, setMessage] = useState("");
   const [persisted, setPersisted] = useState<boolean | null>(null);
@@ -74,6 +86,55 @@ export default function Settings() {
                 {label}
               </button>
             ))}
+          </div>
+        </section>
+
+        <section>
+          <h3>Allergies &amp; ingredients to avoid</h3>
+          <p className="muted small">
+            Recipes that use these are flagged, you can filter them out of your list, and each recipe can suggest
+            substitutes. Flags are a helpful check, not a guarantee — always read labels on packaged ingredients.
+          </p>
+          <div className="tag-picker">
+            {Object.entries(ALLERGEN_GROUPS).map(([k, g]) => {
+              const on = avoid.groups.includes(k);
+              return (
+                <button
+                  key={k}
+                  className={on ? "tag on" : "tag"}
+                  aria-pressed={on}
+                  onClick={() => updateAvoid({ ...avoid, groups: on ? avoid.groups.filter((x) => x !== k) : [...avoid.groups, k] })}
+                >
+                  {on && <Icon name="check" size={14} />} {g.label}
+                </button>
+              );
+            })}
+          </div>
+          {avoid.custom.length > 0 && (
+            <div className="tag-picker">
+              {avoid.custom.map((w) => (
+                <button
+                  key={w}
+                  className="tag on"
+                  aria-label={`Stop avoiding ${w}`}
+                  onClick={() => updateAvoid({ ...avoid, custom: avoid.custom.filter((x) => x !== w) })}
+                >
+                  {w} <Icon name="close" size={14} />
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="new-tag">
+            <input
+              className="text-input"
+              placeholder="Something else, e.g. butter"
+              value={newAvoid}
+              onChange={(e) => setNewAvoid(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addAvoidWord()}
+            />
+            <button className="btn" onClick={addAvoidWord} disabled={!newAvoid.trim()}>
+              Add
+            </button>
           </div>
         </section>
 
