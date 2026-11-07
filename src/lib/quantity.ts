@@ -81,7 +81,7 @@ const UNITS = ["cup", "tablespoon", "teaspoon", "pound", "ounce", "clove", "can"
 const UNIT_AFTER_NUMBER = new RegExp(`(${NUMBER.source})(\\s+)(${UNITS.join("|")})(e?s)?\\b`, "gi");
 
 /** "2 cup" → "2 cups", "½ cups" → "½ cup" */
-function fixPlurals(text: string): string {
+export function fixPlurals(text: string): string {
   return text.replace(UNIT_AFTER_NUMBER, (_m, num: string, space: string, unit: string) => {
     const plural = parseNumber(num) > 1;
     const suffix = !plural ? "" : /(ch|sh)$/i.test(unit) || /box$/i.test(unit) ? "es" : "s";

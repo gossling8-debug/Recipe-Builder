@@ -19,6 +19,15 @@ where it's added, so you don't have to flip back and forth between the steps and
 - **Resize a recipe** (½× to 3×): amounts in the list and in every step update, including metric
   conversions, while package sizes like "2 (8 oz) blocks" stay as they are.
 - **Edit a recipe** to fix anything misread. Steps use `[ingredient: amount]` tags.
+- **Favorites**: star a recipe (on the recipe or straight from the list); starred recipes are pinned
+  at the top of the list.
+- **Share** a recipe (at the chosen size) or the shopping list through the phone's share sheet;
+  falls back to copying the text.
+- **Shopping list**: add recipes at any size; matching ingredients are added up (1 cup + 2 cups sugar
+  → 3 cups), items can be ticked off, and the list can be shared.
+- **Tags, filters and sorting**: Claude suggests tags when scanning; edit them in the editor; filter
+  the list by Favorites or any tag and sort by newest or A–Z.
+- **Text size**: Standard, Large or Largest, in Settings.
 - **Library saved on your phone**, with search, and it works offline once loaded.
 - **Backup / restore** to a file, because clearing the site's data in your browser erases saved recipes.
 

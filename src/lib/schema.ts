@@ -51,6 +51,9 @@ export const RecipeSchema = z.object({
   ingredients: z.array(IngredientSchema),
   steps: z.array(StepSchema),
   notes: z.string().nullable().describe("Any tips, sources or notes on the card that aren't steps. null if none."),
+  tags: z
+    .array(z.string())
+    .describe('1–3 short categories for finding this recipe later, e.g. "Dinner", "Dessert", "Baking", "Breakfast", "Side", "Appetizer", "Soup", "Drink", "Holiday", "Slow cooker". Title Case.'),
   warnings: z
     .array(z.string())
     .describe("Short notes about anything unreadable, guessed, or missing (e.g. an ingredient with no amount). Empty if none."),
@@ -67,6 +70,8 @@ export interface SavedRecipe extends ScannedRecipe {
   createdAt: number;
   /** Compressed copies of the original card photos, as data: URLs. */
   photos: string[];
+  /** Starred by the cook; shown in the Favorites section. */
+  favorite?: boolean;
 }
 
 /** Formats an ingredient line for the ingredient list, e.g. "2 cups flour, sifted". */
@@ -97,7 +102,7 @@ export function sanitizeRecipe(r: ScannedRecipe): ScannedRecipe {
         .filter((seg) => seg.text.length > 0),
     }))
     .filter((step) => step.segments.some((s) => s.text.trim().length > 0));
-  return { ...r, title: r.title.trim() || "Untitled recipe", steps };
+  return { ...r, title: r.title.trim() || "Untitled recipe", steps, tags: cleanTags(r.tags ?? []) };
 }
 
 /** Indexes of ingredients that never show up in any step — worth flagging to the cook. */
@@ -105,4 +110,21 @@ export function unusedIngredients(r: ScannedRecipe): number[] {
   const used = new Set<number>();
   for (const step of r.steps) for (const seg of step.segments) if (seg.ingredient_index !== null) used.add(seg.ingredient_index);
   return r.ingredients.map((_, i) => i).filter((i) => !used.has(i));
+}
+
+/** Trims, Title-Cases and de-duplicates tags ("dinner ", "Dinner" → "Dinner"). */
+export function cleanTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of tags) {
+    const t = raw.trim().replace(/\s+/g, " ");
+    if (!t) continue;
+    const nice = t.replace(/\b\w/g, (c) => c.toUpperCase());
+    const key = nice.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push(nice);
+    }
+  }
+  return out;
 }

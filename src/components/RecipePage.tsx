@@ -6,12 +6,16 @@ import RecipeEditor from "./RecipeEditor";
 import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
 import { deleteRecipe, getRecipe, saveRecipe } from "../lib/db";
 import { href, navigate } from "../lib/route";
+import { recipeToText, shareText } from "../lib/share";
+import { removeFromShopping } from "../lib/shopping";
+import { useToast } from "./Toast";
 import type { SavedRecipe } from "../lib/schema";
 
 export default function RecipePage({ id }: { id: string }) {
   const [recipe, setRecipe] = useState<SavedRecipe | null | undefined>(undefined);
   const [showPhotos, setShowPhotos] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [toast, showToast] = useToast();
 
   useEffect(() => {
     getRecipe(id).then((r) => setRecipe(r ?? null), () => setRecipe(null));
@@ -37,7 +41,23 @@ export default function RecipePage({ id }: { id: string }) {
     if (!recipe || !confirm(`Delete “${recipe.title}”? This can't be undone.`)) return;
     await deleteRecipe(recipe.id);
     clearProgress(recipe.id);
+    removeFromShopping(recipe.id);
     navigate({ name: "library" }, true);
+  }
+
+  async function toggleFavorite() {
+    if (!recipe) return;
+    const updated = { ...recipe, favorite: !recipe.favorite };
+    setRecipe(updated);
+    await saveRecipe(updated);
+    showToast(updated.favorite ? "Added to Favorites" : "Removed from Favorites");
+  }
+
+  async function share() {
+    if (!recipe) return;
+    const result = await shareText(recipe.title, recipeToText(recipe, loadProgress(recipe.id).scale));
+    if (result === "copied") showToast("Recipe copied — paste it anywhere");
+    if (result === "failed") showToast("Sharing isn't available in this browser");
   }
 
   return (
@@ -48,11 +68,19 @@ export default function RecipePage({ id }: { id: string }) {
         actions={
           recipe && !editing ? (
             <>
+              <button
+                className={recipe.favorite ? "icon-btn starred" : "icon-btn"}
+                onClick={toggleFavorite}
+                aria-label={recipe.favorite ? "Remove from favorites" : "Add to favorites"}
+                aria-pressed={!!recipe.favorite}
+              >
+                <Icon name="star" filled={!!recipe.favorite} />
+              </button>
+              <button className="icon-btn" onClick={share} aria-label="Share recipe">
+                <Icon name="share" />
+              </button>
               <button className="icon-btn" onClick={() => setEditing(true)} aria-label="Edit recipe">
                 <Icon name="edit" />
-              </button>
-              <button className="icon-btn" onClick={remove} aria-label="Delete recipe">
-                <Icon name="trash" />
               </button>
             </>
           ) : null
@@ -65,6 +93,7 @@ export default function RecipePage({ id }: { id: string }) {
           <RecipeEditor
             recipe={recipe}
             onCancel={() => setEditing(false)}
+            onDelete={remove}
             onSave={async (updated) => {
               await saveRecipe(updated);
               // Step and ingredient positions may have changed: keep only the chosen size.
@@ -77,7 +106,7 @@ export default function RecipePage({ id }: { id: string }) {
         )}
         {recipe && !editing && (
           <>
-            <RecipeView recipe={recipe} recipeId={recipe.id} />
+            <RecipeView key={recipe.id} recipe={recipe} recipeId={recipe.id} />
             {recipe.photos.length > 0 && (
               <section className="original">
                 <button className="btn" onClick={() => setShowPhotos((s) => !s)}>
@@ -89,6 +118,7 @@ export default function RecipePage({ id }: { id: string }) {
           </>
         )}
       </main>
+      {toast}
     </>
   );
 }

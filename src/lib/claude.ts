@@ -16,6 +16,8 @@ Steps: use the card's own steps. If the instructions are one paragraph, split th
 - If the step only refers back to something already added ("stir the batter"), it is plain text, not an ingredient segment.
 - If a step uses an ingredient that is not in the list (for example "salt to taste"), add it to the ingredient list with an empty quantity and reference it.
 
+Tags: give 1–3 short categories that would help find this recipe later (meal or course, and a method like "Slow cooker" or an occasion like "Holiday" only if obvious).
+
 If anything is unreadable or you had to guess, make your best reading and add a short warning that says what you guessed. If the photo is not a recipe, return an empty ingredient and step list and explain in warnings.`;
 
 export class ScanError extends Error {}

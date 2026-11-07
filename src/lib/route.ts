@@ -4,12 +4,14 @@ export type Route =
   | { name: "library" }
   | { name: "scan" }
   | { name: "settings" }
+  | { name: "shopping" }
   | { name: "recipe"; id: string };
 
 export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#\/?/, "");
   if (path === "scan") return { name: "scan" };
   if (path === "settings") return { name: "settings" };
+  if (path === "shopping") return { name: "shopping" };
   const m = path.match(/^recipe\/(.+)$/);
   if (m) return { name: "recipe", id: decodeURIComponent(m[1]) };
   return { name: "library" };

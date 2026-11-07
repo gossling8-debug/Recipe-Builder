@@ -16,18 +16,21 @@ const PATHS = {
   down: "M12 5v14 M6 13l6 6 6-6",
   check: "M5 12.5l4.5 4.5L19 7",
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z M20 20l-4-4",
+  share: "M12 3.5v11 M8 7.5l4-4 4 4 M6 11H5.5A1.5 1.5 0 0 0 4 12.5v6A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5v-6a1.5 1.5 0 0 0-1.5-1.5H18",
+  star: "M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.6-5 2.6 1-5.6-4.1-3.9 5.6-.8z",
+  bag: "M5.5 8h13l-1 11.5a1.5 1.5 0 0 1-1.5 1.5H8a1.5 1.5 0 0 1-1.5-1.5z M9 10V6.5a3 3 0 0 1 6 0V10",
 } as const;
 
 export type IconName = keyof typeof PATHS;
 
-export default function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
+export default function Icon({ name, size = 22, filled = false }: { name: IconName; size?: number; filled?: boolean }) {
   return (
     <svg
       className="icon"
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
       strokeWidth={1.6}
       strokeLinecap="round"

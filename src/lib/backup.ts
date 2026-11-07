@@ -11,6 +11,9 @@ const BackupSchema = z.object({
       id: z.string(),
       createdAt: z.number(),
       photos: z.array(z.string()),
+      // Added in later versions; older backups won't have them.
+      tags: z.array(z.string()).optional(),
+      favorite: z.boolean().optional(),
     }),
   ),
 });
@@ -43,7 +46,8 @@ export async function importBackup(file: File): Promise<number> {
   if (!parsed.success) throw new Error("That file isn't a Recipe Builder backup (or it's damaged).");
   for (const r of parsed.data.recipes) {
     const recipe: SavedRecipe = {
-      ...sanitizeRecipe(r),
+      ...sanitizeRecipe({ ...r, tags: r.tags ?? [] }),
+      favorite: r.favorite ?? false,
       id: r.id || newId(),
       createdAt: r.createdAt,
       photos: r.photos.filter((p) => p.startsWith("data:image/")),
