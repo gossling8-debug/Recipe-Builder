@@ -5,6 +5,8 @@ import type { SavedRecipe } from "./schema";
 export interface ShoppingState {
   recipes: { id: string; scale: number }[];
   checked: string[];
+  /** Items already opened at the store (so the cook can see what's been looked up). */
+  opened?: string[];
 }
 
 const KEY = "recipe-builder.shopping";
@@ -118,4 +120,19 @@ export function shoppingToText(items: ShoppingItem[], checked: Set<string>): str
   const lines = ["Shopping list", ""];
   for (const it of items) if (!checked.has(it.key)) lines.push(`☐ ${[it.amount, it.name].filter(Boolean).join(" ")}`);
   return lines.join("\n");
+}
+
+/**
+ * A Walmart search for one shopping-list item. Opens the Walmart app if it's
+ * installed (signed into the cook's account, e.g. Walmart+), otherwise the site.
+ * Only the ingredient name is searched — "4 cups sugar" would confuse the
+ * search, and the cook picks the brand and package size.
+ */
+export function walmartSearchUrl(name: string): string {
+  const q = name
+    .replace(/\(.*?\)/g, " ")
+    .replace(/\b(for (serving|topping|garnish)|to taste|optional|divided)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return `https://www.walmart.com/search?q=${encodeURIComponent(q)}`;
 }

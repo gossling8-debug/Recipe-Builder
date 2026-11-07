@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
+import CloudSection from "./CloudSection";
 import { applyTextSize, getTextSize, TEXT_SIZES, type TextSize } from "../lib/textSize";
 import { getApiKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
@@ -239,6 +240,8 @@ export default function Settings() {
           </div>
           {keyError && <div className="callout warn">{keyError}</div>}
         </section>
+
+        <CloudSection />
 
         <section>
           <h3>Backup</h3>

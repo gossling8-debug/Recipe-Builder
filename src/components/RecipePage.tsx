@@ -39,7 +39,10 @@ export default function RecipePage({ id }: { id: string }) {
   }, [recipe]);
 
   useEffect(() => {
-    getRecipe(id).then((r) => setRecipe(r ?? null), () => setRecipe(null));
+    const load = () => getRecipe(id).then((r) => setRecipe(r ?? null), () => setRecipe(null));
+    void load();
+    window.addEventListener("recipes-synced", load);
+    return () => window.removeEventListener("recipes-synced", load);
   }, [id]);
 
   // Keep the screen on while a recipe is open — no greasy-finger unlocking mid-recipe.

@@ -1,0 +1,10 @@
+rules_version = '2';
+
+// Each person can read and write only their own data, and only when signed in.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
