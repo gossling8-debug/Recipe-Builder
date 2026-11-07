@@ -3,26 +3,26 @@ import Header from "./Header";
 import { getApiKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
 import { exportBackup, importBackup } from "../lib/backup";
-import { isStorageBlocked, STORAGE_BLOCKED_HELP } from "../lib/db";
+import { storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 
 export default function Settings() {
   const [key, setKey] = useState(getApiKey());
   const [saved, setSaved] = useState(false);
   const [keyError, setKeyError] = useState("");
+  const [mode, setMode] = useState<StorageMode | null>(null);
   const [message, setMessage] = useState("");
   const [persisted, setPersisted] = useState<boolean | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     navigator.storage?.persisted?.().then(setPersisted, () => setPersisted(null));
+    storageMode().then(setMode, () => {});
   }, []);
 
   function save() {
-    if (!setApiKey(key)) {
-      setKeyError(STORAGE_BLOCKED_HELP);
-      return;
-    }
-    setKeyError("");
+    setKeyError(
+      setApiKey(key) ? "" : "This browser won't let the app remember your key, so it's kept only until you close the app.",
+    );
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -32,7 +32,7 @@ export default function Settings() {
       const n = await exportBackup();
       setMessage(`Backup file created with ${n} recipe${n === 1 ? "" : "s"}. Save it somewhere safe (Files, iCloud Drive, Google Drive, email).`);
     } catch (e) {
-      setMessage(isStorageBlocked(e) ? STORAGE_BLOCKED_HELP : `Backup failed: ${e instanceof Error ? e.message : e}`);
+      setMessage(e instanceof DOMException ? storageErrorMessage(e) : `Backup failed: ${e instanceof Error ? e.message : e}`);
     }
   }
 
@@ -42,7 +42,7 @@ export default function Settings() {
       const n = await importBackup(file);
       setMessage(`Restored ${n} recipe${n === 1 ? "" : "s"}.`);
     } catch (e) {
-      setMessage(isStorageBlocked(e) ? STORAGE_BLOCKED_HELP : e instanceof Error ? e.message : String(e));
+      setMessage(e instanceof DOMException ? storageErrorMessage(e) : e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -69,7 +69,7 @@ export default function Settings() {
               {saved ? "Saved ✓" : "Save key"}
             </button>
           </div>
-          {keyError && <div className="callout error">{keyError}</div>}
+          {keyError && <div className="callout warn">{keyError}</div>}
         </section>
 
         <section>
@@ -79,6 +79,11 @@ export default function Settings() {
             them, so export a backup now and then.
             {persisted === true && " This browser has agreed not to clear them on its own to free up space."}
           </p>
+          {mode && (
+            <p className="small" data-testid="storage-mode">
+              <strong>Storage on this browser:</strong> {STORAGE_MODE_TEXT[mode]}
+            </p>
+          )}
           <div className="button-row">
             <button className="btn" onClick={doExport}>
               ⬇️ Export backup
