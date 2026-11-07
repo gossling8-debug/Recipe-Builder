@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
+import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 import { href } from "../lib/route";
 import { getApiKey } from "../lib/settings";
@@ -24,14 +25,15 @@ export default function Library() {
   return (
     <>
       <Header
-        title="My Recipes"
+        title=""
         actions={
           <a className="icon-btn" href={href({ name: "settings" })} aria-label="Settings">
-            ⚙
+            <Icon name="settings" />
           </a>
         }
       />
       <main className="page">
+        <h1 className="page-title">Recipes</h1>
         {!getApiKey() && !error && (
           <div className="callout">
             <strong>Welcome!</strong> To scan cards, add your Anthropic API key first.{" "}
@@ -53,11 +55,8 @@ export default function Library() {
         {recipes === null && !error && <p className="muted">Loading…</p>}
         {recipes?.length === 0 && (
           <div className="empty">
-            <div className="empty-icon" aria-hidden>
-              🗂️
-            </div>
-            <p>No recipes yet.</p>
-            <p className="muted">Tap “Scan a recipe card” and take a photo of a card.</p>
+            <p className="empty-title">Your recipe box is empty.</p>
+            <p className="muted">Scan a recipe card to add your first recipe.</p>
           </div>
         )}
         <ul className="recipe-list">
@@ -68,7 +67,7 @@ export default function Library() {
                 <div>
                   <div className="recipe-card-title">{r.title}</div>
                   <div className="muted small">
-                    {r.ingredients.length} ingredients · {r.steps.length} steps
+                    {plural(r.ingredients.length, "ingredient")} · {plural(r.steps.length, "step")}
                   </div>
                 </div>
               </a>
@@ -79,9 +78,11 @@ export default function Library() {
       </main>
       <div className="fab-bar">
         <a className="btn primary big" href={href({ name: "scan" })}>
-          📷 Scan a recipe card
+          <Icon name="camera" /> Scan a recipe card
         </a>
       </div>
     </>
   );
 }
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;

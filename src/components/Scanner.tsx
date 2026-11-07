@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
+import Icon from "./Icon";
 import { compressPhoto, stripDataUrl } from "../lib/image";
 import { newId, saveRecipe, storageErrorMessage } from "../lib/db";
 import { href, navigate } from "../lib/route";
@@ -99,7 +100,7 @@ export default function Scanner() {
                       aria-label={`Remove photo ${i + 1}`}
                       onClick={() => setPhotos((all) => all.filter((_, j) => j !== i))}
                     >
-                      ×
+                      <Icon name="close" size={18} />
                     </button>
                   </li>
                 ))}
@@ -108,10 +109,10 @@ export default function Scanner() {
             {photos.length < MAX_PHOTOS && (
               <div className="button-row">
                 <button className="btn" onClick={() => cameraInput.current?.click()}>
-                  📷 {photos.length ? "Add another photo" : "Take photo"}
+                  <Icon name="camera" /> {photos.length ? "Add another photo" : "Take photo"}
                 </button>
                 <button className="btn" onClick={() => libraryInput.current?.click()}>
-                  🖼️ Choose from photos
+                  <Icon name="image" /> Choose from photos
                 </button>
               </div>
             )}
@@ -145,7 +146,7 @@ export default function Scanner() {
       {!busy && photos.length > 0 && (
         <div className="fab-bar">
           <button className="btn primary big" onClick={read}>
-            ✨ Read recipe
+            Read recipe
           </button>
         </div>
       )}

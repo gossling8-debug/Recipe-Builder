@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
+import Icon from "./Icon";
 import { getApiKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
 import { exportBackup, importBackup } from "../lib/backup";
@@ -86,10 +87,10 @@ export default function Settings() {
           )}
           <div className="button-row">
             <button className="btn" onClick={doExport}>
-              ⬇️ Export backup
+              <Icon name="download" size={20} /> Export backup
             </button>
             <button className="btn" onClick={() => fileInput.current?.click()}>
-              ⬆️ Restore backup
+              <Icon name="upload" size={20} /> Restore backup
             </button>
           </div>
           <input

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { fieldsToIngredient, ingredientToFields, stepToText, textToStep } from "../lib/edit";
 import { sanitizeRecipe, type SavedRecipe } from "../lib/schema";
+import Icon from "./Icon";
 
 interface Row {
   key: number;
@@ -101,7 +102,7 @@ export default function RecipeEditor(props: {
               onChange={(e) => setRow(r.key, { name: e.target.value })}
             />
             <button className="icon-btn small-btn" aria-label="Remove ingredient" onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}>
-              ✕
+              <Icon name="close" size={18} />
             </button>
           </li>
         ))}
@@ -110,7 +111,7 @@ export default function RecipeEditor(props: {
         className="btn"
         onClick={() => setRows((rs) => [...rs, { key: nextKey++, amount: "", name: "", section: rs[rs.length - 1]?.section ?? null }])}
       >
-        + Add ingredient
+        <Icon name="plus" size={18} /> Add ingredient
       </button>
 
       <h3>Instructions</h3>
@@ -125,7 +126,7 @@ export default function RecipeEditor(props: {
               <strong>Step {i + 1}</strong>
               <span>
                 <button className="icon-btn small-btn" aria-label="Move step up" disabled={i === 0} onClick={() => moveStep(i, -1)}>
-                  ↑
+                  <Icon name="up" size={18} />
                 </button>
                 <button
                   className="icon-btn small-btn"
@@ -133,10 +134,10 @@ export default function RecipeEditor(props: {
                   disabled={i === steps.length - 1}
                   onClick={() => moveStep(i, 1)}
                 >
-                  ↓
+                  <Icon name="down" size={18} />
                 </button>
                 <button className="icon-btn small-btn" aria-label="Remove step" onClick={() => setSteps((ss) => ss.filter((_, j) => j !== i))}>
-                  ✕
+                  <Icon name="close" size={18} />
                 </button>
               </span>
             </div>
@@ -145,7 +146,7 @@ export default function RecipeEditor(props: {
         ))}
       </ol>
       <button className="btn" onClick={() => setSteps((ss) => [...ss, ""])}>
-        + Add step
+        <Icon name="plus" size={18} /> Add step
       </button>
 
       <h3>Notes</h3>

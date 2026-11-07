@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
+import Icon from "./Icon";
 import RecipeView from "./RecipeView";
 import RecipeEditor from "./RecipeEditor";
 import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
@@ -48,10 +49,10 @@ export default function RecipePage({ id }: { id: string }) {
           recipe && !editing ? (
             <>
               <button className="icon-btn" onClick={() => setEditing(true)} aria-label="Edit recipe">
-                ✏️
+                <Icon name="edit" />
               </button>
               <button className="icon-btn" onClick={remove} aria-label="Delete recipe">
-                🗑
+                <Icon name="trash" />
               </button>
             </>
           ) : null
