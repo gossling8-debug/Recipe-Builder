@@ -8,11 +8,13 @@ export function getApiKey(): string {
   }
 }
 
-export function setApiKey(value: string): void {
+/** Returns false if the browser refused to store it. */
+export function setApiKey(value: string): boolean {
   try {
     if (value) localStorage.setItem(KEY, value.trim());
     else localStorage.removeItem(KEY);
+    return true;
   } catch {
-    /* storage blocked (private mode) — the key just won't be remembered */
+    return false;
   }
 }

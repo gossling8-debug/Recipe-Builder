@@ -3,10 +3,12 @@ import Header from "./Header";
 import { getApiKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
 import { exportBackup, importBackup } from "../lib/backup";
+import { isStorageBlocked, STORAGE_BLOCKED_HELP } from "../lib/db";
 
 export default function Settings() {
   const [key, setKey] = useState(getApiKey());
   const [saved, setSaved] = useState(false);
+  const [keyError, setKeyError] = useState("");
   const [message, setMessage] = useState("");
   const [persisted, setPersisted] = useState<boolean | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -16,7 +18,11 @@ export default function Settings() {
   }, []);
 
   function save() {
-    setApiKey(key);
+    if (!setApiKey(key)) {
+      setKeyError(STORAGE_BLOCKED_HELP);
+      return;
+    }
+    setKeyError("");
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -26,7 +32,7 @@ export default function Settings() {
       const n = await exportBackup();
       setMessage(`Backup file created with ${n} recipe${n === 1 ? "" : "s"}. Save it somewhere safe (Files, iCloud Drive, Google Drive, email).`);
     } catch (e) {
-      setMessage(`Backup failed: ${e instanceof Error ? e.message : e}`);
+      setMessage(isStorageBlocked(e) ? STORAGE_BLOCKED_HELP : `Backup failed: ${e instanceof Error ? e.message : e}`);
     }
   }
 
@@ -36,7 +42,7 @@ export default function Settings() {
       const n = await importBackup(file);
       setMessage(`Restored ${n} recipe${n === 1 ? "" : "s"}.`);
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : String(e));
+      setMessage(isStorageBlocked(e) ? STORAGE_BLOCKED_HELP : e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -63,6 +69,7 @@ export default function Settings() {
               {saved ? "Saved ✓" : "Save key"}
             </button>
           </div>
+          {keyError && <div className="callout error">{keyError}</div>}
         </section>
 
         <section>

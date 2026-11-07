@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
-import { listRecipes } from "../lib/db";
+import { listRecipes, storageErrorMessage } from "../lib/db";
 import { href } from "../lib/route";
 import { getApiKey } from "../lib/settings";
 import type { SavedRecipe } from "../lib/schema";
@@ -11,7 +11,7 @@ export default function Library() {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    listRecipes().then(setRecipes, (e) => setError(String(e?.message ?? e)));
+    listRecipes().then(setRecipes, (e) => setError(storageErrorMessage(e)));
   }, []);
 
   const q = query.trim().toLowerCase();
@@ -30,13 +30,13 @@ export default function Library() {
         }
       />
       <main className="page">
-        {!getApiKey() && (
+        {!getApiKey() && !error && (
           <div className="callout">
             <strong>Welcome!</strong> To scan cards, add your Anthropic API key first.{" "}
             <a href={href({ name: "settings" })}>Open Settings</a>
           </div>
         )}
-        {error && <div className="callout error">Couldn't load your recipes: {error}</div>}
+        {error && <div className="callout error">{error}</div>}
         {recipes && recipes.length > 3 && (
           <input
             className="search"

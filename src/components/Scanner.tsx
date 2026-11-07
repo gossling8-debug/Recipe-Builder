@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
 import { compressPhoto, stripDataUrl } from "../lib/image";
-import { newId, saveRecipe } from "../lib/db";
+import { isStorageBlocked, newId, saveRecipe, STORAGE_BLOCKED_HELP } from "../lib/db";
 import { href, navigate } from "../lib/route";
 import { getApiKey } from "../lib/settings";
 
@@ -50,7 +50,7 @@ export default function Scanner() {
       await saveRecipe({ ...recipe, id, createdAt: Date.now(), photos: thumbs });
       navigate({ name: "recipe", id }, true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(isStorageBlocked(e) ? STORAGE_BLOCKED_HELP : e instanceof Error ? e.message : String(e));
       setBusy(false);
     }
   }

@@ -49,3 +49,23 @@ export async function requestPersistentStorage(): Promise<boolean> {
 export function newId(): string {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
+
+/**
+ * The browser threw a SecurityError: it's refusing to let this site store
+ * anything. On iPhone this is almost always Safari's "Block All Cookies"
+ * setting, which also blocks the storage the app uses.
+ */
+export function isStorageBlocked(err: unknown): boolean {
+  return err instanceof DOMException && err.name === "SecurityError";
+}
+
+export const STORAGE_BLOCKED_HELP =
+  "Your browser is blocking this app from saving anything, so recipes and your API key can't be kept. " +
+  "On iPhone: open the Settings app → Apps → Safari (on older iPhones, Settings → Safari), turn off “Block All Cookies”, then close and reopen this app. " +
+  "Private browsing, or a browser such as DuckDuckGo that wipes site data, can cause this too.";
+
+/** Friendly text for an error from the recipe storage. */
+export function storageErrorMessage(err: unknown): string {
+  if (isStorageBlocked(err)) return STORAGE_BLOCKED_HELP;
+  return `Couldn't use this phone's storage: ${err instanceof Error ? err.message : String(err)}`;
+}
