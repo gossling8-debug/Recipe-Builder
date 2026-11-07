@@ -2,6 +2,9 @@ import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/s
 import { scaleAmount } from "../lib/quantity";
 import { toggleIn, useProgress } from "../lib/progress";
 import Icon from "./Icon";
+import { useState } from "react";
+import { addToShopping, loadShopping, removeFromShopping } from "../lib/shopping";
+import { href } from "../lib/route";
 
 const SCALES: [number, string][] = [
   [0.5, "½×"],
@@ -29,6 +32,7 @@ export default function RecipeView({ recipe, recipeId }: { recipe: ScannedRecipe
   const done = new Set(progress.done);
   const added = new Set(progress.added);
   const started = have.size + done.size + added.size > 0;
+  const [listed, setListed] = useState(() => loadShopping().recipes.find((r) => r.id === recipeId));
 
   // Group ingredients under their card sub-headings, keeping card order.
   const groups: { section: string | null; items: number[] }[] = [];
@@ -106,6 +110,35 @@ export default function RecipeView({ recipe, recipeId }: { recipe: ScannedRecipe
           </div>
         ))}
       </section>
+
+      <div className="list-row">
+        {listed && listed.scale === scale ? (
+          <>
+            <span className="small">
+              <Icon name="check" size={16} /> On your <a href={href({ name: "shopping" })}>shopping list</a>
+            </span>
+            <button
+              className="link-btn small"
+              onClick={() => {
+                removeFromShopping(recipeId);
+                setListed(undefined);
+              }}
+            >
+              Remove
+            </button>
+          </>
+        ) : (
+          <button
+            className="btn"
+            onClick={() => {
+              addToShopping(recipeId, scale);
+              setListed({ id: recipeId, scale });
+            }}
+          >
+            <Icon name="bag" size={18} /> {listed ? "Update shopping list to this size" : "Add to shopping list"}
+          </button>
+        )}
+      </div>
 
       <section>
         <h3>Instructions</h3>

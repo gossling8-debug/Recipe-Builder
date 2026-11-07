@@ -5,6 +5,7 @@ import Library from "./components/Library";
 import Scanner from "./components/Scanner";
 import Settings from "./components/Settings";
 import RecipePage from "./components/RecipePage";
+import ShoppingList from "./components/ShoppingList";
 
 export default function App() {
   const route = useRoute();
@@ -17,6 +18,8 @@ export default function App() {
       return <Scanner />;
     case "settings":
       return <Settings />;
+    case "shopping":
+      return <ShoppingList />;
     case "recipe":
       return <RecipePage id={route.id} />;
     default:

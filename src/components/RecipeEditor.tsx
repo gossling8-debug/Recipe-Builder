@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { listRecipes } from "../lib/db";
 import { fieldsToIngredient, ingredientToFields, stepToText, textToStep } from "../lib/edit";
-import { sanitizeRecipe, type SavedRecipe } from "../lib/schema";
+import { cleanTags, sanitizeRecipe, type SavedRecipe } from "../lib/schema";
 import Icon from "./Icon";
 
 interface Row {
@@ -17,6 +18,7 @@ export default function RecipeEditor(props: {
   recipe: SavedRecipe;
   onSave: (r: SavedRecipe) => Promise<void>;
   onCancel: () => void;
+  onDelete: () => void;
 }) {
   const { recipe } = props;
   const [title, setTitle] = useState(recipe.title);
@@ -24,6 +26,23 @@ export default function RecipeEditor(props: {
   const [time, setTime] = useState(recipe.time ?? "");
   const [notes, setNotes] = useState(recipe.notes ?? "");
   const [keepWarnings, setKeepWarnings] = useState(true);
+  const [tags, setTags] = useState<string[]>(recipe.tags ?? []);
+  const [newTag, setNewTag] = useState("");
+  const [knownTags, setKnownTags] = useState<string[]>([]);
+
+  // Suggest tags already used on other recipes, plus a few common ones.
+  useEffect(() => {
+    listRecipes().then(
+      (all) => setKnownTags(cleanTags([...all.flatMap((r) => r.tags ?? []), ...COMMON_TAGS])),
+      () => setKnownTags(COMMON_TAGS),
+    );
+  }, []);
+  const toggleTag = (t: string) =>
+    setTags((ts) => (ts.some((x) => x.toLowerCase() === t.toLowerCase()) ? ts.filter((x) => x.toLowerCase() !== t.toLowerCase()) : [...ts, t]));
+  const addNewTag = () => {
+    if (newTag.trim()) setTags((ts) => cleanTags([...ts, newTag]));
+    setNewTag("");
+  };
   const [rows, setRows] = useState<Row[]>(() =>
     recipe.ingredients.map((ing) => ({ key: nextKey++, ...ingredientToFields(ing), section: ing.section })),
   );
@@ -52,6 +71,7 @@ export default function RecipeEditor(props: {
       time: time.trim() || null,
       notes: notes.trim() || null,
       warnings: keepWarnings ? recipe.warnings : [],
+      tags: cleanTags([...tags, newTag]),
       ingredients,
       steps: steps.filter((s) => s.trim()).map((s) => textToStep(s.trim(), ingredients)),
     });
@@ -80,6 +100,31 @@ export default function RecipeEditor(props: {
           <span>Time / temp</span>
           <input className="text-input" value={time} onChange={(e) => setTime(e.target.value)} placeholder="e.g. 350°F, 25 min" />
         </label>
+      </div>
+
+      <h3>Tags</h3>
+      <p className="muted small">Tap to add or remove. Tags let you filter your recipe list.</p>
+      <div className="tag-picker">
+        {cleanTags([...tags, ...knownTags]).map((t) => {
+          const on = tags.some((x) => x.toLowerCase() === t.toLowerCase());
+          return (
+            <button key={t} className={on ? "tag on" : "tag"} aria-pressed={on} onClick={() => toggleTag(t)}>
+              {on && <Icon name="check" size={14} />} {t}
+            </button>
+          );
+        })}
+      </div>
+      <div className="new-tag">
+        <input
+          className="text-input"
+          placeholder="New tag"
+          value={newTag}
+          onChange={(e) => setNewTag(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && addNewTag()}
+        />
+        <button className="btn" onClick={addNewTag} disabled={!newTag.trim()}>
+          Add
+        </button>
       </div>
 
       <h3>Ingredients</h3>
@@ -160,6 +205,11 @@ export default function RecipeEditor(props: {
       )}
 
       {error && <div className="callout error">{error}</div>}
+      <div className="danger-zone">
+        <button className="btn danger" onClick={props.onDelete} disabled={saving}>
+          <Icon name="trash" size={18} /> Delete this recipe
+        </button>
+      </div>
       <p className="muted small">Saving clears this recipe's checkmarks, since steps may have changed.</p>
       <div className="fab-bar">
         <div className="button-row">
@@ -174,3 +224,5 @@ export default function RecipeEditor(props: {
     </div>
   );
 }
+
+const COMMON_TAGS = ["Breakfast", "Lunch", "Dinner", "Dessert", "Baking", "Side", "Appetizer", "Soup", "Holiday"];

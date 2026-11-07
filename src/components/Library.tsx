@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { saveRecipe } from "../lib/db";
+import { loadShopping } from "../lib/shopping";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -11,15 +13,63 @@ export default function Library() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<StorageMode | null>(null);
+  const [filter, setFilter] = useState(() => remembered("filter", "all"));
+  const [sort, setSort] = useState(() => remembered("sort", "newest"));
+  const onList = loadShopping().recipes.length;
+
+  const choose = (kind: "filter" | "sort", value: string) => {
+    remember(kind, value);
+    (kind === "filter" ? setFilter : setSort)(value);
+  };
+
+  async function toggleFavorite(r: SavedRecipe) {
+    const updated = { ...r, favorite: !r.favorite };
+    setRecipes((rs) => rs && rs.map((x) => (x.id === r.id ? updated : x)));
+    await saveRecipe(updated).catch(() => {});
+  }
 
   useEffect(() => {
     listRecipes().then(setRecipes, (e) => setError(storageErrorMessage(e)));
     storageMode().then(setMode, () => {});
   }, []);
 
+  const all = recipes ?? [];
+  const tags = [...new Set(all.flatMap((r) => r.tags ?? []))].sort((a, b) => a.localeCompare(b));
+  const hasFavorites = all.some((r) => r.favorite);
+  // A remembered filter for a tag that no longer exists falls back to All.
+  const activeFilter = filter === "favorites" ? (hasFavorites ? filter : "all") : filter !== "all" && !tags.includes(filter) ? "all" : filter;
+
   const q = query.trim().toLowerCase();
-  const shown = (recipes ?? []).filter(
-    (r) => !q || r.title.toLowerCase().includes(q) || r.ingredients.some((i) => i.name.toLowerCase().includes(q)),
+  const shown = all
+    .filter((r) => !q || r.title.toLowerCase().includes(q) || r.ingredients.some((i) => i.name.toLowerCase().includes(q)) || (r.tags ?? []).some((t) => t.toLowerCase().includes(q)))
+    .filter((r) => activeFilter === "all" || (activeFilter === "favorites" ? r.favorite : (r.tags ?? []).includes(activeFilter)))
+    .sort((a, b) => (sort === "az" ? a.title.localeCompare(b.title) : b.createdAt - a.createdAt));
+
+  // On the plain "All" view, favorites are pinned in their own section at the top.
+  const pinFavorites = activeFilter === "all" && !q && hasFavorites;
+  const favorites = pinFavorites ? shown.filter((r) => r.favorite) : [];
+  const rest = pinFavorites ? shown.filter((r) => !r.favorite) : shown;
+
+  const row = (r: SavedRecipe) => (
+    <li key={r.id} className="recipe-row">
+      <a href={href({ name: "recipe", id: r.id })} className="recipe-card">
+        {r.photos[0] ? <img src={r.photos[0]} alt="" /> : <div className="thumb-placeholder" />}
+        <div>
+          <div className="recipe-card-title">{r.title}</div>
+          <div className="muted small">
+            {(r.tags ?? []).length ? (r.tags ?? []).join(" · ") : `${plural(r.ingredients.length, "ingredient")} · ${plural(r.steps.length, "step")}`}
+          </div>
+        </div>
+      </a>
+      <button
+        className={r.favorite ? "icon-btn star-btn starred" : "icon-btn star-btn"}
+        aria-label={r.favorite ? `Remove ${r.title} from favorites` : `Add ${r.title} to favorites`}
+        aria-pressed={!!r.favorite}
+        onClick={() => toggleFavorite(r)}
+      >
+        <Icon name="star" size={20} filled={!!r.favorite} />
+      </button>
+    </li>
   );
 
   return (
@@ -27,9 +77,15 @@ export default function Library() {
       <Header
         title=""
         actions={
-          <a className="icon-btn" href={href({ name: "settings" })} aria-label="Settings">
-            <Icon name="settings" />
-          </a>
+          <>
+            <a className="icon-btn badge-host" href={href({ name: "shopping" })} aria-label={`Shopping list${onList ? `, ${onList} recipes` : ""}`}>
+              <Icon name="bag" />
+              {onList > 0 && <span className="badge">{onList}</span>}
+            </a>
+            <a className="icon-btn" href={href({ name: "settings" })} aria-label="Settings">
+              <Icon name="settings" />
+            </a>
+          </>
         }
       />
       <main className="page">
@@ -59,22 +115,45 @@ export default function Library() {
             <p className="muted">Scan a recipe card to add your first recipe.</p>
           </div>
         )}
-        <ul className="recipe-list">
-          {shown.map((r) => (
-            <li key={r.id}>
-              <a href={href({ name: "recipe", id: r.id })} className="recipe-card">
-                {r.photos[0] ? <img src={r.photos[0]} alt="" /> : <div className="thumb-placeholder" />}
-                <div>
-                  <div className="recipe-card-title">{r.title}</div>
-                  <div className="muted small">
-                    {plural(r.ingredients.length, "ingredient")} · {plural(r.steps.length, "step")}
-                  </div>
-                </div>
-              </a>
-            </li>
-          ))}
-        </ul>
-        {recipes && recipes.length > 0 && shown.length === 0 && <p className="muted">No matches.</p>}
+        {all.length > 0 && (hasFavorites || tags.length > 0) && (
+          <div className="filters" role="group" aria-label="Show">
+            {[
+              ["all", "All"],
+              ...(hasFavorites ? [["favorites", "Favorites"]] : []),
+              ...tags.map((t) => [t, t]),
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                className={activeFilter === value ? "tag on" : "tag"}
+                aria-pressed={activeFilter === value}
+                onClick={() => choose("filter", value)}
+              >
+                {value === "favorites" && <Icon name="star" size={13} filled />} {label}
+              </button>
+            ))}
+          </div>
+        )}
+        {all.length > 1 && (
+          <div className="list-toolbar">
+            <span className="muted small">{plural(shown.length, "recipe")}</span>
+            <label className="sort">
+              <span className="muted small">Sort</span>
+              <select value={sort} onChange={(e) => choose("sort", e.target.value)}>
+                <option value="newest">Newest</option>
+                <option value="az">A–Z</option>
+              </select>
+            </label>
+          </div>
+        )}
+        {favorites.length > 0 && (
+          <>
+            <h2 className="list-heading">Favorites</h2>
+            <ul className="recipe-list">{favorites.map(row)}</ul>
+            {rest.length > 0 && <h2 className="list-heading">All recipes</h2>}
+          </>
+        )}
+        {rest.length > 0 && <ul className="recipe-list">{rest.map(row)}</ul>}
+        {all.length > 0 && shown.length === 0 && <p className="muted">No matches.</p>}
       </main>
       <div className="fab-bar">
         <a className="btn primary big" href={href({ name: "scan" })}>
@@ -86,3 +165,19 @@ export default function Library() {
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+// The chosen filter and sort are a convenience: remembered on this device if possible.
+function remembered(kind: string, fallback: string): string {
+  try {
+    return localStorage.getItem(`recipe-builder.library.${kind}`) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+function remember(kind: string, value: string): void {
+  try {
+    localStorage.setItem(`recipe-builder.library.${kind}`, value);
+  } catch {
+    /* ignore */
+  }
+}

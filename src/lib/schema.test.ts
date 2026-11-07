@@ -24,6 +24,7 @@ const base: ScannedRecipe = {
     { segments: [{ text: "   ", ingredient_index: null, amount: null }] },
   ],
   notes: null,
+  tags: [" dinner", "Dinner", "slow cooker"],
   warnings: [],
 };
 
@@ -46,4 +47,8 @@ describe("formatIngredient", () => {
 
 describe("unusedIngredients", () => {
   it("lists ingredients no step mentions", () => expect(unusedIngredients(sanitizeRecipe(base))).toEqual([2]));
+});
+
+describe("tags", () => {
+  it("are cleaned and de-duplicated", () => expect(sanitizeRecipe(base).tags).toEqual(["Dinner", "Slow Cooker"]));
 });
