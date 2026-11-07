@@ -65,6 +65,16 @@ export default function ShoppingList() {
           {entries.length > 1 && <span className="shop-for">{it.recipes.join(", ")}</span>}
         </span>
       </label>
+      {!checked.has(it.key) && opened.has(it.key) && (
+        // Tapping the ✓ clears it ("not added yet") without opening Walmart again.
+        <button
+          className="store-undo"
+          aria-label={`Mark ${it.name} as not added to the Walmart cart yet`}
+          onClick={() => update({ ...state, opened: (state.opened ?? []).filter((k) => k !== it.key) })}
+        >
+          <Icon name="check" size={14} />
+        </button>
+      )}
       {!checked.has(it.key) && (
         <a
           className={opened.has(it.key) ? "store-btn opened" : "store-btn"}
@@ -75,7 +85,7 @@ export default function ShoppingList() {
           aria-label={`Find ${it.name} at Walmart`}
           onClick={() => update({ ...state, opened: [...new Set([...(state.opened ?? []), it.key])] })}
         >
-          {opened.has(it.key) && <Icon name="check" size={14} />} Walmart
+          Walmart
         </a>
       )}
     </li>
@@ -146,7 +156,7 @@ export default function ShoppingList() {
                 </div>
                 <p className="muted small">
                   {target === "website"
-                    ? "Tap Walmart to find an item on walmart.com. If you're signed in, it goes into the same cart as your Walmart app (and Walmart+)."
+                    ? "Tap Walmart to find an item on walmart.com. If you're signed in, it goes into the same cart as your Walmart app (and Walmart+). Tap the ✓ to clear it if you didn't add it."
                     : "Tap Walmart to open the item in the Walmart app. This is a test — if the app doesn't open, or opens without searching, switch back to Website."}
                 </p>
               </>
