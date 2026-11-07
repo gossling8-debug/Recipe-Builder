@@ -7,7 +7,7 @@ import { href } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
 import { shareText } from "../lib/share";
 import { applySwaps } from "../lib/swaps";
-import { walmartSearchUrl } from "../lib/shopping";
+import { getWalmartTarget, setWalmartTarget, walmartSearchUrl, type WalmartTarget } from "../lib/shopping";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
 
 const scaleLabel = (s: number) => (s === 1 ? "" : ` · ×${s === 0.5 ? "½" : s === 1.5 ? "1½" : s}`);
@@ -54,6 +54,7 @@ export default function ShoppingList() {
   }
 
   const opened = new Set(state.opened ?? []);
+  const [target, setTarget] = useState<WalmartTarget>(getWalmartTarget);
   const row = (it: (typeof items)[number]) => (
     <li key={it.key} className="shop-row">
       <label className={checked.has(it.key) ? "checked" : ""}>
@@ -67,8 +68,9 @@ export default function ShoppingList() {
       {!checked.has(it.key) && (
         <a
           className={opened.has(it.key) ? "store-btn opened" : "store-btn"}
-          href={walmartSearchUrl(it.name)}
-          target="_blank"
+          href={walmartSearchUrl(it.name, target)}
+          // The website opens in a new tab; the app link hands off to the Walmart app.
+          target={target === "website" ? "_blank" : undefined}
           rel="noopener noreferrer"
           aria-label={`Find ${it.name} at Walmart`}
           onClick={() => update({ ...state, opened: [...new Set([...(state.opened ?? []), it.key])] })}
@@ -122,10 +124,32 @@ export default function ShoppingList() {
 
             <h3>To buy · {remaining.length}</h3>
             {remaining.length > 0 && (
-              <p className="muted small">
-                Tap <strong>Walmart</strong> to find an item in the Walmart app (signed into your Walmart+ account), add
-                it to your cart, then come back and tick it off.
-              </p>
+              <>
+                <div className="store-target">
+                  <span className="small muted">Open items in</span>
+                  <div className="segmented" role="radiogroup" aria-label="Open Walmart items in">
+                    {(["website", "app"] as const).map((t) => (
+                      <button
+                        key={t}
+                        role="radio"
+                        aria-checked={target === t}
+                        className={target === t ? "chip active" : "chip"}
+                        onClick={() => {
+                          setTarget(t);
+                          setWalmartTarget(t);
+                        }}
+                      >
+                        {t === "website" ? "Website" : "Walmart app"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="muted small">
+                  {target === "website"
+                    ? "Tap Walmart to find an item on walmart.com. If you're signed in, it goes into the same cart as your Walmart app (and Walmart+)."
+                    : "Tap Walmart to open the item in the Walmart app. This is a test — if the app doesn't open, or opens without searching, switch back to Website."}
+                </p>
+              </>
             )}
             {remaining.length === 0 ? <p className="muted">All done.</p> : <ul className="ingredients">{remaining.map(row)}</ul>}
 
