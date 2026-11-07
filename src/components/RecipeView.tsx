@@ -36,6 +36,7 @@ export default function RecipeView({
   swaps = new Map(),
   onUndoSwap,
   onStartCooking,
+  top,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
@@ -47,6 +48,8 @@ export default function RecipeView({
   onUndoSwap?: (index: number) => void;
   /** Opens cooking mode (one step at a time). */
   onStartCooking?: () => void;
+  /** Shown under the size control (the meal planner). */
+  top?: ReactNode;
 }) {
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
@@ -95,6 +98,7 @@ export default function RecipeView({
         ))}
         </div>
       </div>
+      {top}
       {scale !== 1 && (
         <p className="small muted">
           Amounts are {scale < 1 ? "reduced" : "multiplied"} ×{scaleLabel(scale)}. Cooking times and pan sizes aren't changed —

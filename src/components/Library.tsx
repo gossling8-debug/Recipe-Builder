@@ -3,6 +3,7 @@ import { saveRecipe } from "../lib/db";
 import { loadShopping } from "../lib/shopping";
 import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
 import { activeSwaps } from "../lib/swaps";
+import { loadPlans, timeOf, untilText } from "../lib/plan";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -18,6 +19,12 @@ export default function Library() {
   const [filter, setFilter] = useState(() => remembered("filter", "all"));
   const [sort, setSort] = useState(() => remembered("sort", "newest"));
   const onList = loadShopping().recipes.length;
+  // Re-render every 30 s so "start by … in 20 min" stays current.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   const choose = (kind: "filter" | "sort", value: string) => {
     remember(kind, value);
@@ -108,6 +115,20 @@ export default function Library() {
       />
       <main className="page">
         <h1 className="page-title">Recipes</h1>
+        {Object.values(loadPlans())
+          .sort((a, b) => a.startAt - b.startAt)
+          .map((p) => (
+            <a key={p.recipeId} className="plan-strip" href={href({ name: "recipe", id: p.recipeId })}>
+              <Icon name="timer" size={18} />
+              <span>
+                <strong>{p.startAt <= Date.now() ? `Start ${p.title} now` : `Start ${p.title} by ${timeOf(p.startAt)}`}</strong>
+                <span className="muted small">
+                  {" "}
+                  {p.startAt > Date.now() && `${untilText(p.startAt)} · `}eat at {timeOf(p.eatAt)}
+                </span>
+              </span>
+            </a>
+          ))}
         {!getApiKey() && !error && (
           <div className="callout">
             <strong>Welcome!</strong> To scan cards, add your Anthropic API key first.{" "}

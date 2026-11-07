@@ -2,6 +2,7 @@
 export interface FoundTimer {
   label: string; // as written, e.g. "8–10 minutes"
   seconds: number; // for a range, the lower end (check early, add more if needed)
+  maxSeconds: number; // for a range, the upper end (used when planning)
 }
 
 const NUM = String.raw`(\d+(?:\.\d+)?(?:\s*½)?|½)`;
@@ -22,9 +23,10 @@ export function findTimers(text: string): FoundTimer[] {
     const unit = m[3].toLowerCase();
     const mult = unit.startsWith("h") ? 3600 : unit.startsWith("m") ? 60 : 1;
     const seconds = Math.round(num(m[1]) * mult);
+    const maxSeconds = m[2] ? Math.round(num(m[2]) * mult) : seconds;
     // Skip silly values (e.g. "0 minutes") and anything over 12 hours.
     if (seconds < 5 || seconds > 12 * 3600) continue;
-    if (!out.some((t) => t.seconds === seconds)) out.push({ label: m[0].trim(), seconds });
+    if (!out.some((t) => t.seconds === seconds)) out.push({ label: m[0].trim(), seconds, maxSeconds });
   }
   return out;
 }
