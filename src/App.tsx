@@ -6,9 +6,10 @@ import Scanner from "./components/Scanner";
 import Settings from "./components/Settings";
 import RecipePage from "./components/RecipePage";
 import ShoppingList from "./components/ShoppingList";
+import PlanWatcher from "./components/PlanWatcher";
 import ImportPage from "./components/ImportPage";
 
-export default function App() {
+function Screen() {
   const route = useRoute();
   useEffect(() => {
     requestPersistentStorage().catch(() => {});
@@ -28,4 +29,13 @@ export default function App() {
     default:
       return <Library />;
   }
+}
+
+export default function App() {
+  return (
+    <>
+      <PlanWatcher />
+      <Screen />
+    </>
+  );
 }

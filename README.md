@@ -35,6 +35,10 @@ where it's added, so you don't have to flip back and forth between the steps and
 - **Cost control**: choose the recipe reader in Settings (Best / Balanced / Budget), see what each
   recipe cost to read and a monthly spending total.
 - **Share your version**: shared links include the substitutes you chose.
+- **Plan a meal time**: pick when you want to eat; the app says when to start (from your own past
+  times for that recipe, else the recipe's stated times, else an estimate from its steps), adds a
+  calendar reminder (alerts 15 min before and at start time) and shows a banner if the app is open.
+  After cooking, confirm how long it really took so the next plan is accurate.
 - **Conversions** at the bottom of a recipe when an ingredient comes in other forms: fresh garlic ↔
   jarred minced ↔ garlic powder, onion ↔ dried minced ↔ powder, fresh ↔ dried herbs, ginger, lemon/lime
   juice, salted ↔ unsalted butter, and DIY buttermilk — worked out for the recipe's amount and size.

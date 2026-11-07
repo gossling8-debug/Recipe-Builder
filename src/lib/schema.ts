@@ -76,6 +76,8 @@ export interface SavedRecipe extends ScannedRecipe {
   source?: string;
   /** Estimated cost (US dollars) of reading this recipe with Claude. */
   importCost?: number;
+  /** How long it actually took each time it was cooked (confirmed by the cook). */
+  cookLog?: { at: number; minutes: number; scale: number }[];
   /** Claude's substitute suggestions for the avoid list, saved so they're only paid for once. */
   substitutions?: {
     avoidKey: string; // which avoid list they were made for

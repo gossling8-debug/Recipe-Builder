@@ -17,11 +17,17 @@ export default function CookMode({
   recipeId,
   timers,
   onClose,
+  onLog,
+  plannedMinutes,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
   timers: ReturnType<typeof useTimers>;
   onClose: () => void;
+  /** Saves how long it actually took (minutes). */
+  onLog: (minutes: number) => Promise<void>;
+  /** The plan's estimate, if one was made, to compare against. */
+  plannedMinutes?: number;
 }) {
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
@@ -48,14 +54,86 @@ export default function CookMode({
   }, []);
 
   const go = (to: number) => setAt(Math.max(0, Math.min(total - 1, to)));
+  const [finishing, setFinishing] = useState(false);
+  const [minutes, setMinutes] = useState(0);
   const next = () => {
     update((p) => ({ ...p, done: p.done.includes(at) ? p.done : [...p.done, at] }));
-    if (last) onClose();
-    else go(at + 1);
+    if (!last) return go(at + 1);
+    // Measured from when cooking mode was first opened for this meal.
+    const startedAt = cookStart(recipeId);
+    const measured = Math.round((Date.now() - startedAt) / 60000);
+    setMinutes(measured >= 2 ? measured : plannedMinutes ?? 30);
+    setFinishing(true);
   };
 
-  // Swipe left / right to change steps.
+  // Swipe left / right to change steps. (All hooks must run before any early return.)
   const touch = useRef<{ x: number; y: number } | null>(null);
+
+  if (finishing) {
+    return (
+      <div className="cook" role="dialog" aria-label="How long did it take?">
+        <main className="cook-body cook-finish">
+          <p className="cook-count">All done — enjoy!</p>
+          <h2>How long did it take?</h2>
+          <p className="muted">
+            From starting prep to ready to eat. It's pre-filled with the time since you opened cooking mode — adjust it if
+            you started earlier.
+          </p>
+          <div className="minutes-picker">
+            <button className="btn" aria-label="5 minutes less" onClick={() => setMinutes((m) => Math.max(5, m - 5))}>
+              −5
+            </button>
+            <label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                className="text-input"
+                value={minutes}
+                onChange={(e) => setMinutes(Math.max(1, Number(e.target.value) || 1))}
+              />
+              <span>minutes</span>
+            </label>
+            <button className="btn" aria-label="5 minutes more" onClick={() => setMinutes((m) => m + 5)}>
+              +5
+            </button>
+          </div>
+          {plannedMinutes !== undefined && (
+            <p className="small">
+              You planned about {plannedMinutes} min —{" "}
+              {Math.abs(minutes - plannedMinutes) <= 5
+                ? "right on time."
+                : minutes > plannedMinutes
+                  ? `it took ${minutes - plannedMinutes} min longer.`
+                  : `${plannedMinutes - minutes} min quicker.`}
+            </p>
+          )}
+          <p className="muted small">Next time you plan this recipe, your real times are used.</p>
+        </main>
+        <footer className="cook-nav">
+          <button
+            className="btn big"
+            onClick={() => {
+              clearCookStart(recipeId);
+              onClose();
+            }}
+          >
+            Skip
+          </button>
+          <button
+            className="btn primary big"
+            onClick={async () => {
+              await onLog(minutes);
+              onClose();
+            }}
+          >
+            Confirm {minutes} min
+          </button>
+        </footer>
+      </div>
+    );
+  }
+
 
   return (
     <div
@@ -144,4 +222,25 @@ export default function CookMode({
       </footer>
     </div>
   );
+}
+
+/** When cooking started for this meal (first time cooking mode opened, within the last 8 hours). */
+export function cookStart(recipeId: string): number {
+  const key = `recipe-builder.cookStart.${recipeId}`;
+  try {
+    const saved = Number(sessionStorage.getItem(key));
+    if (saved && Date.now() - saved < 8 * 3600_000) return saved;
+    sessionStorage.setItem(key, String(Date.now()));
+  } catch {
+    /* fall through */
+  }
+  return Date.now();
+}
+
+export function clearCookStart(recipeId: string): void {
+  try {
+    sessionStorage.removeItem(`recipe-builder.cookStart.${recipeId}`);
+  } catch {
+    /* ignore */
+  }
 }

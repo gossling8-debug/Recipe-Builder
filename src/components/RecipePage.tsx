@@ -4,7 +4,9 @@ import Icon from "./Icon";
 import RecipeView from "./RecipeView";
 import RecipeEditor from "./RecipeEditor";
 import Substitutes from "./Substitutes";
-import CookMode from "./CookMode";
+import CookMode, { clearCookStart, cookStart } from "./CookMode";
+import PlanMeal from "./PlanMeal";
+import { clearPlan, getPlan } from "../lib/plan";
 import { TimerBar, useTimers } from "./Timers";
 import { activeSwaps, applySwaps } from "../lib/swaps";
 import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
@@ -136,7 +138,11 @@ export default function RecipePage({ id }: { id: string }) {
             <TimerBar {...timers} />
             <RecipeView
               key={`${recipe.id}-${viewKey}`}
-              onStartCooking={() => setCooking(true)}
+              onStartCooking={() => {
+                cookStart(recipe.id); // starts the clock for "how long did it take?"
+                setCooking(true);
+              }}
+              top={<PlanMeal recipe={{ ...applySwaps(recipe), cookLog: recipe.cookLog }} recipeId={recipe.id} />}
               recipe={applySwaps(recipe)}
               recipeId={recipe.id}
               swaps={activeSwaps(recipe)}
@@ -187,6 +193,15 @@ export default function RecipePage({ id }: { id: string }) {
           recipe={applySwaps(recipe)}
           recipeId={recipe.id}
           timers={timers}
+          plannedMinutes={getPlan(recipe.id)?.minutes}
+          onLog={async (minutes) => {
+            const scale = loadProgress(recipe.id).scale;
+            const updated = { ...recipe, cookLog: [...(recipe.cookLog ?? []), { at: Date.now(), minutes, scale }] };
+            setRecipe(updated);
+            await saveRecipe(updated);
+            clearPlan(recipe.id);
+            clearCookStart(recipe.id);
+          }}
           onClose={() => {
             setCooking(false);
             setViewKey((k) => k + 1);
