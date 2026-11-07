@@ -282,3 +282,15 @@ code {
   font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted);
   margin: 28px 0 8px;
 }
+
+/* Text size (Settings). zoom scales text, spacing, icons and tap targets
+   together and re-flows the layout to fit the screen, like browser zoom. */
+html[data-text-size="large"] body { zoom: 1.15; }
+html[data-text-size="largest"] body { zoom: 1.3; }
+
+.text-size-control { display: flex; width: 100%; margin-top: 4px; }
+.text-size-control .chip {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-height: 64px; padding: 8px 4px; font-size: 13px;
+}
+.text-size-control .aa { font-family: var(--serif); font-weight: 600; line-height: 1.1; }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
+import { applyTextSize, getTextSize, TEXT_SIZES, type TextSize } from "../lib/textSize";
 import { getApiKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
 import { exportBackup, importBackup } from "../lib/backup";
@@ -10,6 +11,7 @@ export default function Settings() {
   const [key, setKey] = useState(getApiKey());
   const [saved, setSaved] = useState(false);
   const [keyError, setKeyError] = useState("");
+  const [textSize, setTextSize] = useState<TextSize>(getTextSize());
   const [mode, setMode] = useState<StorageMode | null>(null);
   const [message, setMessage] = useState("");
   const [persisted, setPersisted] = useState<boolean | null>(null);
@@ -51,6 +53,30 @@ export default function Settings() {
     <>
       <Header title="Settings" back={href({ name: "library" })} />
       <main className="page">
+        <section>
+          <h3>Text size</h3>
+          <p className="muted small">Makes text, buttons and checkboxes bigger throughout the app.</p>
+          <div className="segmented text-size-control" role="radiogroup" aria-label="Text size">
+            {TEXT_SIZES.map(({ value, label }, i) => (
+              <button
+                key={value}
+                role="radio"
+                aria-checked={textSize === value}
+                className={textSize === value ? "chip active" : "chip"}
+                onClick={() => {
+                  applyTextSize(value);
+                  setTextSize(value);
+                }}
+              >
+                <span className="aa" style={{ fontSize: `${15 + i * 4}px` }} aria-hidden>
+                  Aa
+                </span>
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+
         <section>
           <h3>Anthropic API key</h3>
           <p className="muted small">
