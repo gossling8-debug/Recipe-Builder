@@ -12,7 +12,7 @@ import type { Ingredient } from "./schema";
 export interface ConversionRow {
   form: string; // "Jarred minced, in water"
   amount: string; // "2 tbsp"
-  detail?: string; // "about 1¼ bulbs, minced"
+  detail?: string; // "minced"
   recipe: boolean; // the form the recipe itself uses
 }
 
@@ -65,10 +65,10 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // ---------- garlic ----------
 // Per medium clove (common kitchen standards; cloves vary in size):
-//   fresh bulb ≈ 10 cloves · jarred minced in water ½ tsp · dried (dehydrated)
+//   jarred minced in water ½ tsp · dried (dehydrated)
 //   minced ¼ tsp (McCormick's label) · garlic powder ⅛ tsp · granulated ¼ tsp.
 const GARLIC_PER_CLOVE = { jarred: 0.5, dried: 0.25, powder: 0.125, granulated: 0.25 };
-const CLOVES_PER_BULB = 10;
+const CLOVES_PER_BULB = 10; // only to read recipes that say "1 head of garlic"
 
 function garlic(ing: Ingredient, scale: number): Conversion | null {
   const text = `${ing.unit} ${ing.name} ${ing.preparation ?? ""}`.toLowerCase();
@@ -94,12 +94,11 @@ function garlic(ing: Ingredient, scale: number): Conversion | null {
   }
 
   const per = (n: number) => (c === null ? n : c * n);
-  const bulbs = c !== null && c >= 5 ? `about ${formatNumber(c / CLOVES_PER_BULB)} ${c / CLOVES_PER_BULB > 1 ? "bulbs" : "bulb"}, ` : "";
   const rows: ConversionRow[] = [
     {
-      form: "Fresh garlic (bulb)",
+      form: "Fresh garlic cloves",
       amount: c === null ? "1 clove" : cloves(Math.max(0.5, Math.round(c * 2) / 2)),
-      detail: `${bulbs}minced`,
+      detail: "minced",
       recipe: form === "fresh" || form === "bulb",
     },
     { form: "Jarred minced, in water", amount: volume(per(GARLIC_PER_CLOVE.jarred)), recipe: form === "jarred" },

@@ -18,14 +18,14 @@ describe("garlic", () => {
     Object.fromEntries(one(i, scale).rows!.map((r) => [r.form, (r.recipe ? "* " : "") + r.amount + (r.detail ? ` (${r.detail})` : "")]));
   it("garlic powder → fresh, jarred, dried (one clear amount each)", () =>
     expect(rows(ing("1½", "teaspoons", "garlic powder"))).toEqual({
-      "Fresh garlic (bulb)": "12 cloves (about 1¼ bulbs, minced)",
+      "Fresh garlic cloves": "12 cloves (minced)",
       "Jarred minced, in water": "2 tbsp",
       "Dried minced (dehydrated)": "1 tbsp",
       "Garlic powder": "* 1½ tsp",
     }));
   it("fresh cloves → the other forms", () =>
     expect(rows(ing("4", "cloves", "garlic", "minced"))).toEqual({
-      "Fresh garlic (bulb)": "* 4 cloves (minced)",
+      "Fresh garlic cloves": "* 4 cloves (minced)",
       "Jarred minced, in water": "2 tsp",
       "Dried minced (dehydrated)": "1 tsp",
       "Garlic powder": "½ tsp",
@@ -34,14 +34,14 @@ describe("garlic", () => {
     expect(rows(ing("1", "tsp", "minced garlic"))["Jarred minced, in water"]).toBe("* 1 tsp"));
   it("dried minced garlic", () =>
     expect(rows(ing("½", "tsp", "dried minced garlic"))).toEqual({
-      "Fresh garlic (bulb)": "2 cloves (minced)",
+      "Fresh garlic cloves": "2 cloves (minced)",
       "Jarred minced, in water": "1 tsp",
       "Dried minced (dehydrated)": "* ½ tsp",
       "Garlic powder": "¼ tsp",
     }));
-  it("a whole bulb", () =>
+  it("a recipe that says a head of garlic is shown in cloves", () =>
     expect(rows(ing("1", "head", "garlic"))).toEqual({
-      "Fresh garlic (bulb)": "* 10 cloves (about 1 bulb, minced)",
+      "Fresh garlic cloves": "* 10 cloves (minced)",
       "Jarred minced, in water": "5 tsp",
       "Dried minced (dehydrated)": "2½ tsp",
       "Garlic powder": "1¼ tsp",
