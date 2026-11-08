@@ -648,3 +648,12 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .row-stars { color: var(--accent); letter-spacing: 1px; }
 .leftover-actions { display: flex; gap: 16px; margin-top: 2px; }
 .leftover-actions .link-btn { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Big meal */
+.meal-timeline { list-style: none; padding: 0; margin: 8px 0 12px; border-left: 2px solid var(--line); }
+.meal-timeline li { display: grid; grid-template-columns: 76px 1fr; gap: 10px; padding: 8px 0 8px 12px; position: relative; }
+.meal-timeline li::before { content: ""; position: absolute; left: -6px; top: 15px; width: 10px; height: 10px; border-radius: 50%; background: var(--bg, #fff); border: 2px solid var(--accent); }
+.meal-timeline li.eat::before { background: var(--accent); }
+.tl-time { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.late-note { color: var(--warn); display: block; }
+.meal-pick label.picked span { font-weight: 600; }
