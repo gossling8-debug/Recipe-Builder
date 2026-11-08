@@ -8,6 +8,9 @@ import { whatCanIMake } from "../lib/canMake";
 import { loadPantry, useSoon } from "../lib/pantry";
 import { freshness, useByText } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
+import { agoText, lastMade } from "../lib/made";
+import { dayKey, loadWeek } from "../lib/week";
+import { cloudState, subscribeCloud } from "../lib/cloud";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -23,6 +26,9 @@ export default function Library() {
   const [filter, setFilter] = useState(() => remembered("filter", "all"));
   const [sort, setSort] = useState(() => remembered("sort", "newest"));
   const onList = loadShopping().recipes.length;
+  const [cloud, setCloud] = useState(cloudState());
+  useEffect(() => subscribeCloud(setCloud), []);
+  const familyOn = cloud.status !== "off" && cloud.status !== "signed-out";
   // Re-render every 30 s so "start by … in 20 min" stays current.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -78,7 +84,12 @@ export default function Library() {
       : activeFilter === "canmake" ? canMakeNow.has(r.id)
       : (r.tags ?? []).includes(activeFilter),
     )
-    .sort((a, b) => (sort === "az" ? a.title.localeCompare(b.title) : b.createdAt - a.createdAt));
+    .sort((a, b) =>
+      sort === "az" ? a.title.localeCompare(b.title)
+      // Longest since it was made first; never-made recipes after those, newest first.
+      : sort === "lastmade" ? (lastMade(a) ?? Infinity) - (lastMade(b) ?? Infinity) || b.createdAt - a.createdAt
+      : b.createdAt - a.createdAt,
+    );
 
   // On the plain "All" view, favorites are pinned in their own section at the top.
   const pinFavorites = activeFilter === "all" && !q && hasFavorites;
@@ -94,6 +105,7 @@ export default function Library() {
           <div className="muted small">
             {(r.tags ?? []).length ? (r.tags ?? []).join(" · ") : `${plural(r.ingredients.length, "ingredient")} · ${plural(r.steps.length, "step")}`}
           </div>
+          {lastMade(r) !== undefined && <div className="muted small">Last made {agoText(lastMade(r)!)}</div>}
           {avoiding && avoidReasons(r).length > 0 && (
             <div className="small avoid-meta">Contains {avoidReasons(r).join(", ").toLowerCase()}</div>
           )}
@@ -116,6 +128,9 @@ export default function Library() {
         title=""
         actions={
           <>
+            <a className="icon-btn" href={href({ name: "week" })} aria-label="This week's meals">
+              <Icon name="calendar" />
+            </a>
             <a className="icon-btn" href={href({ name: "pantry" })} aria-label="Pantry">
               <Icon name="jar" />
             </a>
@@ -152,6 +167,19 @@ export default function Library() {
                     : ""}
                   {more > 0 ? ` · +${more} more` : ""}
                 </span>
+              </span>
+            </a>
+          );
+        })()}
+        {(() => {
+          const today = (loadWeek().days[dayKey(new Date())] ?? []).map((m) => all.find((r) => r.id === m.id)).filter(Boolean);
+          if (!today.length) return null;
+          return (
+            <a className="plan-strip" href={href({ name: "week" })}>
+              <Icon name="calendar" size={18} />
+              <span>
+                <strong>Today: {today.map((r) => r!.title).join(", ")}</strong>
+                <span className="muted small"> · see the week</span>
               </span>
             </a>
           );
@@ -223,6 +251,7 @@ export default function Library() {
               <select value={sort} onChange={(e) => choose("sort", e.target.value)}>
                 <option value="newest">Newest</option>
                 <option value="az">A–Z</option>
+                <option value="lastmade">Not made lately</option>
               </select>
             </label>
           </div>
@@ -236,6 +265,15 @@ export default function Library() {
         )}
         {rest.length > 0 && <ul className="recipe-list">{rest.map(row)}</ul>}
         {all.length > 0 && shown.length === 0 && <p className="muted">No matches.</p>}
+        {familyOn && (
+          <a className="plan-strip family-link" href={href({ name: "family" })}>
+            <Icon name="book" size={18} />
+            <span>
+              <strong>Family cookbooks</strong>
+              <span className="muted small"> · recipes shared with you</span>
+            </span>
+          </a>
+        )}
       </main>
       <div className="fab-bar">
         <a className="btn primary big" href={href({ name: "scan" })}>

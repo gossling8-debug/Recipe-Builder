@@ -10,6 +10,7 @@ import { applySwaps } from "../lib/swaps";
 import { boughtWhen, recordPurchase, setItem, statusFor } from "../lib/pantry";
 import { legacyNameKey } from "../lib/shopping";
 import { formatQty } from "../lib/qty";
+import { convertText, useUnits } from "../lib/units";
 import { useByLabel } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
 import { walmartSearchUrl } from "../lib/shopping";
@@ -21,6 +22,7 @@ export default function ShoppingList() {
   const [state, setState] = useState<ShoppingState>(loadShopping);
   const [all, setAll] = useState<SavedRecipe[] | null>(null);
   const [toast, showToast] = useToast();
+  const [units] = useUnits();
 
   useEffect(() => {
     listRecipes().then(setAll, () => setAll([]));
@@ -104,7 +106,7 @@ export default function ShoppingList() {
       <label className={checked.has(it.key) ? "checked" : ""}>
         <input type="checkbox" checked={checked.has(it.key)} onChange={() => toggle(it.key)} />
         <span>
-          {it.amount && <span className="shop-amount">{it.amount} </span>}
+          {it.amount && <span className="shop-amount">{convertText(it.amount, units, it.name)} </span>}
           {it.name}
           {entries.length > 1 && <span className="shop-for">{it.recipes.join(", ")}</span>}
           {!checked.has(it.key) && <PantryNote status={status.get(it.key)} />}

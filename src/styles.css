@@ -599,3 +599,38 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 }
 .conv-detail { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
 .conv-table th { width: 55%; }
+
+/* My notes & last made */
+.made-line { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.made-btn { padding: 6px 12px; min-height: 0; font-size: 15px; }
+.notes-input { width: 100%; resize: vertical; font: inherit; }
+.my-notes-text { margin-bottom: 4px; }
+
+/* This week */
+.week { list-style: none; padding: 0; margin: 12px 0; }
+.week-day { border-top: 1px solid var(--line); padding: 12px 0; }
+.week-day-head { margin-bottom: 4px; }
+.week-meals { list-style: none; padding: 0; margin: 0; }
+.week-meals li { display: flex; align-items: center; gap: 6px; min-height: 40px; }
+.week-meals li a { flex: 0 1 auto; }
+.week-meals .small-btn { margin-left: auto; }
+.week-pick { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+.week-pick select { flex: 1; min-width: 0; }
+.week-add { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
+.add-week { margin-top: 8px; }
+.add-week > .small { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.day-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+
+/* Nutrition */
+.nutri-head { display: flex; gap: 32px; align-items: flex-end; margin: 4px 0 6px; }
+.nutri-cal { font-family: var(--serif); font-size: 34px; line-height: 1.1; }
+.nutri-cal.swapped { color: var(--accent, inherit); }
+.nutri-table th.sub { padding-left: 18px; font-weight: 400; }
+.nutri-tips { padding-left: 20px; }
+
+/* Family cookbooks */
+.book-list { list-style: none; padding: 0; margin: 12px 0; }
+.book-card { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); color: inherit; text-decoration: none; }
+.family-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.family-row > span { display: inline-flex; align-items: center; gap: 6px; }
+.family-link { margin-top: 20px; }

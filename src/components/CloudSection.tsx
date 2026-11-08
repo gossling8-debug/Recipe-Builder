@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { href } from "../lib/route";
 import { cloudState, createAccount, resetPassword, signIn, signOut, subscribeCloud, syncNow, type CloudState } from "../lib/cloud";
 
 const ago = (ms?: number) => {
@@ -103,6 +104,10 @@ export default function CloudSection() {
         </button>
       </div>
       <p className="muted small">Signing out keeps your recipes on this phone and in the cloud.</p>
+      <p>
+        <a href={href({ name: "family" })}>Family cookbooks</a>
+        <span className="muted small"> — share chosen recipes with family or friends</span>
+      </p>
       {message && <div className="callout small">{message}</div>}
     </section>
   );
