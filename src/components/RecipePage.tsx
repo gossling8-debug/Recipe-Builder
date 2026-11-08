@@ -194,6 +194,7 @@ export default function RecipePage({ id }: { id: string }) {
         {recipe && !editing && (
           <>
             <TimerBar {...timers} />
+            {recipe.dishPhoto && <img className="dish-hero" src={recipe.dishPhoto} alt={`${recipe.title}, as you made it`} />}
             <RecipeView
               key={`${recipe.id}-${viewKey}`}
               onStartCooking={() => {
@@ -253,6 +254,11 @@ export default function RecipePage({ id }: { id: string }) {
                 </>
               }
             />
+            <p className="print-link">
+              <a className="btn" href={href({ name: "print", id: recipe.id })}>
+                <Icon name="download" size={18} /> Print or save as PDF
+              </a>
+            </p>
             {(recipe.source || recipe.importCost !== undefined) && (
               <p className="muted small source-line">
                 {recipe.source && (

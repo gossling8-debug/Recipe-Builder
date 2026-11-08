@@ -11,6 +11,7 @@ import WarnIcon from "./WarnIcon";
 import { agoText, lastMade } from "../lib/made";
 import { dayKey, loadWeek } from "../lib/week";
 import { cloudState, subscribeCloud } from "../lib/cloud";
+import { eatByLabel, leftoverPast, useLeftovers } from "../lib/leftovers";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -26,6 +27,7 @@ export default function Library() {
   const [filter, setFilter] = useState(() => remembered("filter", "all"));
   const [sort, setSort] = useState(() => remembered("sort", "newest"));
   const onList = loadShopping().recipes.length;
+  const fridge = useLeftovers().filter((l) => !l.frozen);
   const [cloud, setCloud] = useState(cloudState());
   useEffect(() => subscribeCloud(setCloud), []);
   const familyOn = cloud.status !== "off" && cloud.status !== "signed-out";
@@ -87,6 +89,8 @@ export default function Library() {
     .sort((a, b) =>
       sort === "az" ? a.title.localeCompare(b.title)
       // Longest since it was made first; never-made recipes after those, newest first.
+      // Best rated first ("would make again" breaks ties); unrated last.
+      : sort === "rating" ? (b.rating ?? 0) - (a.rating ?? 0) || Number(b.makeAgain ?? 0) - Number(a.makeAgain ?? 0) || a.title.localeCompare(b.title)
       : sort === "lastmade" ? (lastMade(a) ?? Infinity) - (lastMade(b) ?? Infinity) || b.createdAt - a.createdAt
       : b.createdAt - a.createdAt,
     );
@@ -99,13 +103,19 @@ export default function Library() {
   const row = (r: SavedRecipe) => (
     <li key={r.id} className="recipe-row">
       <a href={href({ name: "recipe", id: r.id })} className="recipe-card">
-        {r.photos[0] ? <img src={r.photos[0]} alt="" /> : <div className="thumb-placeholder" />}
+        {r.dishPhoto || r.photos[0] ? <img src={r.dishPhoto ?? r.photos[0]} alt="" /> : <div className="thumb-placeholder" />}
         <div>
           <div className="recipe-card-title">{r.title}</div>
           <div className="muted small">
             {(r.tags ?? []).length ? (r.tags ?? []).join(" · ") : `${plural(r.ingredients.length, "ingredient")} · ${plural(r.steps.length, "step")}`}
           </div>
-          {lastMade(r) !== undefined && <div className="muted small">Last made {agoText(lastMade(r)!)}</div>}
+          {(r.rating || lastMade(r) !== undefined) && (
+            <div className="muted small">
+              {r.rating ? <span className="row-stars" aria-label={`${r.rating} stars`}>{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</span> : null}
+              {r.rating && lastMade(r) !== undefined ? " · " : ""}
+              {lastMade(r) !== undefined && `Last made ${agoText(lastMade(r)!)}`}
+            </div>
+          )}
           {avoiding && avoidReasons(r).length > 0 && (
             <div className="small avoid-meta">Contains {avoidReasons(r).join(", ").toLowerCase()}</div>
           )}
@@ -171,6 +181,17 @@ export default function Library() {
             </a>
           );
         })()}
+        {fridge.length > 0 && (
+          <a className="plan-strip use-soon-strip" href={href({ name: "pantry" })}>
+            {leftoverPast(fridge[0]) ? <WarnIcon /> : <Icon name="jar" size={18} />}
+            <span>
+              <strong>
+                Leftovers: {fridge[0].title} · {eatByLabel(fridge[0])}
+              </strong>
+              {fridge.length > 1 && <span className="muted small"> · +{fridge.length - 1} more</span>}
+            </span>
+          </a>
+        )}
         {(() => {
           const today = (loadWeek().days[dayKey(new Date())] ?? []).map((m) => all.find((r) => r.id === m.id)).filter(Boolean);
           if (!today.length) return null;
@@ -252,6 +273,7 @@ export default function Library() {
                 <option value="newest">Newest</option>
                 <option value="az">A–Z</option>
                 <option value="lastmade">Not made lately</option>
+                <option value="rating">Top rated</option>
               </select>
             </label>
           </div>

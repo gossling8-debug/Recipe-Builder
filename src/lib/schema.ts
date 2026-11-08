@@ -93,6 +93,12 @@ export interface SavedRecipe extends ScannedRecipe {
     createdAt: number;
     result: import("./nutrition").Nutrition;
   };
+  /** The cook's own photo of the finished dish (data: URL); shown in the library instead of the card. */
+  dishPhoto?: string;
+  /** The cook's rating, 1–5 stars. */
+  rating?: number;
+  /** "Would make again" (true) or "Wouldn't" (false). */
+  makeAgain?: boolean;
   /** The cook's own notes ("used less sugar — perfect"). */
   myNotes?: string;
   /** Days it was made (ms), from "I made this" or "Made it today". Cooking mode adds to cookLog instead. */

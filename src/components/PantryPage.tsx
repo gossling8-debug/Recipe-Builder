@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { listRecipes } from "../lib/db";
+import LeftoversList from "./LeftoversList";
 import WarnIcon from "./WarnIcon";
 import { whatCanIMake, type CanMake } from "../lib/canMake";
 import { addToShopping, loadShopping } from "../lib/shopping";
@@ -77,6 +78,8 @@ export default function PantryPage() {
           What you should have on hand. Ticking items on your shopping list adds them; making a recipe uses them up. Amounts
           are estimates — tap one to correct it.
         </p>
+
+        <LeftoversList />
 
         {soon.length > 0 && (
           <section className="use-soon">

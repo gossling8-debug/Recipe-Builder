@@ -47,6 +47,11 @@ export default function WeekPage() {
           Pick what you'll cook each day. When you're done, put the whole week on your shopping list in one tap.
         </p>
         {recipes?.length === 0 && <p className="muted">Add some recipes first — then plan them here.</p>}
+        {recipes && recipes.length > 1 && (
+          <a className="btn plan-open" href={href({ name: "meal" })}>
+            <Icon name="timer" size={18} /> Plan a big meal (several dishes at once)
+          </a>
+        )}
         <ol className="week">
           {days.map((d) => {
             const meals = week.days[d.key] ?? [];
@@ -74,6 +79,11 @@ export default function WeekPage() {
                       );
                     })}
                   </ul>
+                )}
+                {meals.length > 1 && (
+                  <a className="link-btn small week-add" href={href({ name: "meal", day: d.key, ids: [...new Set(meals.map((m) => m.id))] })}>
+                    <Icon name="timer" size={16} /> Timeline so these are ready together
+                  </a>
                 )}
                 {adding === d.key ? (
                   <div className="week-pick">
