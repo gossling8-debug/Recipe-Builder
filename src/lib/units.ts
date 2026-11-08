@@ -8,8 +8,9 @@ import type { ScannedRecipe } from "./schema";
  * Converted: cups / fl oz / pints / quarts / gallons ↔ mL / L, oz / lb ↔ g / kg,
  * °F ↔ °C, inches ↔ cm. Teaspoons and tablespoons are left alone: they're
  * used the same way in metric kitchens. When the card already gives both
- * ("2 lbs (910 g)"), the card's own figure is used. Weight is only turned into
- * cups for staples whose weight per cup is well known (flour, sugar…), marked ≈.
+ * ("2 lbs (910 g)"), the card's own figure is used. Cups of staples whose
+ * weight per cup is well known (flour, sugar, butter…) become grams in metric,
+ * and grams become cups in US — marked ≈ because it's a typical weight.
  */
 export type UnitSystem = "original" | "us" | "metric";
 
@@ -89,6 +90,8 @@ const GRAMS_PER_CUP: [RegExp, number][] = [
   [/cocoa/i, 85],
   [/\brice\b/i, 185],
 ];
+/** For metric: staples that metric recipes weigh rather than measure. */
+const WEIGH_IN_METRIC: [RegExp, number][] = [...GRAMS_PER_CUP, [/\bbutter\b(?!milk)/i, 227], [/chocolate chips/i, 170]];
 
 const round = (n: number, step: number) => Math.round(n / step) * step;
 const trim = (n: number) => String(Math.round(n * 100) / 100);
@@ -126,6 +129,8 @@ function usWeight(g: number, name: string): string {
 function convertOne(n: number, unit: string, to: "us" | "metric", name: string): string | null {
   if (to === "metric") {
     const v = find(US_VOLUME_ML, unit);
+    const gpc = WEIGH_IN_METRIC.find(([re]) => re.test(name))?.[1];
+    if (v && gpc && /cup/i.test(unit)) return `≈ ${metricWeight(n * gpc)}`;
     if (v) return metricVolume(n * v);
     const w = find(US_WEIGHT_G, unit);
     if (w) return metricWeight(n * w);

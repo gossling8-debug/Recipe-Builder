@@ -22,6 +22,13 @@ describe("to metric", () => {
     ["3 eggs", "3 eggs"],
   ])("%s → %s", (a, b) => expect(convertText(a, "metric")).toBe(b));
 
+  it("weighs dry staples in grams, like metric recipes do (approximate)", () => {
+    expect(convertText("2 cups", "metric", "all-purpose flour")).toBe("≈ 250 g");
+    expect(convertText("1 cup", "metric", "sugar")).toBe("≈ 200 g");
+    expect(convertText("½ cup", "metric", "butter, softened")).toBe("≈ 115 g");
+    expect(convertText("1 cup", "metric", "buttermilk")).toBe("240 mL");
+    expect(convertText("2 tbsp", "metric", "flour")).toBe("2 tbsp");
+  });
   it("converts oven temperatures and pan sizes in steps", () => {
     expect(convertText("Bake at 350°F in a 9x13-inch pan.", "metric")).toBe("Bake at 175°C in a 23×33 cm pan.");
     expect(convertText("Preheat oven to 425 degrees.", "metric")).toBe("Preheat oven to 220°C.");
