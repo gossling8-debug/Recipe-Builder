@@ -323,6 +323,24 @@ export default function RecipeView({
                     {l}
                   </div>
                 ))}
+                {c.rows && (
+                  <table className="conv-table">
+                    <tbody>
+                      {c.rows.map((r) => (
+                        <tr key={r.form} className={r.recipe ? "recipe-form" : undefined}>
+                          <th scope="row">
+                            {r.form}
+                            {r.recipe && <span className="conv-recipe-tag">recipe</span>}
+                          </th>
+                          <td>
+                            {r.amount}
+                            {r.detail && <span className="conv-detail">{r.detail}</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
                 <p className="conv-note">{c.note}</p>
               </li>
             ))}

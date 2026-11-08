@@ -9,9 +9,17 @@ import type { Ingredient } from "./schema";
  * and onions vary in size — so amounts are shown as "≈" and powders as a
  * range where sources disagree.
  */
+export interface ConversionRow {
+  form: string; // "Jarred minced, in water"
+  amount: string; // "2 tbsp"
+  detail?: string; // "about 1¼ bulbs, minced"
+  recipe: boolean; // the form the recipe itself uses
+}
+
 export interface Conversion {
   title: string; // "Garlic powder, 1½ tsp"
-  lines: string[]; // "Fresh garlic: ≈ 6–12 cloves, minced"
+  lines: string[]; // "Fresh onion: ≈ ½ medium"
+  rows?: ConversionRow[]; // side-by-side amounts for each form (garlic)
   note: string; // honest note about how the result differs
 }
 
@@ -56,58 +64,63 @@ const describe = (ing: Ingredient, scale: number) => {
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // ---------- garlic ----------
-// 1 clove ≈ 1 tsp fresh minced ≈ ½ tsp jarred minced ≈ ⅛–¼ tsp garlic powder ≈ ¼ tsp granulated.
+// Per medium clove (common kitchen standards; cloves vary in size):
+//   fresh bulb ≈ 10 cloves · jarred minced in water ½ tsp · dried (dehydrated)
+//   minced ¼ tsp (McCormick's label) · garlic powder ⅛ tsp · granulated ¼ tsp.
+const GARLIC_PER_CLOVE = { jarred: 0.5, dried: 0.25, powder: 0.125, granulated: 0.25 };
+const CLOVES_PER_BULB = 10;
+
 function garlic(ing: Ingredient, scale: number): Conversion | null {
   const text = `${ing.unit} ${ing.name} ${ing.preparation ?? ""}`.toLowerCase();
-  if (!/\bgarlic\b/.test(text) || /garlic (salt|bread|butter|sauce|oil)/.test(text)) return null;
+  if (!/\bgarlic\b/.test(text) || /garlic (salt|bread|butter|sauce|oil|naan|knots?)/.test(text)) return null;
   const q = qty(ing, scale);
   const tsp = q === null ? null : teaspoons(q, ing.unit);
 
-  let form: "powder" | "granulated" | "jarred" | "minced" | "cloves" | "head";
+  type Form = "fresh" | "bulb" | "jarred" | "dried" | "powder" | "granulated";
+  let form: Form;
   if (/garlic powder/.test(text)) form = "powder";
   else if (/granulated garlic/.test(text)) form = "granulated";
-  else if (/\bjar(red)?\b/.test(text)) form = "jarred";
-  else if (/\bheads?\b/.test(text)) form = "head";
-  else if (tsp !== null) form = "minced";
-  else form = "cloves";
+  else if (/\b(dried|dehydrated|instant)\b|garlic flakes/.test(text)) form = "dried";
+  else if (/\b(heads?|bulbs?)\b/.test(text)) form = "bulb";
+  // "2 tsp minced garlic" — jarred and freshly minced measure about the same per clove.
+  else if (tsp !== null || /\bjar(red)?\b|in water/.test(text)) form = "jarred";
+  else form = "fresh";
 
-  // Amount in cloves as [low, high].
-  let c: [number, number] | null = null;
+  let c: number | null = null; // amount in cloves
   if (q !== null) {
-    if (form === "cloves") c = [q, q];
-    else if (form === "head") c = [q * 10, q * 12];
-    else if (tsp !== null) {
-      if (form === "powder") c = [tsp / 0.25, tsp / 0.125];
-      else if (form === "granulated") c = [tsp / 0.25, tsp / 0.25];
-      else if (form === "jarred") c = [tsp / 0.5, tsp / 0.5];
-      else c = [tsp, tsp]; // fresh minced
-    }
+    if (form === "fresh") c = q;
+    else if (form === "bulb") c = q * CLOVES_PER_BULB;
+    else if (tsp !== null) c = tsp / GARLIC_PER_CLOVE[form];
   }
 
-  const lines: string[] = [];
-  if (c) {
-    if (form !== "cloves" && form !== "minced") lines.push(`Fresh garlic: ≈ ${range(c[0], c[1], cloves)}, minced (about 1 tsp per clove)`);
-    if (form !== "jarred") lines.push(`Jarred minced garlic: ≈ ${rangeVol(c[0] * 0.5, c[1] * 0.5)}`);
-    if (form === "jarred" || form === "minced") lines.push(`Fresh cloves: ≈ ${range(c[0], c[1], cloves)}`);
-    if (form !== "powder") lines.push(`Garlic powder: ≈ ${rangeVol(c[0] * 0.125, c[1] * 0.25)}`);
-  } else {
-    lines.push("1 clove ≈ 1 tsp fresh minced ≈ ½ tsp jarred minced ≈ ⅛–¼ tsp garlic powder");
-  }
+  const per = (n: number) => (c === null ? n : c * n);
+  const bulbs = c !== null && c >= 5 ? `about ${formatNumber(c / CLOVES_PER_BULB)} ${c / CLOVES_PER_BULB > 1 ? "bulbs" : "bulb"}, ` : "";
+  const rows: ConversionRow[] = [
+    {
+      form: "Fresh garlic (bulb)",
+      amount: c === null ? "1 clove" : cloves(Math.max(0.5, Math.round(c * 2) / 2)),
+      detail: `${bulbs}minced`,
+      recipe: form === "fresh" || form === "bulb",
+    },
+    { form: "Jarred minced, in water", amount: volume(per(GARLIC_PER_CLOVE.jarred)), recipe: form === "jarred" },
+    { form: "Dried minced (dehydrated)", amount: volume(per(GARLIC_PER_CLOVE.dried)), recipe: form === "dried" },
+    { form: "Garlic powder", amount: volume(per(GARLIC_PER_CLOVE.powder)), recipe: form === "powder" },
+  ];
+
   const note =
     form === "powder" || form === "granulated"
-      ? "Fresh or jarred garlic is sharper and more pungent than powder, and adds a little moisture and texture. In a creamy dip or sauce, start at the low end and taste — fresh garlic gets stronger as it sits."
-      : "Jarred garlic is milder and slightly tangy from its brine, so you may want a bit more than the guide. Powder is mellower and toastier and blends smoothly, but has none of fresh garlic's bite.";
-  return { title: describe(ing, scale), lines, note };
-}
-
-/** "1–2 tbsp", or "¾ tsp – 1½ tbsp" when the units differ. */
-function rangeVol(lo: number, hi: number): string {
-  const a = volume(lo);
-  const b = volume(hi);
-  if (a === b) return a;
-  const [na, ua] = [a.slice(0, a.lastIndexOf(" ")), a.slice(a.lastIndexOf(" ") + 1)];
-  const ub = b.slice(b.lastIndexOf(" ") + 1);
-  return ua === ub || (ua === "cup" && ub === "cups") ? `${na}–${b}` : `${a} – ${b}`;
+      ? "Powder is concentrated, so the fresh amount looks like a lot. Fresh and jarred garlic also taste sharper than powder — for a milder result, start with about half and add more to taste."
+      : form === "dried"
+        ? "Dried minced garlic softens as it cooks; fresh and jarred give more bite. In something uncooked, like a dip, let dried minced sit 10 minutes so it softens."
+        : form === "jarred"
+          ? "Fresh garlic is a little stronger and brighter than jarred. Dried minced and powder lose the bite but blend in smoothly — good in sauces and dips."
+          : "Jarred is a little milder and slightly tangy. Dried minced and powder lose fresh garlic's bite but blend in smoothly — good in sauces and dips.";
+  return {
+    title: describe(ing, scale),
+    lines: c === null ? ["Amounts for 1 clove:"] : [],
+    rows,
+    note,
+  };
 }
 
 // ---------- onion ----------
