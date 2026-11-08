@@ -52,7 +52,7 @@ export type Nutrition = Omit<Full, "serving_size" | "source"> & { serving_size?:
 
 const SYSTEM = `You are a careful nutrition estimator and practical home cook. Estimate nutrition per serving for the recipe as written, using standard values (USDA-style) for each ingredient and typical products where brands aren't given. Count only what ends up eaten: for deep frying, estimate absorbed oil; for marinades that are discarded, count only a part.
 
-If the recipe itself lists nutrition facts (often in the notes, e.g. "Per serving: 437 kcal, 31 g protein"), use the recipe's own numbers exactly, set source to "card", and its servings and serving size if given. Only estimate values the recipe doesn't list, and say which ones in caveats. Calories changes for swaps are still your estimates.
+If the recipe itself lists nutrition facts (often in the notes or printed on the card photo, e.g. "Per serving: 437 kcal, 31 g protein"), use the recipe's own numbers exactly and set source to "card". If the recipe states a serving size (e.g. "Serving size: 1 cup (240 g)"), use it exactly as the serving size, converting only to fill in a missing weight. Only estimate values the recipe doesn't list, and say which ones in caveats. Calories changes for swaps are still your estimates.
 
 Also say how big one serving is: a kitchen measure the cook can dish up with (cups, slices, pieces) and its weight, both for the food as served — cooked and with its sauce. The total of all servings should roughly match the finished dish (water cooks off, pasta absorbs it).
 
@@ -60,7 +60,12 @@ Be honest about uncertainty. Don't round to look precise — calories to the nea
 
 Then suggest a few healthier swaps that keep the dish recognisably itself. Be candid about how each changes the taste or texture; don't oversell. Give amounts for the recipe as written. If the recipe is already a light dish, say so with an empty list. Never give medical advice.`;
 
-export async function estimateNutrition(apiKey: string, recipe: ScannedRecipe, avoidLabels: string[]): Promise<Nutrition> {
+/**
+ * photos: the original card photos (data: URLs). Sent along so the card's own
+ * nutrition facts and serving size are read straight from it, even if the scan
+ * didn't copy them into the text.
+ */
+export async function estimateNutrition(apiKey: string, recipe: ScannedRecipe, avoidLabels: string[], photos: string[] = []): Promise<Nutrition> {
   const client = makeClient(apiKey);
   const m = getModel();
   const list = recipe.ingredients.map((ing, i) => `[${i}] ${[ing.quantity, ing.unit, ing.name, ing.preparation].filter(Boolean).join(" ")}`);
@@ -80,7 +85,18 @@ export async function estimateNutrition(apiKey: string, recipe: ScannedRecipe, a
       max_tokens: 6000,
       output_config: { effort: "medium", format: betaZodOutputFormat(NutritionSchema) },
       system: SYSTEM,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            ...photos.flatMap((p) => {
+              const m = p.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/);
+              return m ? [{ type: "image" as const, source: { type: "base64" as const, media_type: m[1] as "image/jpeg", data: m[2] } }] : [];
+            }),
+            { type: "text" as const, text: photos.length ? `The photos are the original recipe card. If the card shows nutrition facts or a serving size, use those.\n\n${prompt}` : prompt },
+          ],
+        },
+      ],
     });
   } catch (err) {
     throw new ScanError(describeApiError(err));

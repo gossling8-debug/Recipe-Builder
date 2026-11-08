@@ -45,7 +45,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
       const { estimateNutrition } = await import("../lib/nutrition");
       const avoid = loadAvoid();
       const labels = isActive(avoid) ? [...avoid.groups.map((g) => ALLERGEN_GROUPS[g]?.label ?? g), ...avoid.custom] : [];
-      const result = await estimateNutrition(getApiKey(), recipe, labels);
+      const result = await estimateNutrition(getApiKey(), recipe, labels, recipe.photos.slice(0, 4));
       await onSaved({ ...recipe, nutrition: { ingredientsKey: ingredientsKey(recipe), createdAt: Date.now(), result } });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -83,7 +83,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
               <button className="link-btn small" onClick={ask} disabled={busy}>
                 {busy ? "Working… (about 15–30 seconds)" : "Add the serving size"}
               </button>{" "}
-              <span className="muted">(asks Claude again — a few cents)</span>
+              <span className="muted">(reads it from your card — a few cents)</span>
             </p>
           )}
           {n.serving_size && (
