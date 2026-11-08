@@ -627,3 +627,10 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .nutri-cal.swapped { color: var(--accent, inherit); }
 .nutri-table th.sub { padding-left: 18px; font-weight: 400; }
 .nutri-tips { padding-left: 20px; }
+
+/* Family cookbooks */
+.book-list { list-style: none; padding: 0; margin: 12px 0; }
+.book-card { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); color: inherit; text-decoration: none; }
+.family-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.family-row > span { display: inline-flex; align-items: center; gap: 6px; }
+.family-link { margin-top: 20px; }

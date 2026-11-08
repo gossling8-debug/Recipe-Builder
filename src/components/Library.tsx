@@ -10,6 +10,7 @@ import { freshness, useByText } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
 import { agoText, lastMade } from "../lib/made";
 import { dayKey, loadWeek } from "../lib/week";
+import { cloudState, subscribeCloud } from "../lib/cloud";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -25,6 +26,9 @@ export default function Library() {
   const [filter, setFilter] = useState(() => remembered("filter", "all"));
   const [sort, setSort] = useState(() => remembered("sort", "newest"));
   const onList = loadShopping().recipes.length;
+  const [cloud, setCloud] = useState(cloudState());
+  useEffect(() => subscribeCloud(setCloud), []);
+  const familyOn = cloud.status !== "off" && cloud.status !== "signed-out";
   // Re-render every 30 s so "start by … in 20 min" stays current.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -261,6 +265,15 @@ export default function Library() {
         )}
         {rest.length > 0 && <ul className="recipe-list">{rest.map(row)}</ul>}
         {all.length > 0 && shown.length === 0 && <p className="muted">No matches.</p>}
+        {familyOn && (
+          <a className="plan-strip family-link" href={href({ name: "family" })}>
+            <Icon name="book" size={18} />
+            <span>
+              <strong>Family cookbooks</strong>
+              <span className="muted small"> · recipes shared with you</span>
+            </span>
+          </a>
+        )}
       </main>
       <div className="fab-bar">
         <a className="btn primary big" href={href({ name: "scan" })}>

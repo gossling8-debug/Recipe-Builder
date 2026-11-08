@@ -20,6 +20,7 @@ import type { SavedRecipe } from "./schema";
 export interface CloudState {
   status: "off" | "signed-out" | "syncing" | "synced" | "offline" | "error";
   email?: string;
+  uid?: string;
   lastSync?: number;
   message?: string;
 }
@@ -46,7 +47,7 @@ interface Fb {
 }
 let fbPromise: Promise<Fb> | null = null;
 
-function fb(): Promise<Fb> {
+export function fb(): Promise<Fb> {
   if (!firebaseConfig) return Promise.reject(new Error("Cloud backup isn't set up yet."));
   fbPromise ??= (async () => {
     const [{ initializeApp }, a, f] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore")]);
@@ -62,7 +63,7 @@ function fb(): Promise<Fb> {
   return fbPromise;
 }
 
-const user = async (): Promise<User | null> => (await fb()).auth.currentUser;
+export const user = async (): Promise<User | null> => (await fb()).auth.currentUser;
 
 // ---------- start ----------
 let started = false;
@@ -76,9 +77,9 @@ export async function startCloud(): Promise<void> {
   const { auth, a } = await fb();
   a.onAuthStateChanged(auth, (u) => {
     if (u) {
-      set({ status: "syncing", email: u.email ?? undefined, message: undefined });
+      set({ status: "syncing", email: u.email ?? undefined, uid: u.uid, message: undefined });
       void syncNow();
-    } else set({ status: "signed-out", email: undefined, lastSync: undefined });
+    } else set({ status: "signed-out", email: undefined, uid: undefined, lastSync: undefined });
   });
 
   // Upload each change shortly after it's made (a burst of edits = one upload).
