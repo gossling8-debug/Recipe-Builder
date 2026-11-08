@@ -18,3 +18,25 @@ describe("pantry", () => {
     expect(statusFor(nameKey("large eggs"), "large eggs", parseQty("3", "large eggs")).kind).toBe("enough");
   });
 });
+
+import { recordPurchase, useSoon } from "./pantry";
+describe("use-by dates", () => {
+  it("perishables get an estimated date; staples don't", () => {
+    savePantry({});
+    recordPurchase("chicken breasts", "2 lbs");
+    recordPurchase("sugar", "4 lb");
+    const p = loadPantry();
+    expect(p["chicken breast"].useBy).toBeGreaterThan(Date.now());
+    expect(p["chicken breast"].useByEstimated).toBe(true);
+    expect(p.sugar.useBy).toBeUndefined();
+  });
+  it("buying more keeps the earlier date", () => {
+    const first = loadPantry()["chicken breast"].useBy!;
+    recordPurchase("chicken breasts", "1 lb");
+    expect(loadPantry()["chicken breast"].useBy).toBe(first);
+  });
+  it("lists what to use soon, with recipes that use it", () => {
+    const r = useSoon([{ id: "a", title: "Crack Chicken", ingredients: [{ name: "boneless chicken breasts" }] }, { id: "b", title: "Cookies", ingredients: [{ name: "sugar" }] }]);
+    expect(r.map((x) => [x.item.name, x.recipes.map((y) => y.title)])).toEqual([["chicken breasts", ["Crack Chicken"]]]);
+  });
+});

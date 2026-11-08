@@ -5,7 +5,8 @@ import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
 import { activeSwaps } from "../lib/swaps";
 import { loadPlans, timeOf, untilText } from "../lib/plan";
 import { whatCanIMake } from "../lib/canMake";
-import { loadPantry } from "../lib/pantry";
+import { loadPantry, useSoon } from "../lib/pantry";
+import { useByText } from "../lib/shelfLife";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -129,6 +130,29 @@ export default function Library() {
       />
       <main className="page">
         <h1 className="page-title">Recipes</h1>
+        {(() => {
+          const soon = useSoon(all);
+          if (!soon.length) return null;
+          const first = soon[0];
+          const more = soon.length - 1;
+          return (
+            <a className="plan-strip use-soon-strip" href={href({ name: "pantry" })}>
+              <Icon name="jar" size={18} />
+              <span>
+                <strong>
+                  Use soon: {first.item.name} ({useByText(first.item.useBy!)})
+                </strong>
+                <span className="muted small">
+                  {" "}
+                  {first.recipes.length
+                    ? `· ${first.recipes.length} ${first.recipes.length === 1 ? "recipe uses" : "recipes use"} it`
+                    : ""}
+                  {more > 0 ? ` · +${more} more` : ""}
+                </span>
+              </span>
+            </a>
+          );
+        })()}
         {Object.values(loadPlans())
           .sort((a, b) => a.startAt - b.startAt)
           .map((p) => (

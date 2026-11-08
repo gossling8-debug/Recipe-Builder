@@ -41,6 +41,10 @@ where it's added, so you don't have to flip back and forth between the steps and
   shopping list shows "≈ 3½ lb left — enough" or "buy ≈ ½ cup more", and moves items you already have
   into their own section. Cups/tbsp/ml, oz/lb/g and package sizes like "2 (8 oz) blocks" are
   understood, and common staples convert between cups and pounds.
+- **Use-by dates**: perishables get an estimated use-by date when bought (typical fridge life — e.g. raw
+  chicken ≈ 2 days, milk ≈ 7, cream cheese ≈ 14, eggs ≈ 28; staples get none). Tap to set the package
+  date or remove it. "Use soon" on the Pantry page and a banner on the home screen show what's
+  expiring within 3 days and which recipes use it.
 - **What can I make?** (Pantry page) recipes ranked by how little you'd need to buy, with what's
   missing and an "Add to shopping list" button; a "Can make now" filter on the recipe list. Ingredient
   names are matched sensibly ("all-purpose flour" = "flour", "scallions" = "green onions", egg whites
