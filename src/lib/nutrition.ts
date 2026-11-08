@@ -9,6 +9,12 @@ import type { ScannedRecipe } from "./schema";
 export const NutritionSchema = z.object({
   servings: z.number().describe("How many servings the numbers are divided by: the recipe's own yield, or a sensible guess if it gives none."),
   servings_note: z.string().describe('Where the servings number came from, e.g. "From the card: serves 6" or "The card doesn\'t say; assumed 8 slices".'),
+  serving_size: z.object({
+    measure: z
+      .string()
+      .describe('One serving in everyday kitchen terms, as served (cooked), e.g. "about 1½ cups", "1 slice (⅛ of the pie)", "2 enchiladas", "about ½ cup dip".'),
+    weight_g: z.number().describe("Approximate weight of one serving as served, in grams."),
+  }),
   per_serving: z.object({
     calories: z.number(),
     protein_g: z.number(),
@@ -37,9 +43,12 @@ export const NutritionSchema = z.object({
     .describe("0–4 swaps that make a real difference without ruining the dish. Skip trivial ones. Empty if the recipe is already light."),
   tips: z.array(z.string()).describe("0–3 short method tips (e.g. bake instead of fry, smaller portions with a side salad). Empty if none."),
 });
-export type Nutrition = z.infer<typeof NutritionSchema>;
+/** Estimates saved before serving sizes were added don't have one. */
+export type Nutrition = Omit<z.infer<typeof NutritionSchema>, "serving_size"> & { serving_size?: z.infer<typeof NutritionSchema>["serving_size"] };
 
 const SYSTEM = `You are a careful nutrition estimator and practical home cook. Estimate nutrition per serving for the recipe as written, using standard values (USDA-style) for each ingredient and typical products where brands aren't given. Count only what ends up eaten: for deep frying, estimate absorbed oil; for marinades that are discarded, count only a part.
+
+Also say how big one serving is: a kitchen measure the cook can dish up with (cups, slices, pieces) and its weight, both for the food as served — cooked and with its sauce. The total of all servings should roughly match the finished dish (water cooks off, pasta absorbs it).
 
 Be honest about uncertainty. Don't round to look precise — calories to the nearest 10, grams to whole numbers, sodium to the nearest 10 mg.
 
