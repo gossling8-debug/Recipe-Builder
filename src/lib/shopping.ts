@@ -76,8 +76,8 @@ function unitKey(unit: string): { key: string; display: string } {
   return { key: UNIT_ALIASES[lower] ?? lower, display: base };
 }
 
-/** Grouping key for an ingredient name: lowercase, singular-ish. */
-export function nameKey(name: string): string {
+/** The previous matching rule; kept only to move old saved data to the new keys. */
+export function legacyNameKey(name: string): string {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "")
@@ -85,6 +85,64 @@ export function nameKey(name: string): string {
     .split(/\s+/)
     .map((w) => (w.length > 3 ? w.replace(/(oes|es|s)$/, (m) => (m === "oes" ? "o" : "")) : w))
     .join(" ");
+}
+
+// Words that describe how an ingredient is prepared or sized, not what to buy.
+const DESCRIPTORS = new Set(
+  (
+    "fresh freshly large small medium extra jumbo organic boneless skinless chopped diced minced sliced " +
+    "shredded grated softened melted cold warm packed lightly firmly finely coarsely roughly thinly whole raw " +
+    "peeled uncooked cooked sharp mild plain salted unsalted lowsodium reducedsodium allpurpose divided optional " +
+    "good quality homemade storebought"
+  ).split(" "),
+);
+
+// Different names for the same thing (applied to the cleaned-up name).
+const SYNONYMS: [RegExp, string][] = [
+  [/\b(scallions?|spring onions?)\b/, "green onion"],
+  [/\b(confectioners?|icing) sugar\b/, "powdered sugar"],
+  [/\b(granulated|white|cane) sugar\b/, "sugar"],
+  [/\b(plain|ap) flour\b/, "flour"],
+  [/\bgarbanzo beans?\b/, "chickpea"],
+  [/\b(cilantro|coriander) leaves\b/, "cilantro"],
+  [/\b(heavy whipping|whipping|double) cream\b/, "heavy cream"],
+  [/\bextra virgin olive oil\b|\bevoo\b/, "olive oil"],
+  [/\b(kosher|sea|table) salt\b/, "salt"],
+  [/\bground black pepper\b/, "black pepper"],
+  [/\bcheddar cheese\b/, "cheddar"],
+  [/\b(parmesan cheese|parmigiano reggiano)\b/, "parmesan"],
+  [/\bmozzarella cheese\b/, "mozzarella"],
+  [/\bcorn starch\b/, "cornstarch"],
+  [/\beggs? (whites?|yolks?)\b/, "egg"], // whites and yolks come from eggs
+];
+
+const singularWord = (w: string) =>
+  w.length > 3 && !/(ss|us|is|sses)$/.test(w) ? w.replace(/(oes|ies|es|s)$/, (m) => (m === "oes" ? "o" : m === "ies" ? "y" : m === "es" ? "e" : "")) : w;
+
+/**
+ * Matching key for an ingredient, shared by the shopping list and pantry:
+ * "2 cups all-purpose flour" and "flour" match; so do "scallions" and
+ * "green onions", or "large eggs" and "egg". Words that change what you'd buy
+ * (brown sugar, dried dill, ground beef) are kept.
+ */
+export function nameKey(name: string): string {
+  // Comma parts: keep the first one that names something ("boneless, skinless chicken" → "skinless
+  // chicken"; "chicken, cut into pieces" → "chicken"; "onions, thinly sliced" → "onions").
+  const parts = name.toLowerCase().replace(/\(.*?\)/g, " ").split(",");
+  const named = parts.find((p) => p.split(/[\s-]+/).some((w) => w && !DESCRIPTORS.has(w.replace(/[^a-z]/g, "")))) ?? parts[0];
+  let s = named
+    .replace(/\b(at )?room temperature\b|\bto taste\b|\bfor (serving|garnish|topping)\b/g, " ")
+    .replace(/\ball[- ]purpose\b/g, "allpurpose")
+    .replace(/\b(low|reduced)[- ]sodium\b/g, (m) => m.replace(/[- ]/, ""))
+    .replace(/-/g, " ")
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  for (const [re, to] of SYNONYMS) s = s.replace(re, to);
+  const words = s.split(" ").filter((w) => w && !DESCRIPTORS.has(w));
+  s = (words.length ? words : s.split(" ")).map(singularWord).join(" ");
+  for (const [re, to] of SYNONYMS) s = s.replace(re, to); // again, after descriptors are gone
+  return s || name.toLowerCase().trim();
 }
 
 /**

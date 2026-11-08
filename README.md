@@ -41,6 +41,13 @@ where it's added, so you don't have to flip back and forth between the steps and
   shopping list shows "≈ 3½ lb left — enough" or "buy ≈ ½ cup more", and moves items you already have
   into their own section. Cups/tbsp/ml, oz/lb/g and package sizes like "2 (8 oz) blocks" are
   understood, and common staples convert between cups and pounds.
+- **What can I make?** (Pantry page) recipes ranked by how little you'd need to buy, with what's
+  missing and an "Add to shopping list" button; a "Can make now" filter on the recipe list. Ingredient
+  names are matched sensibly ("all-purpose flour" = "flour", "scallions" = "green onions", egg whites
+  come from eggs) while real differences stay (brown sugar, dried dill).
+- **Read aloud in cooking mode**: one step at a time with a pause after each ingredient, and it never
+  moves on by itself. Pause / Continue / Repeat buttons, and voice commands where the browser supports
+  them ("pause", "stop", "wait", "continue", "next", "back", "repeat").
 - **Plan a meal time**: pick when you want to eat; the app says when to start (from your own past
   times for that recipe, else the recipe's stated times, else an estimate from its steps), adds a
   calendar reminder (alerts 15 min before and at start time) and shows a banner if the app is open.

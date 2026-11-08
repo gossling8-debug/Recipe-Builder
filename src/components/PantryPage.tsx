@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { listRecipes } from "../lib/db";
+import { whatCanIMake, type CanMake } from "../lib/canMake";
+import { addToShopping, loadShopping } from "../lib/shopping";
 import Header from "./Header";
 import Icon from "./Icon";
 import { href } from "../lib/route";
@@ -12,7 +15,16 @@ export default function PantryPage() {
   const [editing, setEditing] = useState<{ key: string; text: string } | null>(null);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
-  const refresh = () => setItems(Object.values(loadPantry()).sort((a, b) => a.name.localeCompare(b.name)));
+  const [ideas, setIdeas] = useState<CanMake[] | null>(null);
+  const [listed, setListed] = useState(() => new Set(loadShopping().recipes.map((r) => r.id)));
+  const loadIdeas = () => listRecipes().then((rs) => setIdeas(whatCanIMake(rs)), () => setIdeas([]));
+  useEffect(() => {
+    void loadIdeas();
+  }, []);
+  const refresh = () => {
+    setItems(Object.values(loadPantry()).sort((a, b) => a.name.localeCompare(b.name)));
+    void loadIdeas();
+  };
 
   function save(item: PantryItem, text: string) {
     setItem(item.key, { ...item, qty: text.trim() ? parseQty(text, item.name) : null, updatedAt: Date.now() });
@@ -46,6 +58,51 @@ export default function PantryPage() {
           What you should have on hand. Ticking items on your shopping list adds them; making a recipe uses them up. Amounts
           are estimates — tap one to correct it.
         </p>
+
+        {items.length > 0 && ideas && (
+          <section className="ideas">
+            <h3 className="list-heading">What can I make?</h3>
+            {ideas.length === 0 ? (
+              <p className="muted small">None of your recipes are close yet — they each need 3 or more things you don't have.</p>
+            ) : (
+              <ul className="idea-list">
+                {ideas.slice(0, 8).map((c) => {
+                  const gaps = [...c.missing, ...c.short];
+                  return (
+                    <li key={c.recipe.id}>
+                      <a className="idea-title" href={href({ name: "recipe", id: c.recipe.id })}>
+                        {c.recipe.title}
+                      </a>
+                      <div className="small">
+                        {gaps.length === 0 ? (
+                          <span className="idea-ready">You have everything</span>
+                        ) : (
+                          <span>Need: {gaps.join(" · ")}</span>
+                        )}
+                        {c.check.length > 0 && <span className="muted"> · check you have enough {c.check.join(", ")}</span>}
+                      </div>
+                      {gaps.length > 0 &&
+                        (listed.has(c.recipe.id) ? (
+                          <span className="muted small">On your shopping list</span>
+                        ) : (
+                          <button
+                            className="link-btn small"
+                            onClick={() => {
+                              addToShopping(c.recipe.id, 1);
+                              setListed(new Set([...listed, c.recipe.id]));
+                            }}
+                          >
+                            Add to shopping list
+                          </button>
+                        ))}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <p className="muted small">Salt, pepper and water are assumed. Uses each recipe at its normal size.</p>
+          </section>
+        )}
 
         {items.length === 0 ? (
           <div className="empty">

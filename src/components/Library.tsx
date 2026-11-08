@@ -4,6 +4,8 @@ import { loadShopping } from "../lib/shopping";
 import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
 import { activeSwaps } from "../lib/swaps";
 import { loadPlans, timeOf, untilText } from "../lib/plan";
+import { whatCanIMake } from "../lib/canMake";
+import { loadPantry } from "../lib/pantry";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -50,6 +52,10 @@ export default function Library() {
   const hasFavorites = all.some((r) => r.favorite);
   const avoid = loadAvoid();
   const avoiding = isActive(avoid);
+  const hasPantry = Object.keys(loadPantry()).length > 0;
+  const canMakeNow = new Set(
+    hasPantry ? whatCanIMake(all, 0).filter((c) => c.missing.length + c.short.length === 0).map((c) => c.recipe.id) : [],
+  );
   const avoidReasons = (r: SavedRecipe) => [
     ...new Set(findAvoided(r.ingredients, avoid, new Set(activeSwaps(r).keys())).flatMap((m) => m.reasons)),
   ];
@@ -57,6 +63,7 @@ export default function Library() {
   const activeFilter =
     filter === "favorites" ? (hasFavorites ? filter : "all")
     : filter === "safe" ? (avoiding ? filter : "all")
+    : filter === "canmake" ? (hasPantry ? filter : "all")
     : filter !== "all" && !tags.includes(filter) ? "all" : filter;
 
   const q = query.trim().toLowerCase();
@@ -66,6 +73,7 @@ export default function Library() {
       activeFilter === "all" ? true
       : activeFilter === "favorites" ? r.favorite
       : activeFilter === "safe" ? avoidReasons(r).length === 0
+      : activeFilter === "canmake" ? canMakeNow.has(r.id)
       : (r.tags ?? []).includes(activeFilter),
     )
     .sort((a, b) => (sort === "az" ? a.title.localeCompare(b.title) : b.createdAt - a.createdAt));
@@ -160,11 +168,12 @@ export default function Library() {
             <p className="muted">Add your first recipe: scan a card, paste a website link, or paste the text.</p>
           </div>
         )}
-        {all.length > 0 && (hasFavorites || tags.length > 0 || avoiding) && (
+        {all.length > 0 && (hasFavorites || tags.length > 0 || avoiding || hasPantry) && (
           <div className="filters" role="group" aria-label="Show">
             {[
               ["all", "All"],
               ...(hasFavorites ? [["favorites", "Favorites"]] : []),
+              ...(hasPantry ? [["canmake", "Can make now"]] : []),
               ...(avoiding ? [["safe", "Fits my avoid list"]] : []),
               ...tags.map((t) => [t, t]),
             ].map(([value, label]) => (
