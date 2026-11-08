@@ -10,6 +10,7 @@ import PlanWatcher from "./components/PlanWatcher";
 import PantryPage from "./components/PantryPage";
 import { startCloud } from "./lib/cloud";
 import ImportPage from "./components/ImportPage";
+import WeekPage from "./components/WeekPage";
 
 function Screen() {
   const route = useRoute();
@@ -25,6 +26,8 @@ function Screen() {
       return <Settings />;
     case "import":
       return <ImportPage data={route.data} />;
+    case "week":
+      return <WeekPage />;
     case "pantry":
       return <PantryPage />;
     case "shopping":

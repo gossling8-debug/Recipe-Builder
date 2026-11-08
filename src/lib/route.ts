@@ -6,6 +6,7 @@ export type Route =
   | { name: "settings" }
   | { name: "shopping" }
   | { name: "pantry" }
+  | { name: "week" }
   | { name: "import"; data: string }
   | { name: "recipe"; id: string };
 
@@ -15,6 +16,7 @@ export function parseRoute(hash: string): Route {
   if (path === "settings") return { name: "settings" };
   if (path === "shopping") return { name: "shopping" };
   if (path === "pantry") return { name: "pantry" };
+  if (path === "week") return { name: "week" };
   const imp = path.match(/^import\/(.+)$/);
   if (imp) return { name: "import", data: imp[1] };
   const m = path.match(/^recipe\/(.+)$/);

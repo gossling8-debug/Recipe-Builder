@@ -605,3 +605,18 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .made-btn { padding: 6px 12px; min-height: 0; font-size: 15px; }
 .notes-input { width: 100%; resize: vertical; font: inherit; }
 .my-notes-text { margin-bottom: 4px; }
+
+/* This week */
+.week { list-style: none; padding: 0; margin: 12px 0; }
+.week-day { border-top: 1px solid var(--line); padding: 12px 0; }
+.week-day-head { margin-bottom: 4px; }
+.week-meals { list-style: none; padding: 0; margin: 0; }
+.week-meals li { display: flex; align-items: center; gap: 6px; min-height: 40px; }
+.week-meals li a { flex: 0 1 auto; }
+.week-meals .small-btn { margin-left: auto; }
+.week-pick { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+.week-pick select { flex: 1; min-width: 0; }
+.week-add { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
+.add-week { margin-top: 8px; }
+.add-week > .small { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.day-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }

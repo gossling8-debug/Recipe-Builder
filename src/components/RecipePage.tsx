@@ -7,6 +7,7 @@ import Substitutes from "./Substitutes";
 import CookMode, { clearCookStart, cookStart } from "./CookMode";
 import PlanMeal from "./PlanMeal";
 import MyNotes from "./MyNotes";
+import AddToWeek from "./AddToWeek";
 import { markMade, unmarkMadeToday } from "../lib/made";
 import { clearPlan, getPlan } from "../lib/plan";
 import { restore, useForRecipe, type PantryItem } from "../lib/pantry";
@@ -206,7 +207,12 @@ export default function RecipePage({ id }: { id: string }) {
                   void saveRecipe(updated);
                   showToast("Pantry change undone");
                 } }}
-              top={<PlanMeal recipe={{ ...applySwaps(recipe), cookLog: recipe.cookLog }} recipeId={recipe.id} />}
+              top={
+                <>
+                  <PlanMeal recipe={{ ...applySwaps(recipe), cookLog: recipe.cookLog }} recipeId={recipe.id} />
+                  <AddToWeek recipeId={recipe.id} />
+                </>
+              }
               recipe={applySwaps(recipe)}
               recipeId={recipe.id}
               swaps={activeSwaps(recipe)}

@@ -9,6 +9,7 @@ import { loadPantry, useSoon } from "../lib/pantry";
 import { freshness, useByText } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
 import { agoText, lastMade } from "../lib/made";
+import { dayKey, loadWeek } from "../lib/week";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -123,6 +124,9 @@ export default function Library() {
         title=""
         actions={
           <>
+            <a className="icon-btn" href={href({ name: "week" })} aria-label="This week's meals">
+              <Icon name="calendar" />
+            </a>
             <a className="icon-btn" href={href({ name: "pantry" })} aria-label="Pantry">
               <Icon name="jar" />
             </a>
@@ -159,6 +163,19 @@ export default function Library() {
                     : ""}
                   {more > 0 ? ` · +${more} more` : ""}
                 </span>
+              </span>
+            </a>
+          );
+        })()}
+        {(() => {
+          const today = (loadWeek().days[dayKey(new Date())] ?? []).map((m) => all.find((r) => r.id === m.id)).filter(Boolean);
+          if (!today.length) return null;
+          return (
+            <a className="plan-strip" href={href({ name: "week" })}>
+              <Icon name="calendar" size={18} />
+              <span>
+                <strong>Today: {today.map((r) => r!.title).join(", ")}</strong>
+                <span className="muted small"> · see the week</span>
               </span>
             </a>
           );
