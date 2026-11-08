@@ -113,7 +113,7 @@ export default function MyNotes({ recipe, onSaved }: { recipe: SavedRecipe; onSa
         <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => (addPhoto(e.target.files?.[0]), (e.target.value = ""))} />
         {recipe.dishPhoto ? (
           <span className="small">
-            <Icon name="camera" size={16} /> Your photo is at the top of the recipe ·{" "}
+            <Icon name="camera" size={16} /> Photo added ·{" "}
             <button className="link-btn small" onClick={() => fileInput.current?.click()}>
               Change
             </button>{" "}

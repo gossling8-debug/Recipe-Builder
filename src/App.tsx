@@ -12,6 +12,7 @@ import { startCloud } from "./lib/cloud";
 import ImportPage from "./components/ImportPage";
 import WeekPage from "./components/WeekPage";
 import BigMealPage from "./components/BigMealPage";
+import PrintPage from "./components/PrintPage";
 import { BookPage, FamilyPage, JoinPage, SharedRecipePage } from "./components/Family";
 
 function Screen() {
@@ -33,6 +34,8 @@ function Screen() {
       return route.book ? <BookPage id={route.book} /> : <FamilyPage />;
     case "join":
       return <JoinPage id={route.id} />;
+    case "print":
+      return <PrintPage id={route.id} />;
     case "meal":
       return <BigMealPage key={location.hash} day={route.day} ids={route.ids} />;
     case "week":

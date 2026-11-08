@@ -7,6 +7,7 @@ export type Route =
   | { name: "shopping" }
   | { name: "pantry" }
   | { name: "week" }
+  | { name: "print"; id: string }
   | { name: "meal"; day?: string; ids?: string[] }
   | { name: "family"; book?: string; recipe?: string }
   | { name: "join"; id: string }
@@ -22,6 +23,8 @@ export function parseRoute(hash: string): Route {
   if (path === "week") return { name: "week" };
   const fam = path.match(/^family(?:\/([^/]+))?(?:\/([^/]+))?$/);
   if (fam) return { name: "family", book: fam[1] && decodeURIComponent(fam[1]), recipe: fam[2] && decodeURIComponent(fam[2]) };
+  const pr = path.match(/^print\/(.+)$/);
+  if (pr) return { name: "print", id: decodeURIComponent(pr[1]) };
   const meal = path.match(/^meal(?:\/(\d{4}-\d{2}-\d{2}))?(?:\/([^/]+))?$/);
   if (meal) return { name: "meal", day: meal[1], ids: meal[2] ? meal[2].split(",").map(decodeURIComponent) : undefined };
   const join = path.match(/^join\/([^/]+)$/);
@@ -35,6 +38,7 @@ export function parseRoute(hash: string): Route {
 
 export function href(route: Route): string {
   if (route.name === "import") return `#/import/${route.data}`;
+  if (route.name === "print") return `#/print/${encodeURIComponent(route.id)}`;
   if (route.name === "meal")
     return ["#/meal", route.day, route.ids?.length ? route.ids.map(encodeURIComponent).join(",") : undefined].filter(Boolean).join("/");
   if (route.name === "join") return `#/join/${encodeURIComponent(route.id)}`;
