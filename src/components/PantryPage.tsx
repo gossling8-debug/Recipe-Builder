@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { listRecipes } from "../lib/db";
+import WarnIcon from "./WarnIcon";
 import { whatCanIMake, type CanMake } from "../lib/canMake";
 import { addToShopping, loadShopping } from "../lib/shopping";
 import Header from "./Header";
@@ -84,6 +85,7 @@ export default function PantryPage() {
               {soon.map(({ item, recipes }) => (
                 <li key={item.key} className={`fresh-${freshness(item.useBy!)}`}>
                   <div>
+                    {freshness(item.useBy!) === "past" && <WarnIcon />}
                     <strong>{item.name}</strong>{" "}
                     <span className="use-by-text">{useByLabel(item.useBy!)}</span>
                   </div>
@@ -116,20 +118,27 @@ export default function PantryPage() {
               <ul className="idea-list">
                 {ideas.slice(0, 8).map((c) => {
                   const gaps = [...c.missing, ...c.short];
+                  const allGood = gaps.length === 0 && c.expired.length === 0;
                   return (
                     <li key={c.recipe.id}>
                       <a className="idea-title" href={href({ name: "recipe", id: c.recipe.id })}>
                         {c.recipe.title}
                       </a>
                       <div className="small">
-                        {gaps.length === 0 ? (
+                        {allGood ? (
                           <span className="idea-ready">You have everything</span>
-                        ) : (
+                        ) : gaps.length > 0 ? (
                           <span>Need: {gaps.join(" · ")}</span>
-                        )}
+                        ) : null}
+                        {c.expired.map((name) => (
+                          <span key={name} className="expired-line">
+                            <WarnIcon size={16} />
+                            {name} is past its date
+                          </span>
+                        ))}
                         {c.check.length > 0 && <span className="muted"> · check you have enough {c.check.join(", ")}</span>}
                       </div>
-                      {gaps.length > 0 &&
+                      {!allGood &&
                         (listed.has(c.recipe.id) ? (
                           <span className="muted small">On your shopping list</span>
                         ) : (
@@ -218,6 +227,7 @@ export default function PantryPage() {
                     </div>
                   ) : (
                     <button className={`link-btn small use-by fresh-${it.useBy ? freshness(it.useBy) : "none"}`} onClick={() => setDateFor(it.key)}>
+                      {it.useBy && freshness(it.useBy) === "past" && <WarnIcon size={16} />}
                       {it.useBy
                         ? `${useByLabel(it.useBy)}${it.useByEstimated ? " (estimated)" : ""}`
                         : "Add a use-by date"}

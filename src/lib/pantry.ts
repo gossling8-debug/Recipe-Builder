@@ -172,6 +172,7 @@ export function restore(undo: Record<string, PantryItem | null>): void {
 export type PantryStatus =
   | { kind: "none" }
   | { kind: "unknown"; item: PantryItem } // have some, can't tell how much vs. what's needed
+  | { kind: "expired"; item: PantryItem } // in the pantry but past its use-by date — doesn't count
   | { kind: "enough"; item: PantryItem }
   | { kind: "some"; item: PantryItem; short: Qty };
 
@@ -179,6 +180,7 @@ export type PantryStatus =
 export function statusFor(key: string, name: string, need: Qty | null): PantryStatus {
   const item = loadPantry()[key];
   if (!item) return { kind: "none" };
+  if (item.useBy !== undefined && freshness(item.useBy) === "past") return { kind: "expired", item };
   if (!item.qty || !need) return { kind: "unknown", item };
   const c = compare(item.qty, need, name);
   if (!c) return { kind: "unknown", item };

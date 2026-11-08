@@ -10,6 +10,8 @@ import { applySwaps } from "../lib/swaps";
 import { boughtWhen, recordPurchase, setItem, statusFor } from "../lib/pantry";
 import { legacyNameKey } from "../lib/shopping";
 import { formatQty } from "../lib/qty";
+import { useByLabel } from "../lib/shelfLife";
+import WarnIcon from "./WarnIcon";
 import { walmartSearchUrl } from "../lib/shopping";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
 
@@ -264,6 +266,13 @@ function PantryNote({ status }: { status: ReturnType<typeof statusFor> | undefin
   if (!status || status.kind === "none") return null;
   const when = boughtWhen(status.item);
   const from = when ? ` from ${when}` : "";
+  if (status.kind === "expired")
+    return (
+      <span className="pantry-note expired-note">
+        <WarnIcon size={15} />
+        The one in your pantry is {useByLabel(status.item.useBy!).toLowerCase()} — buy fresh
+      </span>
+    );
   if (status.kind === "enough")
     return <span className="pantry-note ok">Pantry: ≈ {formatQty(status.item.qty!)} left{from} — enough</span>;
   if (status.kind === "some")

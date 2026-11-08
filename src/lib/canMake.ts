@@ -15,6 +15,7 @@ export interface CanMake {
   missing: string[]; // not in the pantry at all
   short: string[]; // in the pantry but not enough, e.g. "sugar (≈ ½ cup more)"
   check: string[]; // in the pantry, but the amounts can't be compared
+  expired: string[]; // in the pantry but past its date — counted as missing
 }
 
 /**
@@ -25,7 +26,7 @@ export function whatCanIMake(recipes: SavedRecipe[], maxMissing = 2): CanMake[] 
   const out: CanMake[] = [];
   for (const saved of recipes) {
     const recipe = applySwaps(saved);
-    const res: CanMake = { recipe: saved, have: 0, total: 0, missing: [], short: [], check: [] };
+    const res: CanMake = { recipe: saved, have: 0, total: 0, missing: [], short: [], check: [], expired: [] };
     for (const ing of recipe.ingredients) {
       if (!ing.name.trim()) continue;
       res.total++;
@@ -40,13 +41,15 @@ export function whatCanIMake(recipes: SavedRecipe[], maxMissing = 2): CanMake[] 
         res.have++;
         res.check.push(ing.name);
       } else if (s.kind === "some") res.short.push(`${ing.name} (≈ ${formatQty(s.short)} more)`);
+      else if (s.kind === "expired") res.expired.push(ing.name);
       else res.missing.push(ing.name);
     }
-    const gaps = res.missing.length + res.short.length;
+    const gaps = res.missing.length + res.short.length + res.expired.length;
     if (res.total > 0 && res.have > 0 && gaps <= maxMissing) out.push(res);
   }
   return out.sort(
     (a, b) =>
-      a.missing.length + a.short.length - (b.missing.length + b.short.length) || b.have / b.total - a.have / a.total,
+      a.missing.length + a.short.length + a.expired.length - (b.missing.length + b.short.length + b.expired.length) ||
+      b.have / b.total - a.have / a.total,
   );
 }

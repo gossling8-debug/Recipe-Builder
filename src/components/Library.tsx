@@ -6,7 +6,8 @@ import { activeSwaps } from "../lib/swaps";
 import { loadPlans, timeOf, untilText } from "../lib/plan";
 import { whatCanIMake } from "../lib/canMake";
 import { loadPantry, useSoon } from "../lib/pantry";
-import { useByText } from "../lib/shelfLife";
+import { freshness, useByText } from "../lib/shelfLife";
+import WarnIcon from "./WarnIcon";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -55,7 +56,7 @@ export default function Library() {
   const avoiding = isActive(avoid);
   const hasPantry = Object.keys(loadPantry()).length > 0;
   const canMakeNow = new Set(
-    hasPantry ? whatCanIMake(all, 0).filter((c) => c.missing.length + c.short.length === 0).map((c) => c.recipe.id) : [],
+    hasPantry ? whatCanIMake(all, 0).filter((c) => c.missing.length + c.short.length + c.expired.length === 0).map((c) => c.recipe.id) : [],
   );
   const avoidReasons = (r: SavedRecipe) => [
     ...new Set(findAvoided(r.ingredients, avoid, new Set(activeSwaps(r).keys())).flatMap((m) => m.reasons)),
@@ -137,10 +138,12 @@ export default function Library() {
           const more = soon.length - 1;
           return (
             <a className="plan-strip use-soon-strip" href={href({ name: "pantry" })}>
-              <Icon name="jar" size={18} />
+              {freshness(first.item.useBy!) === "past" ? <WarnIcon /> : <Icon name="jar" size={18} />}
               <span>
                 <strong>
-                  Use soon: {first.item.name} ({useByText(first.item.useBy!)})
+                  {freshness(first.item.useBy!) === "past"
+                    ? `Past its date: ${first.item.name} (${useByText(first.item.useBy!)})`
+                    : `Use soon: ${first.item.name} (${useByText(first.item.useBy!)})`}
                 </strong>
                 <span className="muted small">
                   {" "}
