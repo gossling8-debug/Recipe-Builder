@@ -16,6 +16,8 @@ Steps: use the source's own steps. If the instructions are one paragraph, split 
 - If the step only refers back to something already added ("stir the batter"), it is plain text, not an ingredient segment.
 - If a step uses an ingredient that is not in the list (for example "salt to taste"), add it to the ingredient list with an empty quantity and reference it.
 
+Notes: copy any tips or notes from the source. If it lists nutrition facts or a serving size (e.g. "Serving size 1 cup · 437 kcal · 31 g protein"), copy them into notes exactly as written.
+
 Tags: give 1–3 short categories that would help find this recipe later (meal or course, and a method like "Slow cooker" or an occasion like "Holiday" only if obvious).
 
 If anything is unreadable or you had to guess, make your best reading and add a short warning that says what you guessed. If the source is not a recipe (or a web page couldn't be read), return an empty ingredient and step list and explain in warnings.`;

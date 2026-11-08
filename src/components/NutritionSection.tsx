@@ -6,6 +6,8 @@ import { href } from "../lib/route";
 import { activeSwaps, ingredientsKey, type Swap } from "../lib/swaps";
 import { caloriesWithSwaps, type Nutrition } from "../lib/nutrition";
 import type { SavedRecipe } from "../lib/schema";
+import { formatNumber } from "../lib/quantity";
+import { convertText, useUnits } from "../lib/units";
 
 type Healthier = Nutrition["healthier"][number];
 
@@ -21,6 +23,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
   const current = saved && saved.ingredientsKey === ingredientsKey(recipe);
   const swaps = activeSwaps(recipe);
   const hasKey = !!getApiKey();
+  const [units] = useUnits();
 
   const swapFor = (h: Healthier): Swap => ({ name: h.short_name, amount: h.amount, closeness: "Healthier", original: recipe.ingredients[h.ingredient_index].name });
   const isChosen = (h: Healthier) => {
@@ -42,7 +45,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
       const { estimateNutrition } = await import("../lib/nutrition");
       const avoid = loadAvoid();
       const labels = isActive(avoid) ? [...avoid.groups.map((g) => ALLERGEN_GROUPS[g]?.label ?? g), ...avoid.custom] : [];
-      const result = await estimateNutrition(getApiKey(), recipe, labels);
+      const result = await estimateNutrition(getApiKey(), recipe, labels, recipe.photos.slice(0, 4));
       await onSaved({ ...recipe, nutrition: { ingredientsKey: ingredientsKey(recipe), createdAt: Date.now(), result } });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -51,6 +54,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
   }
 
   const n = saved?.result;
+  const fromCard = n?.source === "card";
   const withSwaps = n && n.healthier.some(isChosen) ? caloriesWithSwaps(n, isChosen) : null;
 
   return (
@@ -61,8 +65,11 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
           {!current && <div className="callout warn small">This was estimated before the ingredients were edited.</div>}
           <div className="nutri-head">
             <div>
-              <div className="nutri-cal">≈ {Math.round(n.per_serving.calories)}</div>
-              <div className="muted small">calories per serving</div>
+              <div className="nutri-cal">
+                {fromCard ? "" : "≈ "}
+                {Math.round(n.per_serving.calories)}
+              </div>
+              <div className="muted small">calories per serving{fromCard ? " · from the recipe" : ""}</div>
             </div>
             {withSwaps !== null && (
               <div>
@@ -71,8 +78,23 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
               </div>
             )}
           </div>
+          {!n.serving_size && current && hasKey && (
+            <p className="small">
+              <button className="link-btn small" onClick={ask} disabled={busy}>
+                {busy ? "Working… (about 15–30 seconds)" : "Add the serving size"}
+              </button>{" "}
+              <span className="muted">(reads it from your card — a few cents)</span>
+            </p>
+          )}
+          {n.serving_size && (
+            <p className="serving-size">
+              <span className="muted small">Serving size</span>{" "}
+              <strong>{convertText(n.serving_size.measure, units)}</strong>
+              <span className="muted"> · ≈ {weightText(n.serving_size.weight_g, units)}</span>
+            </p>
+          )}
           <p className="muted small">
-            {n.servings_note} · Estimate: {n.confidence.toLowerCase()}
+            {n.servings_note} · {fromCard ? "Numbers from the recipe" : `Estimate: ${n.confidence.toLowerCase()}`}
           </p>
           <table className="conv-table nutri-table">
             <tbody>
@@ -147,7 +169,9 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
               ))}
             </ul>
           )}
-          <p className="muted small">An estimate from Claude, not a lab test — fine for everyday choices, not for medical diets.</p>
+          <p className="muted small">
+            {fromCard ? "Nutrition as listed on the recipe; swap calories are Claude's estimates." : "An estimate from Claude, not a lab test — fine for everyday choices, not for medical diets."}
+          </p>
         </>
       )}
 
@@ -172,4 +196,14 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
       {error && <div className="callout error">{error}</div>}
     </section>
   );
+}
+
+/** "240 g (8½ oz)"; metric shows grams only, US shows ounces first. */
+function weightText(g: number, units: string): string {
+  const grams = g < 100 ? Math.round(g / 5) * 5 : Math.round(g / 10) * 10;
+  const oz = g / 28.35;
+  const ozText = oz >= 16 ? `${Math.round((oz / 16) * 10) / 10} lb` : `${formatNumber(Math.round(oz * 2) / 2)} oz`;
+  if (units === "metric") return `${grams} g`;
+  if (units === "us") return `${ozText} (${grams} g)`;
+  return `${grams} g (${ozText})`;
 }
