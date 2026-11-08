@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import { compressPhoto } from "../lib/image";
+import { addLeftover, eatByLabel, useLeftovers } from "../lib/leftovers";
+import { href } from "../lib/route";
 import Icon from "./Icon";
 import { agoText, lastMade, madeDays, madeToday, markMade, unmarkMadeToday } from "../lib/made";
 import type { SavedRecipe } from "../lib/schema";
@@ -21,6 +23,7 @@ export default function MyNotes({ recipe, onSaved }: { recipe: SavedRecipe; onSa
       setPhotoError(e instanceof Error ? e.message : String(e));
     }
   }
+  const leftover = useLeftovers().find((l) => l.id === recipe.id);
   const days = madeDays(recipe);
   const last = lastMade(recipe);
   const today = madeToday(recipe);
@@ -58,6 +61,19 @@ export default function MyNotes({ recipe, onSaved }: { recipe: SavedRecipe; onSa
         )}
       </p>
 
+      <p className="small made-line">
+        {leftover ? (
+          <span>
+            Leftovers · <a href={href({ name: "pantry" })}>{eatByLabel(leftover)}</a>
+          </span>
+        ) : (
+          last !== undefined && (
+            <button className="btn made-btn" onClick={() => addLeftover(recipe.id, recipe.title)}>
+              <Icon name="jar" size={16} /> I have leftovers
+            </button>
+          )
+        )}
+      </p>
       <div className="rating-row" role="group" aria-label="Your rating">
         <span className="small muted">Your rating</span>
         <span className="stars">

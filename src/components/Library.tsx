@@ -11,6 +11,7 @@ import WarnIcon from "./WarnIcon";
 import { agoText, lastMade } from "../lib/made";
 import { dayKey, loadWeek } from "../lib/week";
 import { cloudState, subscribeCloud } from "../lib/cloud";
+import { eatByLabel, leftoverPast, useLeftovers } from "../lib/leftovers";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -26,6 +27,7 @@ export default function Library() {
   const [filter, setFilter] = useState(() => remembered("filter", "all"));
   const [sort, setSort] = useState(() => remembered("sort", "newest"));
   const onList = loadShopping().recipes.length;
+  const fridge = useLeftovers().filter((l) => !l.frozen);
   const [cloud, setCloud] = useState(cloudState());
   useEffect(() => subscribeCloud(setCloud), []);
   const familyOn = cloud.status !== "off" && cloud.status !== "signed-out";
@@ -179,6 +181,17 @@ export default function Library() {
             </a>
           );
         })()}
+        {fridge.length > 0 && (
+          <a className="plan-strip use-soon-strip" href={href({ name: "pantry" })}>
+            {leftoverPast(fridge[0]) ? <WarnIcon /> : <Icon name="jar" size={18} />}
+            <span>
+              <strong>
+                Leftovers: {fridge[0].title} · {eatByLabel(fridge[0])}
+              </strong>
+              {fridge.length > 1 && <span className="muted small"> · +{fridge.length - 1} more</span>}
+            </span>
+          </a>
+        )}
         {(() => {
           const today = (loadWeek().days[dayKey(new Date())] ?? []).map((m) => all.find((r) => r.id === m.id)).filter(Boolean);
           if (!today.length) return null;
