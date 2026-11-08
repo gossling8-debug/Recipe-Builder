@@ -533,3 +533,25 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .scale-row { flex-wrap: wrap; row-gap: 6px; }
 .scale-row .segmented { max-width: 100%; }
 .scale-row .chip { min-width: 40px; padding: 4px 8px; }
+
+/* ---------- What can I make? ---------- */
+.ideas { margin-bottom: 24px; }
+.idea-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+.idea-list li { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.idea-title { font-family: var(--serif); font-size: 18px; font-weight: 600; text-decoration: none; }
+.idea-ready { color: var(--accent); font-weight: 600; }
+.idea-list .link-btn { padding: 6px 0 0; }
+
+/* ---------- Read aloud ---------- */
+.read-bar { padding: 12px 20px 0; }
+.read-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.read-controls .btn { min-height: 44px; padding: 8px 14px; }
+.read-toggle.on { background: var(--ink); color: var(--ink-text); border-color: var(--ink); }
+.voice-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; }
+.voice-row .link-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 0; }
+.voice-on { color: var(--accent); font-weight: 600; }
+.error-text { color: var(--error); }
+
+.read-controls { flex-wrap: wrap; } /* one row normally; wraps at the largest text size instead of hiding a button */
+.read-controls .btn { flex: 0 1 auto; white-space: nowrap; }
+.read-controls .read-toggle { flex: 1 1 auto; }

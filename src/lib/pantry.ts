@@ -28,7 +28,31 @@ export function loadPantry(): Pantry {
   } catch {
     /* blocked */
   }
-  return memory;
+  return rekey(memory);
+}
+
+/**
+ * Items saved under an older matching rule are moved to the current key, and
+ * merged if two now mean the same thing ("all-purpose flour" + "flour").
+ */
+function rekey(p: Pantry): Pantry {
+  if (Object.values(p).every((it) => it.key === nameKey(it.name))) return p;
+  const out: Pantry = {};
+  for (const it of Object.values(p)) {
+    const key = nameKey(it.name);
+    const prev = out[key];
+    if (!prev) out[key] = { ...it, key };
+    else {
+      const merged = prev.qty && it.qty ? add(prev.qty, it.qty, it.name) : null;
+      out[key] = merged
+        ? { ...prev, qty: merged, boughtAt: Math.max(prev.boughtAt ?? 0, it.boughtAt ?? 0) || undefined, updatedAt: Date.now() }
+        : it.updatedAt > prev.updatedAt
+          ? { ...it, key }
+          : prev;
+    }
+  }
+  savePantry(out);
+  return out;
 }
 
 export function savePantry(p: Pantry): void {

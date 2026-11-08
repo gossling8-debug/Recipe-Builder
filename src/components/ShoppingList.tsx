@@ -8,6 +8,7 @@ import type { SavedRecipe } from "../lib/schema";
 import { shareText } from "../lib/share";
 import { applySwaps } from "../lib/swaps";
 import { boughtWhen, recordPurchase, setItem, statusFor } from "../lib/pantry";
+import { legacyNameKey } from "../lib/shopping";
 import { formatQty } from "../lib/qty";
 import { getWalmartTarget, setWalmartTarget, walmartSearchUrl, type WalmartTarget } from "../lib/shopping";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
@@ -43,6 +44,18 @@ export default function ShoppingList() {
   );
   const items = useMemo(() => combine(entries), [entries]);
   const checked = new Set(state.checked);
+  // Ticks saved under the older matching rule move to the current item keys.
+  useEffect(() => {
+    const map = new Map(items.map((i) => [legacyNameKey(i.name), i.key]));
+    const move = (k: string) => map.get(k) ?? k;
+    const moved = (list?: string[]) => list && [...new Set(list.map(move))];
+    const checkedNow = moved(state.checked)!;
+    if (checkedNow.join() === state.checked.join() && (moved(state.opened) ?? []).join() === (state.opened ?? []).join()) return;
+    const bought = Object.fromEntries(Object.entries(state.bought ?? {}).map(([k, v]) => [move(k), v]));
+    update({ ...state, checked: checkedNow, opened: moved(state.opened), bought });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
   const notChecked = items.filter((i) => !checked.has(i.key));
   const status = new Map(notChecked.map((i) => [i.key, statusFor(i.key, i.name, i.need)]));
   // Enough already on hand → its own section, so the list to buy stays short.

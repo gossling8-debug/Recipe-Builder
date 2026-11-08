@@ -5,6 +5,8 @@ import { TimerBar, type useTimers } from "./Timers";
 import { scaleAmount } from "../lib/quantity";
 import { toggleIn, useProgress } from "../lib/progress";
 import { findTimers } from "../lib/timers";
+import { stepChunks } from "../lib/speech";
+import { ReadAloudBar, useReader, useVoiceCommands } from "./ReadAloud";
 import type { ScannedRecipe } from "../lib/schema";
 
 /**
@@ -57,6 +59,36 @@ export default function CookMode({
   }, []);
 
   const go = (to: number) => setAt(Math.max(0, Math.min(total - 1, to)));
+
+  // Read aloud: one step at a time; it never moves on by itself.
+  const reader = useReader();
+  const [reading, setReading] = useState(false);
+  const chunksAt = (i: number) => stepChunks(recipe.steps[i], scale);
+  const toggleRead = () => {
+    if (reading) {
+      setReading(false);
+      reader.stop();
+    } else {
+      setReading(true);
+      reader.read(chunksAt(at)); // started by the tap, which iPhones require for speech
+    }
+  };
+  const firstStep = useRef(true);
+  useEffect(() => {
+    if (firstStep.current) {
+      firstStep.current = false;
+      return;
+    }
+    if (reading) reader.read(chunksAt(at));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [at]);
+  const voice = useVoiceCommands((cmd) => {
+    if (cmd === "pause") reader.pause();
+    else if (cmd === "resume") reader.state === "paused" ? reader.resume() : reader.repeat();
+    else if (cmd === "repeat") reader.repeat();
+    else if (cmd === "next") next();
+    else if (cmd === "back") go(at - 1);
+  }, reader.current);
   const [finishing, setFinishing] = useState(false);
   const [minutes, setMinutes] = useState(0);
   const next = () => {
@@ -66,6 +98,7 @@ export default function CookMode({
     const startedAt = cookStart(recipeId);
     const measured = Math.round((Date.now() - startedAt) / 60000);
     setMinutes(measured >= 2 ? measured : plannedMinutes ?? 30);
+    reader.stop();
     setFinishing(true);
     onMade?.();
   };
@@ -170,6 +203,7 @@ export default function CookMode({
       </div>
 
       <TimerBar {...timers} />
+      <ReadAloudBar reader={reader} voice={voice} reading={reading} onToggleRead={toggleRead} />
 
       <main className="cook-body">
         <p className="cook-step">
