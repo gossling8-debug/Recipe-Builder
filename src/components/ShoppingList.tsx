@@ -10,7 +10,7 @@ import { applySwaps } from "../lib/swaps";
 import { boughtWhen, recordPurchase, setItem, statusFor } from "../lib/pantry";
 import { legacyNameKey } from "../lib/shopping";
 import { formatQty } from "../lib/qty";
-import { getWalmartTarget, setWalmartTarget, walmartSearchUrl, type WalmartTarget } from "../lib/shopping";
+import { walmartSearchUrl } from "../lib/shopping";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
 
 const scaleLabel = (s: number) => (s === 1 ? "" : ` · ×${s === 0.5 ? "½" : s === 1.5 ? "1½" : s}`);
@@ -97,7 +97,6 @@ export default function ShoppingList() {
   }
 
   const opened = new Set(state.opened ?? []);
-  const [target, setTarget] = useState<WalmartTarget>(getWalmartTarget);
   const row = (it: (typeof items)[number]) => (
     <li key={it.key} className="shop-row">
       <label className={checked.has(it.key) ? "checked" : ""}>
@@ -122,9 +121,8 @@ export default function ShoppingList() {
       {!checked.has(it.key) && (
         <a
           className={opened.has(it.key) ? "store-btn opened" : "store-btn"}
-          href={walmartSearchUrl(it.name, target)}
-          // The website opens in a new tab; the app link hands off to the Walmart app.
-          target={target === "website" ? "_blank" : undefined}
+          href={walmartSearchUrl(it.name)}
+          target="_blank"
           rel="noopener noreferrer"
           aria-label={`Find ${it.name} at Walmart`}
           onClick={() => update({ ...state, opened: [...new Set([...(state.opened ?? []), it.key])] })}
@@ -216,29 +214,10 @@ export default function ShoppingList() {
             <h3>To buy · {remaining.length}</h3>
             {remaining.length > 0 && (
               <>
-                <div className="store-target">
-                  <span className="small muted">Open items in</span>
-                  <div className="segmented" role="radiogroup" aria-label="Open Walmart items in">
-                    {(["website", "app"] as const).map((t) => (
-                      <button
-                        key={t}
-                        role="radio"
-                        aria-checked={target === t}
-                        className={target === t ? "chip active" : "chip"}
-                        onClick={() => {
-                          setTarget(t);
-                          setWalmartTarget(t);
-                        }}
-                      >
-                        {t === "website" ? "Website" : "Walmart app"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 <p className="muted small">
-                  {target === "website"
-                    ? "Tap Walmart to find an item on walmart.com. If you're signed in, it goes into the same cart as your Walmart app (and Walmart+). Tap the ✓ to clear it if you didn't add it."
-                    : "Tap Walmart to open the item in the Walmart app. This is a test — if the app doesn't open, or opens without searching, switch back to Website."}
+                  Tap <strong>Walmart</strong> to find an item in the Walmart app and add it to your cart, then tick it off
+                  here. Tap the ✓ to clear it if you didn't add it. (If it opens the website instead: in DuckDuckGo, turn on
+                  Settings → General → Open Links in Associated Apps.)
                 </p>
               </>
             )}

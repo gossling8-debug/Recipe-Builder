@@ -198,35 +198,14 @@ export function shoppingToText(items: ShoppingItem[], checked: Set<string>): str
 }
 
 /**
- * A Walmart search for one shopping-list item. Opens the Walmart app if it's
- * installed (signed into the cook's account, e.g. Walmart+), otherwise the site.
- * Only the ingredient name is searched — "4 cups sugar" would confuse the
- * search, and the cook picks the brand and package size.
+ * A Walmart search for one shopping-list item. The phone opens it in the
+ * Walmart app when the app is installed and the browser allows it (in
+ * DuckDuckGo: Settings → General → Open Links in Associated Apps), otherwise
+ * on walmart.com — the same cart either way. Only the ingredient name is
+ * searched; the cook picks the brand and package size.
  */
-export function walmartSearchUrl(name: string, target: WalmartTarget = "website"): string {
-  const q = walmartQuery(name);
-  // The app's own link scheme lets the phone hand off to the Walmart app even
-  // from inside another browser. Walmart doesn't document its in-app search
-  // link, so this format is a best guess that the cook tests on their phone.
-  if (target === "app") return `walmart://search?query=${encodeURIComponent(q)}`;
-  return `https://www.walmart.com/search?q=${encodeURIComponent(q)}`;
-}
-
-export type WalmartTarget = "website" | "app";
-const TARGET_KEY = "recipe-builder.walmartTarget";
-export function getWalmartTarget(): WalmartTarget {
-  try {
-    return localStorage.getItem(TARGET_KEY) === "app" ? "app" : "website";
-  } catch {
-    return "website";
-  }
-}
-export function setWalmartTarget(t: WalmartTarget): void {
-  try {
-    localStorage.setItem(TARGET_KEY, t);
-  } catch {
-    /* session only */
-  }
+export function walmartSearchUrl(name: string): string {
+  return `https://www.walmart.com/search?q=${encodeURIComponent(walmartQuery(name))}`;
 }
 
 function walmartQuery(name: string): string {
