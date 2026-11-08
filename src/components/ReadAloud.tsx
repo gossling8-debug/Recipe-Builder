@@ -12,6 +12,17 @@ const GAP = 350;
  */
 export function useReader() {
   const [state, setState] = useState<"idle" | "speaking" | "paused">("idle");
+  // "Wait for my tap": stop after each ingredient until the cook taps to go on.
+  const [waitForTap, setWaitForTapState] = useState(() => {
+    try {
+      return localStorage.getItem("recipe-builder.waitForTap") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const waitRef = useRef(waitForTap);
+  waitRef.current = waitForTap;
+  const [waiting, setWaiting] = useState(false);
   const chunks = useRef<Chunk[]>([]);
   const at = useRef(0);
   const run = useRef(0); // invalidates callbacks from an earlier play
@@ -31,10 +42,17 @@ export function useReader() {
       at.current = i;
       if (i >= chunks.current.length) return setState("idle");
       setState("speaking");
+      setWaiting(false);
       const u = new SpeechSynthesisUtterance(chunks.current[i].text);
       u.rate = 0.95;
       u.onend = () => {
         if (run.current !== myRun) return;
+        if (chunks.current[i].afterIngredient && waitRef.current && i + 1 < chunks.current.length) {
+          at.current = i + 1; // tapping continues with what comes next
+          setWaiting(true);
+          setState("paused");
+          return;
+        }
         const gap = chunks.current[i].afterIngredient ? GAP_AFTER_INGREDIENT : GAP;
         timer.current = window.setTimeout(() => run.current === myRun && playFrom(i + 1), gap);
       };
@@ -50,6 +68,17 @@ export function useReader() {
   return {
     supported,
     state,
+    /** Stopped after an ingredient, waiting for a tap. */
+    waiting,
+    waitForTap,
+    setWaitForTap(v: boolean) {
+      setWaitForTapState(v);
+      try {
+        localStorage.setItem("recipe-builder.waitForTap", v ? "1" : "0");
+      } catch {
+        /* session only */
+      }
+    },
     /** What's being said right now (so voice commands can ignore the phone's own words). */
     current: () => (state === "speaking" ? chunks.current[at.current]?.text ?? "" : ""),
     read(next: Chunk[]) {
@@ -58,6 +87,7 @@ export function useReader() {
     },
     pause() {
       stopSpeech();
+      setWaiting(false);
       setState(chunks.current.length && at.current < chunks.current.length ? "paused" : "idle");
     },
     resume: () => playFrom(at.current),
@@ -122,10 +152,16 @@ export function useVoiceCommands(onCommand: (c: Command) => void, nowSpeaking: (
       handler.current(cmd);
     };
     r.onerror = (e) => {
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed" || e.error === "audio-capture") {
         wanted.current = false;
         setOn(false);
-        setProblem("Microphone access wasn't allowed, so voice commands are off. Use the buttons instead.");
+        setProblem(
+          e.error === "service-not-allowed"
+            ? "This browser doesn't let websites use speech recognition, so voice commands can't work here (they do in Safari). Use “Wait for my tap” instead."
+            : e.error === "audio-capture"
+              ? "No microphone could be used. Check that nothing else is using it, or use “Wait for my tap” instead."
+              : "The microphone is blocked for this browser. On iPhone: Settings → Apps → (your browser) → turn on Microphone, then try again. Or use “Wait for my tap” instead.",
+        );
       }
     };
     r.onend = () => {
@@ -208,6 +244,14 @@ export function ReadAloudBar({
           </>
         )}
       </div>
+      {reading && (
+        <label className="check-line wait-tap">
+          <input type="checkbox" checked={reader.waitForTap} onChange={(e) => reader.setWaitForTap(e.target.checked)} />
+          <span>
+            Wait for my tap after each ingredient <span className="muted small">(no microphone needed)</span>
+          </span>
+        </label>
+      )}
       {reading && (
         <div className="voice-row">
           {voice.supported ? (

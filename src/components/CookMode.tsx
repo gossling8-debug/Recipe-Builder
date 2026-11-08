@@ -205,7 +205,15 @@ export default function CookMode({
       <TimerBar {...timers} />
       <ReadAloudBar reader={reader} voice={voice} reading={reading} onToggleRead={toggleRead} />
 
-      <main className="cook-body">
+      <main
+        className={reader.waiting ? "cook-body waiting" : "cook-body"}
+        onClick={() => reader.waiting && reader.resume()}
+      >
+        {reader.waiting && (
+          <div className="tap-hint" role="status">
+            Added it? <strong>Tap anywhere</strong> to go on.
+          </div>
+        )}
         <p className="cook-step">
           {step.segments.map((seg, k) =>
             seg.ingredient_index === null ? (
