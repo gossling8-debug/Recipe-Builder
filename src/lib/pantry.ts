@@ -18,6 +18,8 @@ export interface PantryItem {
   /** Use-by time (ms). Estimated from typical shelf life unless the cook set it. */
   useBy?: number;
   useByEstimated?: boolean;
+  /** The cook chose "No date" — don't estimate one again. */
+  noUseBy?: boolean;
 }
 
 export type Pantry = Record<string, PantryItem>;
@@ -32,7 +34,31 @@ export function loadPantry(): Pantry {
   } catch {
     /* blocked */
   }
-  return rekey(memory);
+  return fillDates(rekey(memory));
+}
+
+/**
+ * Perishables saved without a date (e.g. bought before use-by dates existed)
+ * get an estimate from when they were bought — the cook never has to say what's
+ * perishable. Items the cook set to "No date" are left alone.
+ */
+function fillDates(p: Pantry): Pantry {
+  let changed = false;
+  const out: Pantry = {};
+  for (const [k, it] of Object.entries(p)) {
+    if (it.useBy === undefined && !it.noUseBy) {
+      const est = estimateUseBy(it.name, it.boughtAt ?? it.updatedAt);
+      if (est !== null) {
+        out[k] = { ...it, useBy: est, useByEstimated: true };
+        changed = true;
+        continue;
+      }
+    }
+    out[k] = it;
+  }
+  if (!changed) return p;
+  savePantry(out);
+  return out;
 }
 
 /**

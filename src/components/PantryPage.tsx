@@ -199,7 +199,7 @@ export default function PantryPage() {
                         onChange={(e) => {
                           const t = fromDateInput(e.target.value);
                           if (t) {
-                            setItem(it.key, { ...it, useBy: t, useByEstimated: false, updatedAt: Date.now() });
+                            setItem(it.key, { ...it, useBy: t, useByEstimated: false, noUseBy: false, updatedAt: Date.now() });
                             setDateFor(null);
                             refresh();
                           }
@@ -208,7 +208,7 @@ export default function PantryPage() {
                       <button
                         className="link-btn small"
                         onClick={() => {
-                          setItem(it.key, { ...it, useBy: undefined, useByEstimated: false, updatedAt: Date.now() });
+                          setItem(it.key, { ...it, useBy: undefined, useByEstimated: false, noUseBy: true, updatedAt: Date.now() });
                           setDateFor(null);
                           refresh();
                         }}

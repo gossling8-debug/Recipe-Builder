@@ -40,3 +40,19 @@ describe("use-by dates", () => {
     expect(r.map((x) => [x.item.name, x.recipes.map((y) => y.title)])).toEqual([["chicken breasts", ["Crack Chicken"]]]);
   });
 });
+
+describe("existing items get dates automatically", () => {
+  it("fills in an estimate from when it was bought, but respects 'No date'", () => {
+    const bought = Date.now() - 86_400_000; // yesterday
+    savePantry({
+      milk: { key: "milk", name: "milk", qty: null, boughtAt: bought, updatedAt: bought },
+      "cream cheese": { key: "cream cheese", name: "cream cheese", qty: null, updatedAt: bought, noUseBy: true },
+      sugar: { key: "sugar", name: "sugar", qty: null, updatedAt: bought },
+    });
+    const p = loadPantry();
+    expect(new Date(p.milk.useBy!).toDateString()).toBe(new Date(bought + 7 * 86_400_000).toDateString()); // 7 days after buying
+    expect(p.milk.useByEstimated).toBe(true);
+    expect(p["cream cheese"].useBy).toBeUndefined();
+    expect(p.sugar.useBy).toBeUndefined();
+  });
+});
