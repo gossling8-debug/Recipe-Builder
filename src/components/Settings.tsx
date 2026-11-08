@@ -22,7 +22,7 @@ export default function Settings() {
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
   const thisMonth = usage.filter((u) => u.at >= monthStart);
   const avgFor = (id: string) => {
-    const scans = usage.filter((u) => u.model === id && u.kind !== "substitutes");
+    const scans = usage.filter((u) => u.model === id && u.kind !== "substitutes" && u.kind !== "nutrition");
     return scans.length ? { avg: scans.reduce((s, u) => s + u.cost, 0) / scans.length, n: scans.length } : null;
   };
   const [newAvoid, setNewAvoid] = useState("");
@@ -203,7 +203,7 @@ export default function Settings() {
                   .map((u, i) => (
                     <li key={i}>
                       <span>
-                        {{ scan: "Card scan", website: "Website", text: "Pasted text", substitutes: "Substitutes" }[u.kind]} ·{" "}
+                        {{ scan: "Card scan", website: "Website", text: "Pasted text", substitutes: "Substitutes", nutrition: "Nutrition" }[u.kind]} ·{" "}
                         {MODELS.find((m) => m.id === u.model)?.label ?? u.model}
                       </span>
                       <span>{money(u.cost)}</span>

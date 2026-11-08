@@ -87,6 +87,12 @@ export interface SavedRecipe extends ScannedRecipe {
     createdAt: number;
     result: import("./substitutes").Substitutions;
   };
+  /** Claude's nutrition estimate and healthier swaps, saved so they're only paid for once. */
+  nutrition?: {
+    ingredientsKey: string; // which ingredients (so edits mark it out of date)
+    createdAt: number;
+    result: import("./nutrition").Nutrition;
+  };
   /** The cook's own notes ("used less sugar — perfect"). */
   myNotes?: string;
   /** Days it was made (ms), from "I made this" or "Made it today". Cooking mode adds to cookLog instead. */

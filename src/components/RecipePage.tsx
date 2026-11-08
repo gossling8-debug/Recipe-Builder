@@ -8,6 +8,7 @@ import CookMode, { clearCookStart, cookStart } from "./CookMode";
 import PlanMeal from "./PlanMeal";
 import MyNotes from "./MyNotes";
 import AddToWeek from "./AddToWeek";
+import NutritionSection from "./NutritionSection";
 import { markMade, unmarkMadeToday } from "../lib/made";
 import { clearPlan, getPlan } from "../lib/plan";
 import { restore, useForRecipe, type PantryItem } from "../lib/pantry";
@@ -234,6 +235,13 @@ export default function RecipePage({ id }: { id: string }) {
                     }}
                   />
                   <Substitutes
+                    recipe={recipe}
+                    onSaved={async (updated) => {
+                      await saveRecipe(updated);
+                      setRecipe(updated);
+                    }}
+                  />
+                  <NutritionSection
                     recipe={recipe}
                     onSaved={async (updated) => {
                       await saveRecipe(updated);

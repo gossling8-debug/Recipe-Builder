@@ -3,7 +3,7 @@ import { scaleAmount } from "../lib/quantity";
 import { toggleIn, useProgress } from "../lib/progress";
 import Icon from "./Icon";
 import { useState, type ReactNode } from "react";
-import { findAvoided, loadAvoid } from "../lib/avoid";
+import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
 import { conversionsFor } from "../lib/conversions";
 import { addToShopping, loadShopping, removeFromShopping } from "../lib/shopping";
 import { href } from "../lib/route";
@@ -154,7 +154,7 @@ export default function RecipeView({
         <div className="callout small">
           <strong>Swapped:</strong>{" "}
           {[...swaps.values()].map((s) => `${s.original} → ${s.name}`).join("; ")}.{" "}
-          {avoided.length === 0 && "This recipe now fits your avoid list."}
+          {avoided.length === 0 && isActive(loadAvoid()) && [...swaps.values()].some((s) => s.closeness !== "Healthier") && "This recipe now fits your avoid list."}
         </div>
       )}
 
