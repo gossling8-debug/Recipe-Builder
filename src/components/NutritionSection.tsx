@@ -54,6 +54,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
   }
 
   const n = saved?.result;
+  const fromCard = n?.source === "card";
   const withSwaps = n && n.healthier.some(isChosen) ? caloriesWithSwaps(n, isChosen) : null;
 
   return (
@@ -64,8 +65,11 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
           {!current && <div className="callout warn small">This was estimated before the ingredients were edited.</div>}
           <div className="nutri-head">
             <div>
-              <div className="nutri-cal">≈ {Math.round(n.per_serving.calories)}</div>
-              <div className="muted small">calories per serving</div>
+              <div className="nutri-cal">
+                {fromCard ? "" : "≈ "}
+                {Math.round(n.per_serving.calories)}
+              </div>
+              <div className="muted small">calories per serving{fromCard ? " · from the recipe" : ""}</div>
             </div>
             {withSwaps !== null && (
               <div>
@@ -74,6 +78,14 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
               </div>
             )}
           </div>
+          {!n.serving_size && current && hasKey && (
+            <p className="small">
+              <button className="link-btn small" onClick={ask} disabled={busy}>
+                {busy ? "Working… (about 15–30 seconds)" : "Add the serving size"}
+              </button>{" "}
+              <span className="muted">(asks Claude again — a few cents)</span>
+            </p>
+          )}
           {n.serving_size && (
             <p className="serving-size">
               <span className="muted small">Serving size</span>{" "}
@@ -82,7 +94,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
             </p>
           )}
           <p className="muted small">
-            {n.servings_note} · Estimate: {n.confidence.toLowerCase()}
+            {n.servings_note} · {fromCard ? "Numbers from the recipe" : `Estimate: ${n.confidence.toLowerCase()}`}
           </p>
           <table className="conv-table nutri-table">
             <tbody>
@@ -157,18 +169,12 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
               ))}
             </ul>
           )}
-          <p className="muted small">An estimate from Claude, not a lab test — fine for everyday choices, not for medical diets.</p>
+          <p className="muted small">
+            {fromCard ? "Nutrition as listed on the recipe; swap calories are Claude's estimates." : "An estimate from Claude, not a lab test — fine for everyday choices, not for medical diets."}
+          </p>
         </>
       )}
 
-      {n && current && !n.serving_size && hasKey && (
-        <p className="small">
-          <button className="link-btn small" onClick={ask} disabled={busy}>
-            {busy ? "Estimating…" : "Add the serving size"}
-          </button>{" "}
-          <span className="muted">(estimates again — a few cents)</span>
-        </p>
-      )}
       {(!n || !current) &&
         (hasKey ? (
           <>
