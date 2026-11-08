@@ -1,6 +1,7 @@
 import { add, compare, formatQty, isEmpty, parseQty, subtract, type Qty } from "./qty";
 import { scaleAmount } from "./quantity";
 import { nameKey } from "./shopping";
+import { estimateUseBy, freshness } from "./shelfLife";
 import type { ScannedRecipe } from "./schema";
 
 /**
@@ -14,6 +15,11 @@ export interface PantryItem {
   qty: Qty | null; // null = "have some, amount unknown"
   boughtAt?: number;
   updatedAt: number;
+  /** Use-by time (ms). Estimated from typical shelf life unless the cook set it. */
+  useBy?: number;
+  useByEstimated?: boolean;
+  /** The cook chose "No date" — don't estimate one again. */
+  noUseBy?: boolean;
 }
 
 export type Pantry = Record<string, PantryItem>;
@@ -28,7 +34,31 @@ export function loadPantry(): Pantry {
   } catch {
     /* blocked */
   }
-  return rekey(memory);
+  return fillDates(rekey(memory));
+}
+
+/**
+ * Perishables saved without a date (e.g. bought before use-by dates existed)
+ * get an estimate from when they were bought — the cook never has to say what's
+ * perishable. Items the cook set to "No date" are left alone.
+ */
+function fillDates(p: Pantry): Pantry {
+  let changed = false;
+  const out: Pantry = {};
+  for (const [k, it] of Object.entries(p)) {
+    if (it.useBy === undefined && !it.noUseBy) {
+      const est = estimateUseBy(it.name, it.boughtAt ?? it.updatedAt);
+      if (est !== null) {
+        out[k] = { ...it, useBy: est, useByEstimated: true };
+        changed = true;
+        continue;
+      }
+    }
+    out[k] = it;
+  }
+  if (!changed) return p;
+  savePantry(out);
+  return out;
 }
 
 /**
@@ -44,8 +74,15 @@ function rekey(p: Pantry): Pantry {
     if (!prev) out[key] = { ...it, key };
     else {
       const merged = prev.qty && it.qty ? add(prev.qty, it.qty, it.name) : null;
+      const useBy = Math.min(prev.useBy ?? Infinity, it.useBy ?? Infinity);
       out[key] = merged
-        ? { ...prev, qty: merged, boughtAt: Math.max(prev.boughtAt ?? 0, it.boughtAt ?? 0) || undefined, updatedAt: Date.now() }
+        ? {
+            ...prev,
+            qty: merged,
+            boughtAt: Math.max(prev.boughtAt ?? 0, it.boughtAt ?? 0) || undefined,
+            updatedAt: Date.now(),
+            useBy: Number.isFinite(useBy) ? useBy : undefined,
+          }
         : it.updatedAt > prev.updatedAt
           ? { ...it, key }
           : prev;
@@ -81,7 +118,12 @@ export function recordPurchase(name: string, amountText: string): PantryItem | n
   const prev = loadPantry()[key];
   // Add to what's there if the units can be combined; otherwise the purchase replaces it.
   const qty = prev?.qty && bought ? (add(prev.qty, bought, name) ?? bought) : bought;
-  return setItem(key, { key, name: prev?.name ?? name, qty, boughtAt: Date.now(), updatedAt: Date.now() });
+  // Perishables get an estimated use-by date. Adding to what's already there
+  // keeps the earlier date — the older portion goes bad first.
+  const estimate = estimateUseBy(name);
+  const useBy = prev?.useBy ?? estimate ?? undefined;
+  const useByEstimated = prev?.useBy ? prev.useByEstimated : estimate !== null;
+  return setItem(key, { key, name: prev?.name ?? name, qty, boughtAt: Date.now(), updatedAt: Date.now(), useBy, useByEstimated });
 }
 
 export interface UseResult {
@@ -130,6 +172,7 @@ export function restore(undo: Record<string, PantryItem | null>): void {
 export type PantryStatus =
   | { kind: "none" }
   | { kind: "unknown"; item: PantryItem } // have some, can't tell how much vs. what's needed
+  | { kind: "expired"; item: PantryItem } // in the pantry but past its use-by date — doesn't count
   | { kind: "enough"; item: PantryItem }
   | { kind: "some"; item: PantryItem; short: Qty };
 
@@ -137,6 +180,7 @@ export type PantryStatus =
 export function statusFor(key: string, name: string, need: Qty | null): PantryStatus {
   const item = loadPantry()[key];
   if (!item) return { kind: "none" };
+  if (item.useBy !== undefined && freshness(item.useBy) === "past") return { kind: "expired", item };
   if (!item.qty || !need) return { kind: "unknown", item };
   const c = compare(item.qty, need, name);
   if (!c) return { kind: "unknown", item };
@@ -145,3 +189,19 @@ export function statusFor(key: string, name: string, need: Qty | null): PantrySt
 
 export const boughtWhen = (item: PantryItem) =>
   item.boughtAt ? new Date(item.boughtAt).toLocaleDateString([], { month: "short", day: "numeric" }) : null;
+
+export interface UseSoon {
+  item: PantryItem;
+  recipes: { id: string; title: string }[];
+}
+
+/** Pantry items past their date or within 3 days, soonest first, with recipes that use them. */
+export function useSoon(recipes: { id: string; title: string; ingredients: { name: string }[] }[], now = Date.now()): UseSoon[] {
+  const soon = Object.values(loadPantry())
+    .filter((it) => it.useBy !== undefined && freshness(it.useBy, now) !== "ok")
+    .sort((a, b) => a.useBy! - b.useBy!);
+  return soon.map((item) => ({
+    item,
+    recipes: recipes.filter((r) => r.ingredients.some((i) => nameKey(i.name) === item.key)).map((r) => ({ id: r.id, title: r.title })),
+  }));
+}

@@ -564,3 +564,26 @@ html[data-text-size="largest"] body { zoom: 1.3; }
   animation: pulse 1.2s ease-in-out infinite alternate;
 }
 
+
+/* ---------- Use-by dates ---------- */
+.use-soon ul { list-style: none; padding: 0; margin: 0 0 6px; border-top: 1px solid var(--line); }
+.use-soon li { padding: 10px 0 10px 12px; border-bottom: 1px solid var(--line); border-left: 3px solid var(--warn); }
+.use-soon li.fresh-past, .use-soon li.fresh-today { border-left-color: var(--error); }
+.use-by-text { color: var(--warn); font-weight: 600; font-size: 14px; }
+.use-soon li.fresh-past .use-by-text, .use-soon li.fresh-today .use-by-text { color: var(--error); }
+.use-by { display: block; padding: 2px 0; text-decoration: none; color: var(--muted); }
+.use-by.fresh-soon { color: var(--warn); font-weight: 600; }
+.use-by.fresh-today, .use-by.fresh-past { color: var(--error); font-weight: 600; }
+.use-by.fresh-none { text-decoration: underline; }
+.date-edit { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.date-edit .text-input { max-width: 180px; min-height: 40px; }
+.plan-strip.use-soon-strip { background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.plan-strip.use-soon-strip .icon { color: var(--warn); }
+
+/* Past-date warning: red-outlined triangle, red exclamation */
+.warn-icon { display: inline-block; vertical-align: -3px; margin-right: 4px; color: var(--error); }
+.warn-icon .icon { display: inline-block; }
+
+.expired-line { display: block; color: var(--error); font-weight: 600; margin-top: 2px; }
+.expired-note { color: var(--error); font-weight: 600; }
+.use-by .warn-icon { margin-right: 2px; }

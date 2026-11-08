@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { listRecipes } from "../lib/db";
+import WarnIcon from "./WarnIcon";
 import { whatCanIMake, type CanMake } from "../lib/canMake";
 import { addToShopping, loadShopping } from "../lib/shopping";
 import Header from "./Header";
 import Icon from "./Icon";
 import { href } from "../lib/route";
-import { boughtWhen, loadPantry, setItem, type PantryItem } from "../lib/pantry";
+import { boughtWhen, loadPantry, setItem, useSoon, type PantryItem, type UseSoon } from "../lib/pantry";
+import { estimateUseBy, freshness, fromDateInput, toDateInput, useByLabel } from "../lib/shelfLife";
 import { formatQty, parseQty } from "../lib/qty";
 import { nameKey } from "../lib/shopping";
 
@@ -16,8 +18,17 @@ export default function PantryPage() {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [ideas, setIdeas] = useState<CanMake[] | null>(null);
+  const [soon, setSoon] = useState<UseSoon[]>([]);
+  const [dateFor, setDateFor] = useState<string | null>(null); // item key whose date is being edited
   const [listed, setListed] = useState(() => new Set(loadShopping().recipes.map((r) => r.id)));
-  const loadIdeas = () => listRecipes().then((rs) => setIdeas(whatCanIMake(rs)), () => setIdeas([]));
+  const loadIdeas = () =>
+    listRecipes().then(
+      (rs) => {
+        setIdeas(whatCanIMake(rs));
+        setSoon(useSoon(rs));
+      },
+      () => setIdeas([]),
+    );
   useEffect(() => {
     void loadIdeas();
   }, []);
@@ -35,7 +46,15 @@ export default function PantryPage() {
   function addItem() {
     if (!name.trim()) return;
     const key = nameKey(name);
-    setItem(key, { key, name: name.trim(), qty: amount.trim() ? parseQty(amount, name) : null, updatedAt: Date.now() });
+    const useBy = estimateUseBy(name) ?? undefined;
+    setItem(key, {
+      key,
+      name: name.trim(),
+      qty: amount.trim() ? parseQty(amount, name) : null,
+      updatedAt: Date.now(),
+      useBy,
+      useByEstimated: useBy !== undefined,
+    });
     setName("");
     setAmount("");
     refresh();
@@ -59,6 +78,37 @@ export default function PantryPage() {
           are estimates — tap one to correct it.
         </p>
 
+        {soon.length > 0 && (
+          <section className="use-soon">
+            <h3 className="list-heading">Use soon</h3>
+            <ul>
+              {soon.map(({ item, recipes }) => (
+                <li key={item.key} className={`fresh-${freshness(item.useBy!)}`}>
+                  <div>
+                    {freshness(item.useBy!) === "past" && <WarnIcon />}
+                    <strong>{item.name}</strong>{" "}
+                    <span className="use-by-text">{useByLabel(item.useBy!)}</span>
+                  </div>
+                  {recipes.length > 0 ? (
+                    <div className="small">
+                      Use it in:{" "}
+                      {recipes.slice(0, 3).map((r, i) => (
+                        <span key={r.id}>
+                          {i > 0 && ", "}
+                          <a href={href({ name: "recipe", id: r.id })}>{r.title}</a>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="muted small">None of your recipes use it.</div>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="muted small">Dates marked “estimated” are typical fridge life — check the package, and trust your eyes and nose.</p>
+          </section>
+        )}
+
         {items.length > 0 && ideas && (
           <section className="ideas">
             <h3 className="list-heading">What can I make?</h3>
@@ -68,20 +118,27 @@ export default function PantryPage() {
               <ul className="idea-list">
                 {ideas.slice(0, 8).map((c) => {
                   const gaps = [...c.missing, ...c.short];
+                  const allGood = gaps.length === 0 && c.expired.length === 0;
                   return (
                     <li key={c.recipe.id}>
                       <a className="idea-title" href={href({ name: "recipe", id: c.recipe.id })}>
                         {c.recipe.title}
                       </a>
                       <div className="small">
-                        {gaps.length === 0 ? (
+                        {allGood ? (
                           <span className="idea-ready">You have everything</span>
-                        ) : (
+                        ) : gaps.length > 0 ? (
                           <span>Need: {gaps.join(" · ")}</span>
-                        )}
+                        ) : null}
+                        {c.expired.map((name) => (
+                          <span key={name} className="expired-line">
+                            <WarnIcon size={16} />
+                            {name} is past its date
+                          </span>
+                        ))}
                         {c.check.length > 0 && <span className="muted"> · check you have enough {c.check.join(", ")}</span>}
                       </div>
-                      {gaps.length > 0 &&
+                      {!allGood &&
                         (listed.has(c.recipe.id) ? (
                           <span className="muted small">On your shopping list</span>
                         ) : (
@@ -141,6 +198,41 @@ export default function PantryPage() {
                     </button>
                   )}
                   {boughtWhen(it) && <div className="muted small">Bought {boughtWhen(it)}</div>}
+                  {dateFor === it.key ? (
+                    <div className="date-edit">
+                      <input
+                        type="date"
+                        className="text-input"
+                        aria-label={`Use-by date for ${it.name}`}
+                        defaultValue={it.useBy ? toDateInput(it.useBy) : ""}
+                        onChange={(e) => {
+                          const t = fromDateInput(e.target.value);
+                          if (t) {
+                            setItem(it.key, { ...it, useBy: t, useByEstimated: false, noUseBy: false, updatedAt: Date.now() });
+                            setDateFor(null);
+                            refresh();
+                          }
+                        }}
+                      />
+                      <button
+                        className="link-btn small"
+                        onClick={() => {
+                          setItem(it.key, { ...it, useBy: undefined, useByEstimated: false, noUseBy: true, updatedAt: Date.now() });
+                          setDateFor(null);
+                          refresh();
+                        }}
+                      >
+                        No date
+                      </button>
+                    </div>
+                  ) : (
+                    <button className={`link-btn small use-by fresh-${it.useBy ? freshness(it.useBy) : "none"}`} onClick={() => setDateFor(it.key)}>
+                      {it.useBy && freshness(it.useBy) === "past" && <WarnIcon size={16} />}
+                      {it.useBy
+                        ? `${useByLabel(it.useBy)}${it.useByEstimated ? " (estimated)" : ""}`
+                        : "Add a use-by date"}
+                    </button>
+                  )}
                 </div>
                 <button
                   className="btn pantry-used"
