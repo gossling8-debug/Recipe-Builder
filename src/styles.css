@@ -555,3 +555,12 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .read-controls { flex-wrap: wrap; } /* one row normally; wraps at the largest text size instead of hiding a button */
 .read-controls .btn { flex: 0 1 auto; white-space: nowrap; }
 .read-controls .read-toggle { flex: 1 1 auto; }
+
+/* ---------- Wait for my tap ---------- */
+.wait-tap { margin: 10px 0 0; font-size: 15px; }
+.cook-body.waiting { cursor: pointer; box-shadow: inset 0 0 0 3px var(--accent-soft); }
+.tap-hint {
+  margin: 0 0 14px; padding: 12px 14px; border-radius: 12px;
+  background: var(--accent-soft); color: var(--accent); font-size: 18px; text-align: center;
+  animation: pulse 1.2s ease-in-out infinite alternate;
+}
