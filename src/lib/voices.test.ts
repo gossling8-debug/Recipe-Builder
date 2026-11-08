@@ -1,31 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { englishVoices } from "./voices";
+import { englishVoices, pickVoice } from "./voices";
 
-const v = (name: string, lang = "en-US", localService = true) => ({ name, lang, localService, default: false, voiceURI: name }) as SpeechSynthesisVoice;
+const V = (name: string, voiceURI: string, lang = "en-US") => ({ name, voiceURI, lang, localService: true, default: false }) as SpeechSynthesisVoice;
 
 describe("voices", () => {
-  it("prefers Premium, then Enhanced, and drops novelty voices", () => {
-    const list = englishVoices([v("Bubbles"), v("Fred"), v("Samantha"), v("Ava (Enhanced)"), v("Zoe (Premium)"), v("Thomas", "fr-FR"), v("Daniel", "en-GB")]);
-    expect(list.map((x) => x.name)).toEqual(["Zoe (Premium)", "Ava (Enhanced)", "Samantha", "Daniel"]);
+  it("drops novelty and non-English voices", () => {
+    const list = englishVoices([V("Bubbles", "b"), V("Fred", "f"), V("Samantha", "s"), V("Thomas", "t", "fr-FR")]);
+    expect(list.map((x) => x.name)).toEqual(["Samantha"]);
   });
-});
-
-import { voiceLabel } from "./voices";
-describe("voice labels", () => {
-  const V = (name: string, voiceURI: string, lang = "en-US") => ({ name, voiceURI, lang, localService: true, default: false }) as SpeechSynthesisVoice;
-  const all = [
-    V("Samantha", "com.apple.voice.compact.en-US.Samantha"),
-    V("Samantha", "com.apple.voice.enhanced.en-US.Samantha"),
-    V("Daniel", "com.apple.voice.compact.en-GB.Daniel", "en-GB"),
-    V("Daniel", "com.apple.eloquence.en-US.Daniel"),
-    V("Karen", "com.apple.voice.compact.en-AU.Karen", "en-AU"),
-  ];
-  it("tells twins apart by quality or accent", () => {
-    const list = englishVoices(all);
-    expect(list[0].voiceURI).toContain("enhanced.en-US.Samantha");
-    expect(list.map((v) => voiceLabel(v, list))).toEqual(
-      expect.arrayContaining(["Samantha — Enhanced", "Samantha — Standard", "Karen"]),
-    );
-    expect(voiceLabel(all[2], list)).toMatch(/^Daniel — .*UK/);
+  it("always uses Samantha's newer voice, never the old robotic one", () => {
+    const iphone = [
+      V("Samantha", "com.apple.eloquence.en-US.Samantha"),
+      V("Samantha", "com.apple.voice.compact.en-US.Samantha"),
+      V("Daniel", "com.apple.voice.compact.en-GB.Daniel", "en-GB"),
+      V("Karen", "com.apple.voice.compact.en-AU.Karen", "en-AU"),
+    ];
+    expect(pickVoice(iphone)?.voiceURI).toBe("com.apple.voice.compact.en-US.Samantha");
+  });
+  it("prefers an enhanced Samantha if there is one", () => {
+    const v = pickVoice([V("Samantha", "com.apple.voice.compact.en-US.Samantha"), V("Samantha", "com.apple.voice.enhanced.en-US.Samantha")]);
+    expect(v?.voiceURI).toContain("enhanced");
+  });
+  it("falls back to the best non-robotic voice without Samantha", () => {
+    const v = pickVoice([V("Daniel", "com.apple.eloquence.en-GB.Daniel", "en-GB"), V("Karen", "com.apple.voice.compact.en-AU.Karen", "en-AU")]);
+    expect(v?.name).toBe("Karen");
   });
 });

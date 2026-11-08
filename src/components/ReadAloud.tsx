@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import { parseCommand, type Chunk, type Command } from "../lib/speech";
-import { chooseVoice, englishVoices, isNatural, saveVoiceName, voiceId, voiceLabel } from "../lib/voices";
+import { pickVoice } from "../lib/voices";
 
 const GAP_AFTER_INGREDIENT = 1500; // ms of quiet to add the ingredient before going on
 const GAP = 350;
@@ -23,8 +23,7 @@ export function useReader() {
   });
   const waitRef = useRef(waitForTap);
 
-  // Voices load in the background on some phones; pick the most natural one.
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  // Voices load in the background on some phones. Always Samantha's newer voice.
   const [voice, setVoiceState] = useState<SpeechSynthesisVoice | null>(null);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
   voiceRef.current = voice;
@@ -33,8 +32,7 @@ export function useReader() {
     const load = () => {
       const all = window.speechSynthesis.getVoices();
       if (!all.length) return;
-      setVoices(englishVoices(all));
-      setVoiceState((cur) => cur ?? chooseVoice(all));
+      setVoiceState((cur) => cur ?? pickVoice(all));
     };
     load();
     window.speechSynthesis.addEventListener?.("voiceschanged", load);
@@ -93,21 +91,6 @@ export function useReader() {
     state,
     /** Stopped after an ingredient, waiting for a tap. */
     waiting,
-    voices,
-    voice,
-    setVoice(id: string) {
-      const v = voices.find((x) => voiceId(x) === id) ?? null;
-      setVoiceState(v);
-      saveVoiceName(id);
-      // Say a short sample in the new voice.
-      stopSpeech();
-      const u = new SpeechSynthesisUtterance("Add the chicken, 2 pounds.");
-      if (v) {
-        u.voice = v;
-        u.lang = v.lang;
-      }
-      window.speechSynthesis.speak(u);
-    },
     waitForTap,
     setWaitForTap(v: boolean) {
       setWaitForTapState(v);
@@ -290,26 +273,6 @@ export function ReadAloudBar({
             Wait for my tap after each ingredient <span className="muted small">(no microphone needed)</span>
           </span>
         </label>
-      )}
-      {reading && reader.voices.length > 0 && (
-        <div className="voice-pick">
-          <label>
-            <span className="small muted">Voice</span>
-            <select value={reader.voice ? voiceId(reader.voice) : ""} onChange={(e) => reader.setVoice(e.target.value)}>
-              {reader.voices.map((v) => (
-                <option key={voiceId(v)} value={voiceId(v)}>
-                  {voiceLabel(v, reader.voices)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {reader.voice && !isNatural(reader.voice) && (
-            <p className="muted small">
-              Sounds robotic? Try the other versions of a voice in this list — one may be clearer. Downloaded iPhone voices
-              (like Ava Premium) usually aren't shared with websites, so they may not appear here.
-            </p>
-          )}
-        </div>
       )}
       {reading && (
         <div className="voice-row">

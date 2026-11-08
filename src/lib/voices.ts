@@ -40,56 +40,20 @@ export function score(v: V): number {
 }
 
 /** Best guess at "sounds natural": an Enhanced/Premium voice is installed. */
-export const isNatural = (v: V) => quality(v) === "premium" || quality(v) === "enhanced";
-
-const ACCENT: Record<string, string> = {
-  US: "US", GB: "UK", AU: "Australian", IE: "Irish", IN: "Indian", ZA: "South African", NZ: "New Zealand", CA: "Canadian", SG: "Singapore",
-};
-
-/** "Samantha", or "Samantha — Enhanced" / "Daniel — UK" when names repeat. */
-export function voiceLabel(v: V, all: V[]): string {
-  const twins = all.filter((x) => x.name === v.name);
-  if (twins.length < 2) return v.name;
-  const parts: string[] = [];
-  const q = quality(v);
-  if (twins.some((x) => quality(x) !== q))
-    parts.push(q === "premium" ? "Premium" : q === "enhanced" ? "Enhanced" : q === "older" ? "Older (robotic)" : "Standard");
-  if (twins.some((x) => x.lang !== v.lang)) {
-    const region = v.lang.split(/[-_]/)[1]?.toUpperCase() ?? "";
-    parts.push(ACCENT[region] ?? v.lang);
-  }
-  return parts.length ? `${v.name} — ${parts.join(", ")}` : `${v.name} — ${twins.indexOf(v) + 1}`;
-}
-
-/** A stable ID for a voice (the system ID when the browser gives one). */
-export const voiceId = (v: V) => v.voiceURI || `${v.name}|${v.lang}`;
-
 export function englishVoices(all: SpeechSynthesisVoice[]): SpeechSynthesisVoice[] {
   const seen = new Set<string>();
+  const id = (v: SpeechSynthesisVoice) => v.voiceURI || `${v.name}|${v.lang}`;
   return all
-    .filter((v) => score(v) > -50 && !seen.has(voiceId(v)) && seen.add(voiceId(v)))
+    .filter((v) => score(v) > -50 && !seen.has(id(v)) && seen.add(id(v)))
     .sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name));
 }
 
-const KEY = "recipe-builder.voice";
-export function savedVoiceName(): string | null {
-  try {
-    return localStorage.getItem(KEY);
-  } catch {
-    return null;
-  }
-}
-export function saveVoiceName(name: string): void {
-  try {
-    localStorage.setItem(KEY, name);
-  } catch {
-    /* session only */
-  }
-}
-
-/** The saved choice if it's still installed, otherwise the best available. */
-export function chooseVoice(all: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-  const list = englishVoices(all);
-  const saved = savedVoiceName();
-  return list.find((v) => voiceId(v) === saved || v.name === saved) ?? list[0] ?? null;
+/**
+ * The read-aloud voice: always Samantha's newer voice (never the old robotic
+ * engine). Phones without Samantha get the most natural English voice they have.
+ */
+export function pickVoice(all: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  const english = englishVoices(all);
+  const samantha = english.filter((v) => /^samantha\b/i.test(v.name) && quality(v) !== "older");
+  return samantha[0] ?? english.find((v) => quality(v) !== "older") ?? english[0] ?? null;
 }
