@@ -11,9 +11,18 @@ export default function MyNotes({ recipe, onSaved }: { recipe: SavedRecipe; onSa
   const [text, setText] = useState(recipe.myNotes ?? "");
   const [editing, setEditing] = useState(false);
   const [photoError, setPhotoError] = useState("");
-  const fileInput = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const libraryInput = useRef<HTMLInputElement>(null);
+  // The recipe page lets go of "keep the screen on" while the camera is open.
+  const openPicker = (input: HTMLInputElement | null) => {
+    window.dispatchEvent(new Event("camera-opening"));
+    // If the picker is cancelled there's no change event; coming back to the page resumes it.
+    window.addEventListener("focus", () => setTimeout(() => window.dispatchEvent(new Event("camera-closed")), 500), { once: true });
+    input?.click();
+  };
 
   async function addPhoto(file: File | undefined) {
+    window.dispatchEvent(new Event("camera-closed"));
     if (!file) return;
     setPhotoError("");
     try {
@@ -110,12 +119,17 @@ export default function MyNotes({ recipe, onSaved }: { recipe: SavedRecipe; onSa
       </div>
 
       <div className="dish-photo-row">
-        <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => (addPhoto(e.target.files?.[0]), (e.target.value = ""))} />
+        <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => (addPhoto(e.target.files?.[0]), (e.target.value = ""))} />
+        <input ref={libraryInput} type="file" accept="image/*" hidden onChange={(e) => (addPhoto(e.target.files?.[0]), (e.target.value = ""))} />
         {recipe.dishPhoto ? (
           <span className="small">
             <Icon name="camera" size={16} /> Photo added ·{" "}
-            <button className="link-btn small" onClick={() => fileInput.current?.click()}>
-              Change
+            <button className="link-btn small" onClick={() => openPicker(cameraInput.current)}>
+              Retake
+            </button>{" "}
+            ·{" "}
+            <button className="link-btn small" onClick={() => openPicker(libraryInput.current)}>
+              Choose another
             </button>{" "}
             ·{" "}
             <button className="link-btn small" onClick={() => onSaved({ ...recipe, dishPhoto: undefined })}>
@@ -123,9 +137,14 @@ export default function MyNotes({ recipe, onSaved }: { recipe: SavedRecipe; onSa
             </button>
           </span>
         ) : (
-          <button className="btn" onClick={() => fileInput.current?.click()}>
-            <Icon name="camera" size={18} /> Add a photo of your dish
-          </button>
+          <div className="button-row dish-photo-btns">
+            <button className="btn" onClick={() => openPicker(cameraInput.current)}>
+              <Icon name="camera" size={18} /> Take a photo of your dish
+            </button>
+            <button className="btn" onClick={() => openPicker(libraryInput.current)}>
+              <Icon name="image" size={18} /> Choose from photos
+            </button>
+          </div>
         )}
         {photoError && <div className="callout error small">{photoError}</div>}
       </div>

@@ -93,17 +93,39 @@ export default function RecipePage({ id }: { id: string }) {
   }, [id]);
 
   // Keep the screen on while a recipe is open — no greasy-finger unlocking mid-recipe.
+  // Let go of it while the camera is open (iPhones can show a black camera
+  // screen while a page holds the screen awake), and take it back afterwards.
   useEffect(() => {
     let lock: WakeLockSentinel | null = null;
+    let paused = false;
     const acquire = () => {
-      if (document.visibilityState === "visible" && "wakeLock" in navigator) {
-        navigator.wakeLock.request("screen").then((l) => (lock = l), () => {});
+      if (!paused && !lock && document.visibilityState === "visible" && "wakeLock" in navigator) {
+        navigator.wakeLock.request("screen").then(
+          (l) => {
+            lock = l;
+            l.addEventListener("release", () => (lock = null));
+          },
+          () => {},
+        );
       }
+    };
+    const pause = () => {
+      paused = true;
+      lock?.release().catch(() => {});
+      lock = null;
+    };
+    const resume = () => {
+      paused = false;
+      acquire();
     };
     acquire();
     document.addEventListener("visibilitychange", acquire);
+    window.addEventListener("camera-opening", pause);
+    window.addEventListener("camera-closed", resume);
     return () => {
       document.removeEventListener("visibilitychange", acquire);
+      window.removeEventListener("camera-opening", pause);
+      window.removeEventListener("camera-closed", resume);
       lock?.release().catch(() => {});
     };
   }, []);
