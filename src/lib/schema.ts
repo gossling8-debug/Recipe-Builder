@@ -87,6 +87,10 @@ export interface SavedRecipe extends ScannedRecipe {
     createdAt: number;
     result: import("./substitutes").Substitutions;
   };
+  /** The cook's own notes ("used less sugar — perfect"). */
+  myNotes?: string;
+  /** Days it was made (ms), from "I made this" or "Made it today". Cooking mode adds to cookLog instead. */
+  madeOn?: number[];
   /** Substitutes the cook chose ("Use this"), applied on top of the original recipe. */
   swaps?: import("./swaps").Swaps;
 }

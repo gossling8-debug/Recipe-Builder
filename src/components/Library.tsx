@@ -8,6 +8,7 @@ import { whatCanIMake } from "../lib/canMake";
 import { loadPantry, useSoon } from "../lib/pantry";
 import { freshness, useByText } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
+import { agoText, lastMade } from "../lib/made";
 import Header from "./Header";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -78,7 +79,12 @@ export default function Library() {
       : activeFilter === "canmake" ? canMakeNow.has(r.id)
       : (r.tags ?? []).includes(activeFilter),
     )
-    .sort((a, b) => (sort === "az" ? a.title.localeCompare(b.title) : b.createdAt - a.createdAt));
+    .sort((a, b) =>
+      sort === "az" ? a.title.localeCompare(b.title)
+      // Longest since it was made first; never-made recipes after those, newest first.
+      : sort === "lastmade" ? (lastMade(a) ?? Infinity) - (lastMade(b) ?? Infinity) || b.createdAt - a.createdAt
+      : b.createdAt - a.createdAt,
+    );
 
   // On the plain "All" view, favorites are pinned in their own section at the top.
   const pinFavorites = activeFilter === "all" && !q && hasFavorites;
@@ -94,6 +100,7 @@ export default function Library() {
           <div className="muted small">
             {(r.tags ?? []).length ? (r.tags ?? []).join(" · ") : `${plural(r.ingredients.length, "ingredient")} · ${plural(r.steps.length, "step")}`}
           </div>
+          {lastMade(r) !== undefined && <div className="muted small">Last made {agoText(lastMade(r)!)}</div>}
           {avoiding && avoidReasons(r).length > 0 && (
             <div className="small avoid-meta">Contains {avoidReasons(r).join(", ").toLowerCase()}</div>
           )}
@@ -223,6 +230,7 @@ export default function Library() {
               <select value={sort} onChange={(e) => choose("sort", e.target.value)}>
                 <option value="newest">Newest</option>
                 <option value="az">A–Z</option>
+                <option value="lastmade">Not made lately</option>
               </select>
             </label>
           </div>

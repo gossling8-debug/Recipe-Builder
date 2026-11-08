@@ -6,6 +6,8 @@ import RecipeEditor from "./RecipeEditor";
 import Substitutes from "./Substitutes";
 import CookMode, { clearCookStart, cookStart } from "./CookMode";
 import PlanMeal from "./PlanMeal";
+import MyNotes from "./MyNotes";
+import { markMade, unmarkMadeToday } from "../lib/made";
 import { clearPlan, getPlan } from "../lib/plan";
 import { restore, useForRecipe, type PantryItem } from "../lib/pantry";
 import { TimerBar, useTimers } from "./Timers";
@@ -58,6 +60,11 @@ export default function RecipePage({ id }: { id: string }) {
     if (!recipe || made) return;
     const { changes, undo } = useForRecipe(applySwaps(recipe), loadProgress(recipe.id).scale);
     rememberMade({ at: Date.now(), undo });
+    const updated = markMade(recipe);
+    if (updated !== recipe) {
+      setRecipe(updated);
+      void saveRecipe(updated);
+    }
     showToast(
       changes.length
         ? `Pantry: ${changes.map((c) => `${c.name} ${c.left}`).join("; ")}`
@@ -191,7 +198,14 @@ export default function RecipePage({ id }: { id: string }) {
                 setCooking(true);
               }}
               onMade={madeIt}
-              made={made && { at: made.at, onUndo: () => (restore(made.undo), rememberMade(null), showToast("Pantry change undone")) }}
+              made={made && { at: made.at, onUndo: () => {
+                  restore(made.undo);
+                  rememberMade(null);
+                  const updated = unmarkMadeToday(recipe);
+                  setRecipe(updated);
+                  void saveRecipe(updated);
+                  showToast("Pantry change undone");
+                } }}
               top={<PlanMeal recipe={{ ...applySwaps(recipe), cookLog: recipe.cookLog }} recipeId={recipe.id} />}
               recipe={applySwaps(recipe)}
               recipeId={recipe.id}
@@ -204,13 +218,23 @@ export default function RecipePage({ id }: { id: string }) {
                 await saveRecipe(updated);
               }}
               extra={
-                <Substitutes
-                  recipe={recipe}
-                  onSaved={async (updated) => {
-                    await saveRecipe(updated);
-                    setRecipe(updated);
-                  }}
-                />
+                <>
+                  <MyNotes
+                    key={recipe.id}
+                    recipe={recipe}
+                    onSaved={async (updated) => {
+                      setRecipe(updated);
+                      await saveRecipe(updated);
+                    }}
+                  />
+                  <Substitutes
+                    recipe={recipe}
+                    onSaved={async (updated) => {
+                      await saveRecipe(updated);
+                      setRecipe(updated);
+                    }}
+                  />
+                </>
               }
             />
             {(recipe.source || recipe.importCost !== undefined) && (
