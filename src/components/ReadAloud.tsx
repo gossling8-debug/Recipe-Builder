@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import { parseCommand, type Chunk, type Command } from "../lib/speech";
-import { chooseVoice, englishVoices, isNatural, saveVoiceName } from "../lib/voices";
+import { chooseVoice, englishVoices, isNatural, saveVoiceName, voiceId, voiceLabel } from "../lib/voices";
 
 const GAP_AFTER_INGREDIENT = 1500; // ms of quiet to add the ingredient before going on
 const GAP = 350;
@@ -95,10 +95,10 @@ export function useReader() {
     waiting,
     voices,
     voice,
-    setVoice(name: string) {
-      const v = voices.find((x) => x.name === name) ?? null;
+    setVoice(id: string) {
+      const v = voices.find((x) => voiceId(x) === id) ?? null;
       setVoiceState(v);
-      saveVoiceName(name);
+      saveVoiceName(id);
       // Say a short sample in the new voice.
       stopSpeech();
       const u = new SpeechSynthesisUtterance("Add the chicken, 2 pounds.");
@@ -295,19 +295,18 @@ export function ReadAloudBar({
         <div className="voice-pick">
           <label>
             <span className="small muted">Voice</span>
-            <select value={reader.voice?.name ?? ""} onChange={(e) => reader.setVoice(e.target.value)}>
+            <select value={reader.voice ? voiceId(reader.voice) : ""} onChange={(e) => reader.setVoice(e.target.value)}>
               {reader.voices.map((v) => (
-                <option key={v.name} value={v.name}>
-                  {v.name}
+                <option key={voiceId(v)} value={voiceId(v)}>
+                  {voiceLabel(v, reader.voices)}
                 </option>
               ))}
             </select>
           </label>
           {reader.voice && !isNatural(reader.voice) && (
             <p className="muted small">
-              Sounds robotic? Download a free natural voice: iPhone <strong>Settings → Accessibility → Spoken Content →
-              Voices → English</strong>, pick one marked <strong>Premium</strong> or <strong>Enhanced</strong> (Ava or Zoe
-              sound good), then close and reopen this app.
+              Sounds robotic? Try the other versions of a voice in this list — one may be clearer. Downloaded iPhone voices
+              (like Ava Premium) usually aren't shared with websites, so they may not appear here.
             </p>
           )}
         </div>
