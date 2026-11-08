@@ -35,7 +35,7 @@ export function saveWeek(s: WeekState): void {
   } catch {
     /* session only */
   }
-  queueMicrotask(() => window.dispatchEvent(new Event("week-changed")));
+  if (typeof window !== "undefined") queueMicrotask(() => window.dispatchEvent(new Event("week-changed")));
 }
 
 export function addMeal(day: string, meal: PlannedMeal): WeekState {
