@@ -194,6 +194,7 @@ export default function RecipePage({ id }: { id: string }) {
         {recipe && !editing && (
           <>
             <TimerBar {...timers} />
+            {recipe.dishPhoto && <img className="dish-hero" src={recipe.dishPhoto} alt={`${recipe.title}, as you made it`} />}
             <RecipeView
               key={`${recipe.id}-${viewKey}`}
               onStartCooking={() => {
