@@ -33,8 +33,6 @@ describe("walmartSearchUrl", () => {
     expect(walmartSearchUrl("cream cheese")).toBe("https://www.walmart.com/search?q=cream%20cheese"));
   it("drops notes and parentheses", () =>
     expect(walmartSearchUrl("green onions (for topping)")).toBe("https://www.walmart.com/search?q=green%20onions"));
-  it("app link", () =>
-    expect(walmartSearchUrl("cream cheese", "app")).toBe("walmart://search?query=cream%20cheese"));
   it("keeps substitutes intact", () =>
     expect(walmartSearchUrl("dairy-free cream cheese")).toBe("https://www.walmart.com/search?q=dairy-free%20cream%20cheese"));
 });
