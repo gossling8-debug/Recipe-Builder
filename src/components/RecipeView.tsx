@@ -8,6 +8,7 @@ import { conversionsFor } from "../lib/conversions";
 import { addToShopping, loadShopping, removeFromShopping } from "../lib/shopping";
 import { href } from "../lib/route";
 import type { Swap } from "../lib/swaps";
+import { convertRecipe, useUnits, type UnitSystem } from "../lib/units";
 
 const SCALES: [number, string][] = [
   [0.5, "½×"],
@@ -29,7 +30,7 @@ function ingredientLine(ing: Ingredient, scale: number): string {
  * ingredients and the chosen size are saved until "Start over".
  */
 export default function RecipeView({
-  recipe,
+  recipe: original,
   recipeId,
   preview = false,
   extra,
@@ -57,6 +58,8 @@ export default function RecipeView({
   /** Shown under the size control (the meal planner). */
   top?: ReactNode;
 }) {
+  const [units, setUnits] = useUnits();
+  const recipe = convertRecipe(original, units);
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
   const have = new Set(progress.have);
@@ -76,7 +79,7 @@ export default function RecipeView({
   const unused = unusedIngredients(recipe);
   const avoided = findAvoided(recipe.ingredients, loadAvoid(), new Set(swaps.keys()));
   const avoidedAt = new Map(avoided.map((m) => [m.index, m.reasons]));
-  const conversions = conversionsFor(recipe.ingredients, scale);
+  const conversions = conversionsFor(original.ingredients, scale); // works from the card's own units
 
   return (
     <article className="recipe">
@@ -104,6 +107,26 @@ export default function RecipeView({
         ))}
         </div>
       </div>
+      <div className="scale-row" role="group" aria-label="Units">
+        <span className="small muted">Units</span>
+        <div className="segmented">
+          {UNIT_CHOICES.map(([value, label]) => (
+            <button
+              key={value}
+              className={value === units ? "chip active" : "chip"}
+              aria-pressed={value === units}
+              onClick={() => setUnits(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {units !== "original" && (
+        <p className="small muted">
+          Converted from the card and rounded to kitchen-friendly amounts. Teaspoons and tablespoons stay as they are.
+        </p>
+      )}
       {top}
       {scale !== 1 && (
         <p className="small muted">
@@ -350,6 +373,12 @@ export default function RecipeView({
     </article>
   );
 }
+
+const UNIT_CHOICES: [UnitSystem, string][] = [
+  ["original", "As written"],
+  ["us", "US"],
+  ["metric", "Metric"],
+];
 
 function scaleLabel(scale: number): string {
   return SCALES.find(([v]) => v === scale)?.[1].replace("×", "") ?? String(scale);

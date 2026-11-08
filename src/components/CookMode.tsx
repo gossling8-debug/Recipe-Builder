@@ -3,6 +3,7 @@ import Icon from "./Icon";
 import { IngredientMention } from "./RecipeView";
 import { TimerBar, type useTimers } from "./Timers";
 import { scaleAmount } from "../lib/quantity";
+import { convertRecipe, useUnits } from "../lib/units";
 import { toggleIn, useProgress } from "../lib/progress";
 import { findTimers } from "../lib/timers";
 import { stepChunks } from "../lib/speech";
@@ -15,7 +16,7 @@ import type { ScannedRecipe } from "../lib/schema";
  * swipes) to move between steps, for messy hands.
  */
 export default function CookMode({
-  recipe,
+  recipe: original,
   recipeId,
   timers,
   onClose,
@@ -34,6 +35,8 @@ export default function CookMode({
   /** Called once when the cook taps Finish (updates the pantry). */
   onMade?: () => void;
 }) {
+  const [units] = useUnits();
+  const recipe = convertRecipe(original, units);
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
   const added = new Set(progress.added);
