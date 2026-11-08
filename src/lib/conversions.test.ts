@@ -14,23 +14,39 @@ describe("volume", () => {
 });
 
 describe("garlic", () => {
-  it("garlic powder → fresh cloves, jarred", () => {
-    const c = one(ing("1½", "teaspoons", "garlic powder"));
-    expect(c.lines).toContain("Fresh garlic: ≈ 6–12 cloves, minced (about 1 tsp per clove)");
-    expect(c.lines).toContain("Jarred minced garlic: ≈ 1–2 tbsp");
-    expect(c.lines.some((l) => l.startsWith("Garlic powder"))).toBe(false);
-  });
-  it("cloves → jarred and powder", () => {
-    const c = one(ing("4", "cloves", "garlic", "minced"));
-    expect(c.lines).toEqual(["Jarred minced garlic: ≈ 2 tsp", "Garlic powder: ≈ ½–1 tsp"]);
-  });
-  it("tsp minced garlic → cloves, jarred, powder", () => {
-    const c = one(ing("2", "tsp", "minced garlic"));
-    expect(c.lines).toEqual(["Jarred minced garlic: ≈ 1 tsp", "Fresh cloves: ≈ 2 cloves", "Garlic powder: ≈ ¼–½ tsp"]);
-  });
-  it("respects the recipe size", () => {
-    expect(one(ing("4", "cloves", "garlic"), 2).lines[0]).toBe("Jarred minced garlic: ≈ 4 tsp");
-  });
+  const rows = (i: Ingredient, scale = 1) =>
+    Object.fromEntries(one(i, scale).rows!.map((r) => [r.form, (r.recipe ? "* " : "") + r.amount + (r.detail ? ` (${r.detail})` : "")]));
+  it("garlic powder → fresh, jarred, dried (one clear amount each)", () =>
+    expect(rows(ing("1½", "teaspoons", "garlic powder"))).toEqual({
+      "Fresh garlic cloves": "12 cloves (minced)",
+      "Jarred minced, in water": "2 tbsp",
+      "Dried minced (dehydrated)": "1 tbsp",
+      "Garlic powder": "* 1½ tsp",
+    }));
+  it("fresh cloves → the other forms", () =>
+    expect(rows(ing("4", "cloves", "garlic", "minced"))).toEqual({
+      "Fresh garlic cloves": "* 4 cloves (minced)",
+      "Jarred minced, in water": "2 tsp",
+      "Dried minced (dehydrated)": "1 tsp",
+      "Garlic powder": "½ tsp",
+    }));
+  it("a teaspoon amount of minced garlic is treated like jarred", () =>
+    expect(rows(ing("1", "tsp", "minced garlic"))["Jarred minced, in water"]).toBe("* 1 tsp"));
+  it("dried minced garlic", () =>
+    expect(rows(ing("½", "tsp", "dried minced garlic"))).toEqual({
+      "Fresh garlic cloves": "2 cloves (minced)",
+      "Jarred minced, in water": "1 tsp",
+      "Dried minced (dehydrated)": "* ½ tsp",
+      "Garlic powder": "¼ tsp",
+    }));
+  it("a recipe that says a head of garlic is shown in cloves", () =>
+    expect(rows(ing("1", "head", "garlic"))).toEqual({
+      "Fresh garlic cloves": "* 10 cloves (minced)",
+      "Jarred minced, in water": "5 tsp",
+      "Dried minced (dehydrated)": "2½ tsp",
+      "Garlic powder": "1¼ tsp",
+    }));
+  it("respects the recipe size", () => expect(rows(ing("4", "cloves", "garlic"), 2)["Jarred minced, in water"]).toBe("4 tsp"));
   it("ignores garlic salt", () => expect(conversionsFor([ing("1", "tsp", "garlic salt")])).toEqual([]));
 });
 

@@ -587,3 +587,15 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .expired-line { display: block; color: var(--error); font-weight: 600; margin-top: 2px; }
 .expired-note { color: var(--error); font-weight: 600; }
 .use-by .warn-icon { margin-right: 2px; }
+
+/* Conversion table (garlic forms) */
+.conv-table { width: 100%; border-collapse: collapse; margin: 8px 0 4px; font-size: 16px; }
+.conv-table th { text-align: left; font-weight: 500; padding: 7px 8px 7px 0; border-bottom: 1px solid var(--line); }
+.conv-table td { text-align: right; font-weight: 700; color: var(--accent); padding: 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.conv-table tr.recipe-form th, .conv-table tr.recipe-form td { color: var(--muted); font-weight: 500; }
+.conv-recipe-tag {
+  margin-left: 6px; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em; background: var(--line); color: var(--muted);
+}
+.conv-detail { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
+.conv-table th { width: 55%; }
