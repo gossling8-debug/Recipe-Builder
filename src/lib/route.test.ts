@@ -4,6 +4,7 @@ import { href, parseRoute, type Route } from "./route";
 describe("routes", () => {
   it.each<Route>([
     { name: "week" },
+    { name: "history" },
     { name: "family" },
     { name: "family", book: "abc123" },
     { name: "family", book: "abc123", recipe: "uid_r1" },

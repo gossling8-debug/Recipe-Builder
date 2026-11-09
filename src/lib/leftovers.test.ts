@@ -29,3 +29,15 @@ describe("leftovers", () => {
     expect(loadLeftovers().map((l) => l.id)).toEqual(["b", "a"]);
   });
 });
+
+describe("cook once, eat twice", () => {
+  it("puts half in the freezer and goes back to the usual size", async () => {
+    const { freezeHalfIfPlanned, loadLeftovers, removeLeftover } = await import("./leftovers");
+    loadLeftovers().forEach((l) => removeLeftover(l.id));
+    let saved: { freezeHalf?: boolean; scale: number } | null = null;
+    expect(freezeHalfIfPlanned("a", "Chili", { scale: 1 }, (p) => (saved = p))).toBe(false);
+    expect(freezeHalfIfPlanned("a", "Chili", { scale: 2, freezeHalf: true }, (p) => (saved = p))).toBe(true);
+    expect(saved).toEqual({ scale: 1, freezeHalf: false });
+    expect(loadLeftovers()[0]).toMatchObject({ id: "a", frozen: true });
+  });
+});

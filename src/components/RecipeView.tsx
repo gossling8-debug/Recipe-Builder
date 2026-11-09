@@ -3,6 +3,8 @@ import { scaleAmount } from "../lib/quantity";
 import { toggleIn, useProgress } from "../lib/progress";
 import Icon from "./Icon";
 import TagPicker from "./TagPicker";
+import { dollars, recipeCost } from "../lib/prices";
+import { servingsCount } from "../lib/autoPlan";
 import { useState, type ReactNode } from "react";
 import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
 import { conversionsFor } from "../lib/conversions";
@@ -43,6 +45,7 @@ export default function RecipeView({
   made,
   onTagsChange,
   photo,
+  versions,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
@@ -64,6 +67,8 @@ export default function RecipeView({
   onTagsChange?: (tags: string[]) => void;
   /** The cook's photo of the dish: a thumbnail by the title that opens full screen. */
   photo?: string;
+  /** The original and its versions, when there's more than one. */
+  versions?: { id: string; title: string; original: boolean }[];
 }) {
   const [units, setUnits] = useUnits();
   const [editingTags, setEditingTags] = useState(false);
@@ -125,6 +130,21 @@ export default function RecipeView({
             </button>
           )}
         </div>
+      )}
+      {versions && (
+        <p className="small versions">
+          Versions:{" "}
+          {versions.map((v, i) => (
+            <span key={v.id}>
+              {i > 0 && " · "}
+              {v.id === recipeId ? (
+                <strong>{v.original ? "Original" : v.title}</strong>
+              ) : (
+                <a href={href({ name: "recipe", id: v.id })}>{v.original ? "Original" : v.title}</a>
+              )}
+            </span>
+          ))}
+        </p>
       )}
       {editingTags && onTagsChange && (
         <div className="plan-card title-tag-editor">
@@ -263,6 +283,21 @@ export default function RecipeView({
         ))}
       </section>
 
+      {!preview && (() => {
+        const c = recipeCost(original, scale);
+        if (!c.priced) return null;
+        const serves = servingsCount(original.servings);
+        return (
+          <p className="small cost-line">
+            Ingredients ≈ <strong>{dollars(c.total)}</strong>
+            {serves ? ` · ${dollars(c.total / (serves * scale))} per serving` : ""}
+            <span className="muted">
+              {" "}
+              (from prices you entered for {c.priced} of {c.of} ingredients{c.priced < c.of ? " — the rest aren't counted" : ""})
+            </span>
+          </p>
+        );
+      })()}
       {!preview && (
       <div className="list-row">
         {listed && listed.scale === scale ? (

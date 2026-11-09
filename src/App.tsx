@@ -13,6 +13,7 @@ import ImportPage from "./components/ImportPage";
 import WeekPage from "./components/WeekPage";
 import BigMealPage from "./components/BigMealPage";
 import PrintPage from "./components/PrintPage";
+import HistoryPage from "./components/HistoryPage";
 import { BookPage, FamilyPage, JoinPage, SharedRecipePage } from "./components/Family";
 
 function Screen() {
@@ -34,6 +35,8 @@ function Screen() {
       return route.book ? <BookPage id={route.book} /> : <FamilyPage />;
     case "join":
       return <JoinPage id={route.id} />;
+    case "history":
+      return <HistoryPage />;
     case "print":
       return <PrintPage id={route.id} />;
     case "meal":
@@ -45,7 +48,7 @@ function Screen() {
     case "shopping":
       return <ShoppingList />;
     case "recipe":
-      return <RecipePage id={route.id} />;
+      return <RecipePage key={route.id} id={route.id} />; // fresh state for each recipe
     default:
       return <Library />;
   }

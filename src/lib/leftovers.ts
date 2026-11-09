@@ -45,9 +45,24 @@ function save(list: Leftover[]): void {
   if (typeof window !== "undefined") queueMicrotask(() => window.dispatchEvent(new Event("leftovers-changed")));
 }
 
-/** Leftovers in the fridge from today's cooking (replaces an earlier entry for the same recipe). */
-export function addLeftover(id: string, title: string, now = Date.now()): void {
-  save([...loadLeftovers().filter((l) => l.id !== id), { id, title, madeAt: now, eatBy: endOfDay(now + FRIDGE_DAYS * day) }]);
+/** Leftovers from today's cooking, in the fridge or straight into the freezer (replaces an earlier entry for the same recipe). */
+export function addLeftover(id: string, title: string, now = Date.now(), frozen = false): void {
+  save([
+    ...loadLeftovers().filter((l) => l.id !== id),
+    { id, title, madeAt: now, eatBy: endOfDay(now + (frozen ? FREEZER_DAYS : FRIDGE_DAYS) * day), ...(frozen ? { frozen: true } : {}) },
+  ]);
+}
+
+/**
+ * Called whenever a recipe is marked as made: if it was doubled to freeze
+ * half, that half goes on the freezer list and the recipe goes back to its
+ * usual size. Returns true if it did.
+ */
+export function freezeHalfIfPlanned(id: string, title: string, progress: { freezeHalf?: boolean; scale: number }, save: (p: { freezeHalf?: boolean; scale: number }) => void): boolean {
+  if (!progress.freezeHalf) return false;
+  addLeftover(id, title, Date.now(), true);
+  save({ ...progress, freezeHalf: false, scale: progress.scale / 2 });
+  return true;
 }
 
 export function freezeLeftover(id: string, now = Date.now()): void {

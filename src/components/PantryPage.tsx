@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { listRecipes } from "../lib/db";
 import LeftoversList from "./LeftoversList";
+import StaplesSection from "./StaplesSection";
+import { addStaple, isStaple, removeStaple, useStaples } from "../lib/staples";
 import WarnIcon from "./WarnIcon";
 import { whatCanIMake, type CanMake } from "../lib/canMake";
 import { addToShopping, loadShopping } from "../lib/shopping";
@@ -14,6 +16,7 @@ import { nameKey } from "../lib/shopping";
 
 /** What should be on hand: added when shopping, used up by cooking. Fix anything that's off. */
 export default function PantryPage() {
+  useStaples(); // re-render when the always-keep list changes
   const [items, setItems] = useState(() => Object.values(loadPantry()).sort((a, b) => a.name.localeCompare(b.name)));
   const [editing, setEditing] = useState<{ key: string; text: string } | null>(null);
   const [name, setName] = useState("");
@@ -201,6 +204,13 @@ export default function PantryPage() {
                     </button>
                   )}
                   {boughtWhen(it) && <div className="muted small">Bought {boughtWhen(it)}</div>}
+                  <button
+                    className={isStaple(it.key) ? "link-btn small keep-on" : "link-btn small"}
+                    aria-pressed={isStaple(it.key)}
+                    onClick={() => (isStaple(it.key) ? removeStaple(it.key) : addStaple(it.name))}
+                  >
+                    {isStaple(it.key) ? "✓ Always keep" : "Always keep"}
+                  </button>
                   {dateFor === it.key ? (
                     <div className="date-edit">
                       <input
@@ -250,6 +260,8 @@ export default function PantryPage() {
             ))}
           </ul>
         )}
+
+        <StaplesSection />
 
         <section>
           <h3 className="list-heading">Add something you have</h3>

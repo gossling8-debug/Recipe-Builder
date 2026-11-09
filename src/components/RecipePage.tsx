@@ -11,12 +11,15 @@ import AddToWeek from "./AddToWeek";
 import NutritionSection from "./NutritionSection";
 import { ShareToFamily } from "./Family";
 import { markMade, unmarkMadeToday } from "../lib/made";
+import { freezeHalfIfPlanned } from "../lib/leftovers";
+import FreezeHalf from "./FreezeHalf";
 import { clearPlan, getPlan } from "../lib/plan";
 import { restore, useForRecipe, type PantryItem } from "../lib/pantry";
 import { TimerBar, useTimers } from "./Timers";
 import { activeSwaps, applySwaps } from "../lib/swaps";
 import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
-import { deleteRecipe, getRecipe, saveRecipe } from "../lib/db";
+import { deleteRecipe, getRecipe, listRecipes, newId, saveRecipe } from "../lib/db";
+import { family, makeVariant } from "../lib/variants";
 import { href, navigate } from "../lib/route";
 import { recipeToText, shareText } from "../lib/share";
 import { recipeLink } from "../lib/link";
@@ -28,7 +31,15 @@ import { cleanTags, type SavedRecipe } from "../lib/schema";
 export default function RecipePage({ id }: { id: string }) {
   const [recipe, setRecipe] = useState<SavedRecipe | null | undefined>(undefined);
   const [showPhotos, setShowPhotos] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(() => {
+    try {
+      if (sessionStorage.getItem("recipe-builder.editAfterCopy") !== id) return false;
+      sessionStorage.removeItem("recipe-builder.editAfterCopy");
+      return true;
+    } catch {
+      return false;
+    }
+  });
   const [cooking, setCooking] = useState(false);
   // Bumped when cooking mode closes, so the recipe view re-reads progress made there.
   const [viewKey, setViewKey] = useState(0);
@@ -68,13 +79,41 @@ export default function RecipePage({ id }: { id: string }) {
       setRecipe(updated);
       void saveRecipe(updated);
     }
+    const froze = freezeHalf();
     showToast(
-      changes.length
-        ? `Pantry: ${changes.map((c) => `${c.name} ${c.left}`).join("; ")}`
-        : "Nothing in your pantry matched this recipe.",
+      (changes.length ? `Pantry: ${changes.map((c) => `${c.name} ${c.left}`).join("; ")}` : "Nothing in your pantry matched this recipe.") +
+        (froze ? " · Half is on your freezer list." : ""),
     );
   }
+
+  /** "Double it and freeze half": once made, half goes on the freezer list and the size goes back. */
+  function freezeHalf(): boolean {
+    if (!recipe) return false;
+    const done = freezeHalfIfPlanned(recipe.id, recipe.title, loadProgress(recipe.id), (p) =>
+      saveProgress(recipe.id, { ...loadProgress(recipe.id), ...p }),
+    );
+    if (done) setViewKey((k) => k + 1); // show the usual size again
+    return done;
+  }
   const [toast, showToast] = useToast();
+  // The original and its versions ("my version"), for the line under the title.
+  const [versions, setVersions] = useState<SavedRecipe[]>([]);
+  useEffect(() => {
+    if (recipe) listRecipes().then((all) => setVersions(family(recipe, all)), () => {});
+  }, [recipe]);
+
+  async function copyRecipe() {
+    if (!recipe) return;
+    const copy = makeVariant(recipe, newId());
+    await saveRecipe(copy);
+    // Open the copy straight in the editor, so it can be made your own.
+    try {
+      sessionStorage.setItem("recipe-builder.editAfterCopy", copy.id);
+    } catch {
+      /* it just opens normally */
+    }
+    navigate({ name: "recipe", id: copy.id });
+  }
   // Built ahead of time: iPhones only allow the share sheet to open straight
   // after a tap, so nothing slow may happen between the tap and share().
   const [link, setLink] = useState("");
@@ -235,11 +274,13 @@ export default function RecipePage({ id }: { id: string }) {
                 <>
                   <PlanMeal recipe={{ ...applySwaps(recipe), cookLog: recipe.cookLog }} recipeId={recipe.id} />
                   <AddToWeek recipeId={recipe.id} />
+                  <FreezeHalf key={viewKey} recipeId={recipe.id} onChange={() => setViewKey((k) => k + 1)} />
                 </>
               }
               recipe={applySwaps(recipe)}
               recipeId={recipe.id}
               photo={recipe.dishPhoto}
+              versions={versions.length > 1 ? versions.map((v) => ({ id: v.id, title: v.title, original: !v.variantOf })) : undefined}
               onTagsChange={async (tags) => {
                 const updated = { ...recipe, tags: cleanTags(tags) };
                 setRecipe(updated);
@@ -258,6 +299,7 @@ export default function RecipePage({ id }: { id: string }) {
                   <MyNotes
                     key={recipe.id}
                     recipe={recipe}
+                    onMarkedMade={() => freezeHalf() && showToast("Half is on your freezer list.")}
                     onSaved={async (updated) => {
                       setRecipe(updated);
                       await saveRecipe(updated);
@@ -281,11 +323,14 @@ export default function RecipePage({ id }: { id: string }) {
                 </>
               }
             />
-            <p className="print-link">
+            <div className="button-row print-link">
               <a className="btn" href={href({ name: "print", id: recipe.id })}>
                 <Icon name="download" size={18} /> Print or save as PDF
               </a>
-            </p>
+              <button className="btn" onClick={copyRecipe}>
+                <Icon name="plus" size={18} /> Make my own version
+              </button>
+            </div>
             {(recipe.source || recipe.importCost !== undefined) && (
               <p className="muted small source-line">
                 {recipe.source && (
