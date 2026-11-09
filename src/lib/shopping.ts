@@ -10,7 +10,7 @@ export interface ShoppingState {
   /** Items already opened at the store (so the cook can see what's been looked up). */
   opened?: string[];
   /** What was bought when each item was ticked, and the pantry before, so unticking can undo it. */
-  bought?: Record<string, { text: string; before: PantryItem | null }>;
+  bought?: Record<string, { text: string; before: PantryItem | null; price?: number; priceId?: string }>;
 }
 
 const KEY = "recipe-builder.shopping";

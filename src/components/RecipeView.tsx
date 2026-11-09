@@ -3,6 +3,8 @@ import { scaleAmount } from "../lib/quantity";
 import { toggleIn, useProgress } from "../lib/progress";
 import Icon from "./Icon";
 import TagPicker from "./TagPicker";
+import { dollars, recipeCost } from "../lib/prices";
+import { servingsCount } from "../lib/autoPlan";
 import { useState, type ReactNode } from "react";
 import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
 import { conversionsFor } from "../lib/conversions";
@@ -281,6 +283,21 @@ export default function RecipeView({
         ))}
       </section>
 
+      {!preview && (() => {
+        const c = recipeCost(original, scale);
+        if (!c.priced) return null;
+        const serves = servingsCount(original.servings);
+        return (
+          <p className="small cost-line">
+            Ingredients ≈ <strong>{dollars(c.total)}</strong>
+            {serves ? ` · ${dollars(c.total / (serves * scale))} per serving` : ""}
+            <span className="muted">
+              {" "}
+              (from prices you entered for {c.priced} of {c.of} ingredients{c.priced < c.of ? " — the rest aren't counted" : ""})
+            </span>
+          </p>
+        );
+      })()}
       {!preview && (
       <div className="list-row">
         {listed && listed.scale === scale ? (

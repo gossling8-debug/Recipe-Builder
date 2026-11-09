@@ -707,3 +707,5 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .staple-list li { display: flex; align-items: center; justify-content: space-between; min-height: 40px; border-bottom: 1px solid var(--line); }
 .staple-need { color: var(--accent); }
 .keep-on { color: var(--accent); }
+.price-input { max-width: 96px; } .spent-line { margin: 4px 0 8px; }
+.cost-line { margin: 10px 0 0; }

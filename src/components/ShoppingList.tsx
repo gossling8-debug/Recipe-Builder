@@ -17,6 +17,7 @@ import { walmartSearchUrl } from "../lib/shopping";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingItem, type ShoppingState } from "../lib/shopping";
 import { buyText, loadStaples, staplesToBuy, statusText } from "../lib/staples";
 import { loadPantry } from "../lib/pantry";
+import { addPrice, deletePrice, dollars, parsePrice, periodStarts, spentSince } from "../lib/prices";
 
 const ALWAYS_KEEP = "Always keep";
 
@@ -45,6 +46,8 @@ export default function ShoppingList() {
   const [all, setAll] = useState<SavedRecipe[] | null>(null);
   const [toast, showToast] = useToast();
   const [units] = useUnits();
+  const starts = periodStarts();
+  const spent = { week: spentSince(starts.week), month: spentSince(starts.month) };
 
   useEffect(() => {
     listRecipes().then(setAll, () => setAll([]));
@@ -92,7 +95,7 @@ export default function ShoppingList() {
   const inPantry = notChecked.filter((i) => status.get(i.key)?.kind === "enough");
   const remaining = notChecked.filter((i) => status.get(i.key)?.kind !== "enough");
   const got = items.filter((i) => checked.has(i.key));
-  const [editing, setEditing] = useState<{ key: string; text: string } | null>(null);
+  const [editing, setEditing] = useState<{ key: string; text: string; price: string } | null>(null);
   const defaultBought = (it: (typeof items)[number]) => (it.need ? formatQty(it.need) : it.amount);
 
   // Ticking = bought: it goes into the pantry. Unticking undoes that.
@@ -101,6 +104,7 @@ export default function ShoppingList() {
     const bought = { ...(state.bought ?? {}) };
     if (checked.has(key)) {
       if (bought[key]) setItem(key, bought[key].before);
+      if (bought[key]?.priceId) deletePrice(bought[key].priceId!);
       delete bought[key];
       update({ ...state, checked: state.checked.filter((k) => k !== key), bought });
     } else {
@@ -110,13 +114,17 @@ export default function ShoppingList() {
     }
   };
 
-  const changeBought = (key: string, text: string) => {
+  // "Change": what was really bought, and (optionally) what it cost.
+  const changeBought = (key: string, text: string, priceText: string) => {
     const it = items.find((i) => i.key === key)!;
     const prev = state.bought?.[key];
     if (!prev || !text.trim()) return setEditing(null);
     setItem(key, prev.before); // undo the first guess, then record what was really bought
     recordPurchase(it.name, text.trim());
-    update({ ...state, bought: { ...state.bought, [key]: { text: text.trim(), before: prev.before } } });
+    if (prev.priceId) deletePrice(prev.priceId);
+    const price = parsePrice(priceText);
+    const priceId = price !== null ? addPrice(it.name, text.trim(), price) : undefined;
+    update({ ...state, bought: { ...state.bought, [key]: { text: text.trim(), before: prev.before, price: price ?? undefined, priceId } } });
     setEditing(null);
   };
 
@@ -166,7 +174,7 @@ export default function ShoppingList() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                changeBought(it.key, editing.text);
+                changeBought(it.key, editing.text, editing.price);
               }}
             >
               <input
@@ -175,7 +183,15 @@ export default function ShoppingList() {
                 aria-label={`How much ${it.name} did you buy?`}
                 placeholder="e.g. 4 lb bag, 16 oz, 2 cans"
                 value={editing.text}
-                onChange={(e) => setEditing({ key: it.key, text: e.target.value })}
+                onChange={(e) => setEditing({ ...editing, text: e.target.value })}
+              />
+              <input
+                className="text-input price-input"
+                inputMode="decimal"
+                aria-label={`What did ${it.name} cost?`}
+                placeholder="$ price"
+                value={editing.price}
+                onChange={(e) => setEditing({ ...editing, price: e.target.value })}
               />
               <button className="btn" type="submit">
                 Save
@@ -183,9 +199,19 @@ export default function ShoppingList() {
             </form>
           ) : (
             <span className="small muted">
-              Bought {state.bought[it.key].text} ·{" "}
-              <button className="link-btn small" onClick={() => setEditing({ key: it.key, text: state.bought![it.key].text })}>
-                Change
+              Bought {state.bought[it.key].text}
+              {state.bought[it.key].price !== undefined && ` · ${dollars(state.bought[it.key].price!)}`} ·{" "}
+              <button
+                className="link-btn small"
+                onClick={() =>
+                  setEditing({
+                    key: it.key,
+                    text: state.bought![it.key].text,
+                    price: state.bought![it.key].price !== undefined ? String(state.bought![it.key].price) : "",
+                  })
+                }
+              >
+                {state.bought[it.key].price === undefined ? "Change or add price" : "Change"}
               </button>
             </span>
           )}
@@ -241,6 +267,12 @@ export default function ShoppingList() {
               ))}
             </ul>
 
+            {spent.month > 0 && (
+              <p className="small spent-line">
+                Spent <strong>{dollars(spent.week)}</strong> this week · <strong>{dollars(spent.month)}</strong> this month
+                <span className="muted"> (from prices you entered)</span>
+              </p>
+            )}
             <h3>To buy · {remaining.length}</h3>
             {remaining.length > 0 && (
               <>
@@ -266,7 +298,7 @@ export default function ShoppingList() {
             {got.length > 0 && (
               <>
                 <h3>In the cart · {got.length}</h3>
-                <p className="muted small">Ticked items go into your pantry. Tap “Change” to enter the size you actually bought.</p>
+                <p className="muted small">Ticked items go into your pantry. Tap “Change” to enter the size you bought and what you paid — prices add up your spending and show what recipes cost.</p>
                 <ul className="ingredients">{got.map(row)}</ul>
               </>
             )}
