@@ -6,6 +6,8 @@ export interface Progress {
   done: number[]; // steps marked done
   added: string[]; // ingredient mentions crossed off in steps, "step-segment"
   scale: number;
+  /** "Double it and freeze half": after it's made, half goes on the freezer list. */
+  freezeHalf?: boolean;
 }
 
 const EMPTY: Progress = { have: [], done: [], added: [], scale: 1 };

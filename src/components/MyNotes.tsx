@@ -7,7 +7,16 @@ import { agoText, lastMade, madeDays, madeToday, markMade, unmarkMadeToday } fro
 import type { SavedRecipe } from "../lib/schema";
 
 /** "Last made 2 weeks ago · 4 times", "Made it today", and the cook's own notes. */
-export default function MyNotes({ recipe, onSaved }: { recipe: SavedRecipe; onSaved: (r: SavedRecipe) => Promise<void> }) {
+export default function MyNotes({
+  recipe,
+  onSaved,
+  onMarkedMade,
+}: {
+  recipe: SavedRecipe;
+  onSaved: (r: SavedRecipe) => Promise<void>;
+  /** After "Made it today" (e.g. to put a doubled batch's extra half in the freezer). */
+  onMarkedMade?: () => void;
+}) {
   const [text, setText] = useState(recipe.myNotes ?? "");
   const [editing, setEditing] = useState(false);
   const [photoError, setPhotoError] = useState("");
@@ -64,7 +73,7 @@ export default function MyNotes({ recipe, onSaved }: { recipe: SavedRecipe; onSa
             </button>
           )
         ) : (
-          <button className="btn made-btn" onClick={() => onSaved(markMade(recipe))}>
+          <button className="btn made-btn" onClick={() => onSaved(markMade(recipe)).then(() => onMarkedMade?.())}>
             <Icon name="check" size={16} /> Made it today
           </button>
         )}

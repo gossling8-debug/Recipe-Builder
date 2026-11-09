@@ -11,6 +11,8 @@ import AddToWeek from "./AddToWeek";
 import NutritionSection from "./NutritionSection";
 import { ShareToFamily } from "./Family";
 import { markMade, unmarkMadeToday } from "../lib/made";
+import { freezeHalfIfPlanned } from "../lib/leftovers";
+import FreezeHalf from "./FreezeHalf";
 import { clearPlan, getPlan } from "../lib/plan";
 import { restore, useForRecipe, type PantryItem } from "../lib/pantry";
 import { TimerBar, useTimers } from "./Timers";
@@ -77,11 +79,21 @@ export default function RecipePage({ id }: { id: string }) {
       setRecipe(updated);
       void saveRecipe(updated);
     }
+    const froze = freezeHalf();
     showToast(
-      changes.length
-        ? `Pantry: ${changes.map((c) => `${c.name} ${c.left}`).join("; ")}`
-        : "Nothing in your pantry matched this recipe.",
+      (changes.length ? `Pantry: ${changes.map((c) => `${c.name} ${c.left}`).join("; ")}` : "Nothing in your pantry matched this recipe.") +
+        (froze ? " · Half is on your freezer list." : ""),
     );
+  }
+
+  /** "Double it and freeze half": once made, half goes on the freezer list and the size goes back. */
+  function freezeHalf(): boolean {
+    if (!recipe) return false;
+    const done = freezeHalfIfPlanned(recipe.id, recipe.title, loadProgress(recipe.id), (p) =>
+      saveProgress(recipe.id, { ...loadProgress(recipe.id), ...p }),
+    );
+    if (done) setViewKey((k) => k + 1); // show the usual size again
+    return done;
   }
   const [toast, showToast] = useToast();
   // The original and its versions ("my version"), for the line under the title.
@@ -262,6 +274,7 @@ export default function RecipePage({ id }: { id: string }) {
                 <>
                   <PlanMeal recipe={{ ...applySwaps(recipe), cookLog: recipe.cookLog }} recipeId={recipe.id} />
                   <AddToWeek recipeId={recipe.id} />
+                  <FreezeHalf key={viewKey} recipeId={recipe.id} onChange={() => setViewKey((k) => k + 1)} />
                 </>
               }
               recipe={applySwaps(recipe)}
@@ -286,6 +299,7 @@ export default function RecipePage({ id }: { id: string }) {
                   <MyNotes
                     key={recipe.id}
                     recipe={recipe}
+                    onMarkedMade={() => freezeHalf() && showToast("Half is on your freezer list.")}
                     onSaved={async (updated) => {
                       setRecipe(updated);
                       await saveRecipe(updated);
