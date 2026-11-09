@@ -42,6 +42,7 @@ export default function RecipeView({
   onMade,
   made,
   onTagsChange,
+  photo,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
@@ -61,9 +62,12 @@ export default function RecipeView({
   top?: ReactNode;
   /** Lets the labels under the title be edited in place. */
   onTagsChange?: (tags: string[]) => void;
+  /** The cook's photo of the dish: a thumbnail by the title that opens full screen. */
+  photo?: string;
 }) {
   const [units, setUnits] = useUnits();
   const [editingTags, setEditingTags] = useState(false);
+  const [bigPhoto, setBigPhoto] = useState(false);
   const recipe = convertRecipe(original, units);
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
@@ -88,7 +92,22 @@ export default function RecipeView({
 
   return (
     <article className="recipe">
-      <h2 className="recipe-title">{recipe.title}</h2>
+      <div className="title-row">
+        <h2 className="recipe-title">{recipe.title}</h2>
+        {photo && (
+          <button className="dish-thumb" onClick={() => setBigPhoto(true)} aria-label="Show your photo of the dish">
+            <img src={photo} alt="" />
+          </button>
+        )}
+      </div>
+      {bigPhoto && photo && (
+        <div className="lightbox" role="dialog" aria-label={`${recipe.title}, as you made it`} onClick={() => setBigPhoto(false)}>
+          <img src={photo} alt={`${recipe.title}, as you made it`} />
+          <button className="icon-btn lightbox-close" aria-label="Close photo" onClick={() => setBigPhoto(false)}>
+            <Icon name="close" />
+          </button>
+        </div>
+      )}
       {(recipe.tags?.length > 0 || onTagsChange) && !editingTags && (
         <div className="title-tags">
           {(recipe.tags ?? []).map((t) =>

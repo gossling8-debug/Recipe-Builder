@@ -123,7 +123,7 @@ export default function MyNotes({ recipe, onSaved }: { recipe: SavedRecipe; onSa
         <input ref={libraryInput} type="file" accept="image/*" hidden onChange={(e) => (addPhoto(e.target.files?.[0]), (e.target.value = ""))} />
         {recipe.dishPhoto ? (
           <span className="small">
-            <Icon name="camera" size={16} /> Photo added ·{" "}
+            <Icon name="camera" size={16} /> Photo added (tap it by the title) ·{" "}
             <button className="link-btn small" onClick={() => openPicker(cameraInput.current)}>
               Retake
             </button>{" "}
