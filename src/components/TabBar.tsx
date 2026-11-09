@@ -4,7 +4,7 @@ import { href, type Route } from "../lib/route";
 const TABS: { route: Route; label: string; icon: IconName; main?: boolean }[] = [
   // Most used on the right, where the thumb reaches.
   { route: { name: "budget" }, label: "Budget", icon: "wallet" },
-  { route: { name: "tonight" }, label: "Tonight", icon: "moon" },
+  { route: { name: "tonight" }, label: "Tonight", icon: "plate" },
   { route: { name: "scan" }, label: "Add", icon: "plus", main: true },
 ];
 
