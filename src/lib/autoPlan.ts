@@ -18,8 +18,13 @@ export const NO_REPEAT_DAYS = 14;
 const NOT_A_DINNER = /\b(desserts?|sides?|side dish|drinks?|beverages?|appetizers?|snacks?|breakfast|brunch|baking|breads?|sauces?|dips?|dressings?|condiments?|cookies?|cakes?|pies?|candy|treats?)\b/i;
 const SWEET_TITLE = /\b(cookies?|cakes?|cupcakes?|brownies?|muffins?|fudge|frosting|icing|dip|dressing|sauce|smoothie|lemonade|punch)\b/i;
 
+const DINNER_TAG = /\b(dinner|supper|main|main dish|entr[eé]e|lunch)\b/i;
+
+/** A dinner tag always counts (e.g. "Dinner" + "Baking"); otherwise desserts, sides and the like are skipped. */
 export const isDinner = (r: SavedRecipe) =>
-  r.makeAgain !== false && !(r.tags ?? []).some((t) => NOT_A_DINNER.test(t)) && !SWEET_TITLE.test(r.title) && r.steps.length > 0;
+  r.makeAgain !== false &&
+  r.steps.length > 0 &&
+  ((r.tags ?? []).some((t) => DINNER_TAG.test(t)) || (!(r.tags ?? []).some((t) => NOT_A_DINNER.test(t)) && !SWEET_TITLE.test(r.title)));
 
 /** "Serves 6", "6-8 servings", "Makes 4 bowls" → 6 / 6 / 4; null if it doesn't say. */
 export function servingsCount(servings: string | null): number | null {

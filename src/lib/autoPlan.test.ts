@@ -76,6 +76,9 @@ describe("fill my week", () => {
     expect(isDinner(mk("Mashed potatoes", { tags: ["Side"] }))).toBe(false);
     expect(isDinner(mk("Tacos", { makeAgain: false }))).toBe(false);
     expect(isDinner(mk("Chicken Pot Pie", { tags: ["Dinner"] }))).toBe(true);
+    expect(isDinner(mk("Keto Baked Chicken", { tags: ["Dinner", "Baking", "Keto"] }))).toBe(true); // Dinner wins
+    expect(isDinner(mk("Keto Fat Bombs", { tags: ["Dessert", "Keto"] }))).toBe(false);
+    expect(isDinner(mk("Keto Chicken", { tags: ["Dinner"], makeAgain: false }))).toBe(false);
     expect(servingsCount("6-8 servings")).toBe(6);
   });
 });
