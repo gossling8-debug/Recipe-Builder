@@ -25,7 +25,7 @@ export const ReceiptSchema = z.object({
       matches: z
         .string()
         .nullable()
-        .describe("If this is the same thing as one of the cook's list names given, that name EXACTLY as given; otherwise null."),
+        .describe("If this is the same thing as one of the shopping-list names given, that name EXACTLY as given; otherwise null."),
     }),
   ),
   tax: z.number().nullable().describe("Sales tax in dollars if shown, else null."),
@@ -40,7 +40,7 @@ The images may be several overlapping pieces of one long screenshot, or several 
 
 For each line give a plain generic name a recipe would use (expand abbreviations: "GV" = Great Value, "MLK" = milk, "BNLS SKNLS CHKN BRST" = boneless skinless chicken breast), the total amount bought, and the line price after discounts. Mark household items as not food.
 
-You are given the names already on the cook's shopping list and pantry. Set "matches" to one of those names, exactly as written, only when it is clearly the same ingredient (e.g. "2% milk" matches "milk"; "shredded cheddar" matches "cheddar cheese"); otherwise null.
+You are given the names on the cook's shopping list. Set "matches" to one of those names, exactly as written, only when it is clearly the same ingredient (e.g. "2% milk" matches "milk"; "shredded cheddar" matches "cheddar cheese"); otherwise null.
 
 If something is unreadable, give your best reading and add a short warning.`;
 
@@ -54,7 +54,7 @@ export async function readReceipt(apiKey: string, images: string[], knownNames: 
     }),
     {
       type: "text" as const,
-      text: `Names on the cook's shopping list and pantry:\n${knownNames.length ? knownNames.map((n) => `- ${n}`).join("\n") : "(none)"}\n\nList what was bought on this receipt.`,
+      text: `Names on the cook's shopping list:\n${knownNames.length ? knownNames.map((n) => `- ${n}`).join("\n") : "(none)"}\n\nList what was bought on this receipt.`,
     },
   ];
   let response;
