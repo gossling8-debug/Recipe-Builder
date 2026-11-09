@@ -14,7 +14,29 @@ import { convertText, useUnits } from "../lib/units";
 import { useByLabel } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
 import { walmartSearchUrl } from "../lib/shopping";
-import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
+import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingItem, type ShoppingState } from "../lib/shopping";
+import { buyText, loadStaples, staplesToBuy, statusText } from "../lib/staples";
+import { loadPantry } from "../lib/pantry";
+
+const ALWAYS_KEEP = "Always keep";
+
+/** Staples to buy (or already ticked this trip), as shopping-list items. */
+function staplesToBuyOrTicked(checked: string[], onListAlready: Set<string>): ShoppingItem[] {
+  const need = new Map(staplesToBuy().map((s) => [s.staple.key, s]));
+  const pantry = loadPantry();
+  return loadStaples()
+    .filter((st) => !onListAlready.has(st.key) && (need.has(st.key) || checked.includes(st.key)))
+    .map((st) => {
+      const n = need.get(st.key);
+      return {
+        key: st.key,
+        name: st.name,
+        amount: n ? buyText(n) : "",
+        recipes: [n ? `${ALWAYS_KEEP} · ${statusText[n.status].toLowerCase()}` : ALWAYS_KEEP],
+        need: n?.buy ?? pantry[st.key]?.lastBought ?? null,
+      };
+    });
+}
 
 const scaleLabel = (s: number) => (s === 1 ? "" : ` · ×${s === 0.5 ? "½" : s === 1.5 ? "1½" : s}`);
 
@@ -46,7 +68,11 @@ export default function ShoppingList() {
         : [],
     [all, state.recipes],
   );
-  const items = useMemo(() => combine(entries), [entries]);
+  const recipeItems = useMemo(() => combine(entries), [entries]);
+  // "Always keep" staples that are out or low join the list by themselves. Once
+  // ticked they stay (in the cart) until the list is cleared, so ticking can be undone.
+  const stapleItems = staplesToBuyOrTicked(state.checked, new Set(recipeItems.map((i) => i.key)));
+  const items = [...recipeItems, ...stapleItems];
   const checked = new Set(state.checked);
   // Ticks saved under the older matching rule move to the current item keys.
   useEffect(() => {
@@ -58,7 +84,7 @@ export default function ShoppingList() {
     const bought = Object.fromEntries(Object.entries(state.bought ?? {}).map(([k, v]) => [move(k), v]));
     update({ ...state, checked: checkedNow, opened: moved(state.opened), bought });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items]);
+  }, [recipeItems]);
 
   const notChecked = items.filter((i) => !checked.has(i.key));
   const status = new Map(notChecked.map((i) => [i.key, statusFor(i.key, i.name, i.need)]));
@@ -108,7 +134,7 @@ export default function ShoppingList() {
         <span>
           {it.amount && <span className="shop-amount">{convertText(it.amount, units, it.name)} </span>}
           {it.name}
-          {entries.length > 1 && <span className="shop-for">{it.recipes.join(", ")}</span>}
+          {(entries.length > 1 || it.recipes[0]?.startsWith(ALWAYS_KEEP)) && <span className="shop-for">{it.recipes.join(", ")}</span>}
           {!checked.has(it.key) && <PantryNote status={status.get(it.key)} />}
         </span>
       </label>
@@ -189,16 +215,16 @@ export default function ShoppingList() {
       />
       <main className="page recipe">
         {all === null && <p className="muted">Loading…</p>}
-        {all !== null && entries.length === 0 && (
+        {all !== null && entries.length === 0 && stapleItems.length === 0 && (
           <div className="empty">
             <p className="empty-title">Your shopping list is empty.</p>
             <p className="muted">Open a recipe and tap “Add to shopping list”. Ingredients from several recipes are combined here.</p>
           </div>
         )}
 
-        {entries.length > 0 && (
+        {(entries.length > 0 || stapleItems.length > 0) && (
           <>
-            <h3>For</h3>
+            {entries.length > 0 && <h3>For</h3>}
             <ul className="shop-recipes">
               {entries.map(({ recipe, scale }) => (
                 <li key={recipe.id}>

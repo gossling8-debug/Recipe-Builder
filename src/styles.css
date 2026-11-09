@@ -703,3 +703,7 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .lightbox-close { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; color: #fff; background: rgba(255, 255, 255, 0.15); border-radius: 50%; }
 .versions { margin: 4px 0; }
 .freeze-half { margin-top: 8px; }
+.staple-list { list-style: none; padding: 0; margin: 6px 0 10px; }
+.staple-list li { display: flex; align-items: center; justify-content: space-between; min-height: 40px; border-bottom: 1px solid var(--line); }
+.staple-need { color: var(--accent); }
+.keep-on { color: var(--accent); }

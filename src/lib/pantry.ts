@@ -20,6 +20,8 @@ export interface PantryItem {
   useByEstimated?: boolean;
   /** The cook chose "No date" — don't estimate one again. */
   noUseBy?: boolean;
+  /** How much was bought last time (to tell when an "always keep" staple is running low). */
+  lastBought?: Qty;
 }
 
 export type Pantry = Record<string, PantryItem>;
@@ -123,7 +125,16 @@ export function recordPurchase(name: string, amountText: string): PantryItem | n
   const estimate = estimateUseBy(name);
   const useBy = prev?.useBy ?? estimate ?? undefined;
   const useByEstimated = prev?.useBy ? prev.useByEstimated : estimate !== null;
-  return setItem(key, { key, name: prev?.name ?? name, qty, boughtAt: Date.now(), updatedAt: Date.now(), useBy, useByEstimated });
+  return setItem(key, {
+    key,
+    name: prev?.name ?? name,
+    qty,
+    boughtAt: Date.now(),
+    updatedAt: Date.now(),
+    useBy,
+    useByEstimated,
+    lastBought: bought ?? prev?.lastBought,
+  });
 }
 
 export interface UseResult {
