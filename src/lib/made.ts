@@ -56,3 +56,18 @@ export function agoText(ms: number, now = Date.now()): string {
   const sameYear = d.getFullYear() === new Date(now).getFullYear();
   return d.toLocaleDateString([], { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }) });
 }
+
+/** Removes one day from the history (marks and cooking-mode times from that day). */
+export function removeMadeDay(r: SavedRecipe, day: number): SavedRecipe {
+  const k = dayKey(day);
+  return {
+    ...r,
+    madeOn: (r.madeOn ?? []).filter((ms) => dayKey(ms) !== k),
+    cookLog: (r.cookLog ?? []).filter((l) => dayKey(l.at) !== k),
+  };
+}
+
+/** Back to "Not made yet". */
+export function clearMade(r: SavedRecipe): SavedRecipe {
+  return { ...r, madeOn: [], cookLog: [] };
+}

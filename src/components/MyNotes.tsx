@@ -3,7 +3,7 @@ import { compressPhoto } from "../lib/image";
 import { addLeftover, eatByLabel, useLeftovers } from "../lib/leftovers";
 import { href } from "../lib/route";
 import Icon from "./Icon";
-import { agoText, lastMade, madeDays, madeToday, markMade, unmarkMadeToday } from "../lib/made";
+import { agoText, clearMade, lastMade, madeDays, madeToday, markMade, removeMadeDay } from "../lib/made";
 import type { SavedRecipe } from "../lib/schema";
 
 /** "Last made 2 weeks ago · 4 times", "Made it today", and the cook's own notes. */
@@ -19,6 +19,7 @@ export default function MyNotes({
 }) {
   const [text, setText] = useState(recipe.myNotes ?? "");
   const [editing, setEditing] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
@@ -65,19 +66,42 @@ export default function MyNotes({
             {days.length > 1 && <span className="muted"> · made {days.length} times</span>}
           </span>
         )}{" "}
-        {today ? (
-          // Only a mark made here can be undone; a time logged in cooking mode stays.
-          madeToday({ madeOn: recipe.madeOn }) && (
-            <button className="link-btn small" onClick={() => onSaved(unmarkMadeToday(recipe))}>
-              Undo today
-            </button>
-          )
-        ) : (
+        {!today && (
           <button className="btn made-btn" onClick={() => onSaved(markMade(recipe)).then(() => onMarkedMade?.())}>
             <Icon name="check" size={16} /> Made it today
           </button>
         )}
+        {last !== undefined && (
+          <button className="link-btn small" onClick={() => setShowHistory((v) => !v)}>
+            {showHistory ? "Done" : "History"}
+          </button>
+        )}
       </p>
+      {showHistory && last !== undefined && (
+        <div className="plan-card made-history">
+          <ul>
+            {[...days].reverse().map((d) => (
+              <li key={d}>
+                <span>{new Date(d).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</span>
+                <button className="link-btn small" onClick={() => onSaved(removeMadeDay(recipe, d))}>
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            className="btn"
+            onClick={() => {
+              if (!confirm("Clear the whole history? This recipe will show as not made yet, and saved cooking times are forgotten.")) return;
+              setShowHistory(false);
+              void onSaved(clearMade(recipe));
+            }}
+          >
+            <Icon name="reset" size={18} /> Clear all — mark as not made
+          </button>
+          <p className="muted small">Removing a day also forgets the cooking time saved that day (used to plan meal times).</p>
+        </div>
+      )}
 
       <p className="small made-line">
         {leftover ? (

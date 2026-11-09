@@ -762,3 +762,5 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .budget-edit .text-input { width: 110px; }
 .cheap-list { list-style: none; padding: 0; margin: 0; }
 .cheap-list li { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.made-history ul { list-style: none; padding: 0; margin: 0 0 10px; }
+.made-history li { display: flex; justify-content: space-between; align-items: center; min-height: 40px; border-bottom: 1px solid var(--line); }

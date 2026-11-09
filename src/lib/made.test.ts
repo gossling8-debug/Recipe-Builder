@@ -28,3 +28,14 @@ describe("made", () => {
     expect(agoText(at(2025, 3, 4), now)).toMatch(/2025/);
   });
 });
+
+describe("editing made history", () => {
+  it("removes one day, or everything", async () => {
+    const { removeMadeDay, clearMade, madeDays } = await import("./made");
+    const r = { ...base, madeOn: [at(2026, 11, 1), at(2026, 11, 7)], cookLog: [{ at: at(2026, 11, 7, 19), minutes: 30, scale: 1 }] };
+    const less = removeMadeDay(r, at(2026, 11, 7, 8));
+    expect(madeDays(less)).toEqual([at(2026, 11, 1)]);
+    expect(less.cookLog).toEqual([]);
+    expect(madeDays(clearMade(r))).toEqual([]);
+  });
+});
