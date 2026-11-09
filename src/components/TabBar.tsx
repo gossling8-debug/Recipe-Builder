@@ -2,7 +2,7 @@ import Icon, { type IconName } from "./Icon";
 import { href, type Route } from "../lib/route";
 
 const TABS: { route: Route; label: string; icon: IconName; main?: boolean }[] = [
-  { route: { name: "budget" }, label: "Budget", icon: "wallet" },
+  { route: { name: "budget" }, label: "Budget", icon: "receipt" },
   { route: { name: "scan" }, label: "Add", icon: "plus", main: true },
   { route: { name: "tonight" }, label: "Tonight", icon: "plate" },
 ];
