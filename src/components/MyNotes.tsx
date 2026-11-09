@@ -1,3 +1,4 @@
+import { feature } from "../lib/features";
 import { useRef, useState } from "react";
 import { compressPhoto } from "../lib/image";
 import { addLeftover, eatByLabel, useLeftovers } from "../lib/leftovers";
@@ -104,12 +105,12 @@ export default function MyNotes({
       )}
 
       <p className="small made-line">
-        {leftover ? (
+        {leftover && feature("pantry") ? (
           <span>
             Leftovers · <a href={href({ name: "pantry" })}>{eatByLabel(leftover)}</a>
           </span>
         ) : (
-          last !== undefined && (
+          last !== undefined && feature("pantry") && (
             <button className="btn made-btn" onClick={() => addLeftover(recipe.id, recipe.title)}>
               <Icon name="jar" size={16} /> I have leftovers
             </button>

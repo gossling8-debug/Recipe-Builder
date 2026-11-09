@@ -1,3 +1,4 @@
+import { feature } from "../lib/features";
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import { IngredientMention } from "./RecipeView";
@@ -206,7 +207,7 @@ export default function CookMode({
       </div>
 
       <TimerBar {...timers} />
-      <ReadAloudBar reader={reader} voice={voice} reading={reading} onToggleRead={toggleRead} />
+      {feature("readAloud") && <ReadAloudBar reader={reader} voice={voice} reading={reading} onToggleRead={toggleRead} />}
 
       <main
         className={reader.waiting ? "cook-body waiting" : "cook-body"}

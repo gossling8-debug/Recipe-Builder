@@ -1,3 +1,4 @@
+import { feature } from "../lib/features";
 import { useEffect, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
@@ -104,10 +105,10 @@ export default function WeekPage() {
             </p>
           </div>
         )}
-        <p className="small">
+        {feature("history") && <p className="small">
           <a href={href({ name: "history" })}>What we've cooked</a>
           <span className="muted"> — your meal history</span>
-        </p>
+        </p>}
         {recipes && recipes.length > 1 && (
           <a className="btn plan-open" href={href({ name: "meal" })}>
             <Icon name="timer" size={18} /> Plan a big meal (several dishes at once)

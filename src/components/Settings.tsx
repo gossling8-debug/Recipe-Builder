@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import FeaturesSection from "./FeaturesSection";
+import { feature } from "../lib/features";
 import Header from "./Header";
 import Icon from "./Icon";
 import CloudSection from "./CloudSection";
@@ -12,6 +14,12 @@ import { exportBackup, importBackup } from "../lib/backup";
 import { storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 
 export default function Settings() {
+  const [, featuresTick] = useState(0);
+  useEffect(() => {
+    const on = () => featuresTick((n) => n + 1);
+    window.addEventListener("features-changed", on);
+    return () => window.removeEventListener("features-changed", on);
+  }, []);
   const [key, setKey] = useState(getApiKey());
   const [saved, setSaved] = useState(false);
   const [keyError, setKeyError] = useState("");
@@ -100,6 +108,9 @@ export default function Settings() {
           </div>
         </section>
 
+        <FeaturesSection />
+
+        {feature("avoid") && (
         <section>
           <h3>Allergies &amp; ingredients to avoid</h3>
           <p className="muted small">
@@ -148,6 +159,8 @@ export default function Settings() {
             </button>
           </div>
         </section>
+
+        )}
 
         <section>
           <h3>Recipe reader</h3>

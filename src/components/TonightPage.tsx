@@ -1,3 +1,4 @@
+import { feature } from "../lib/features";
 import { useEffect, useState, type ReactNode } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
@@ -17,7 +18,8 @@ export default function TonightPage() {
   const [recipes, setRecipes] = useState<SavedRecipe[] | null>(null);
   const [week, setWeek] = useState(() => loadWeek());
   const [skip, setSkip] = useState<Set<string>>(new Set());
-  const fridge = useLeftovers().filter((l) => !l.frozen && l.eatBy >= Date.now());
+  const leftovers = useLeftovers();
+  const fridge = feature("pantry") ? leftovers.filter((l) => !l.frozen && l.eatBy >= Date.now()) : [];
   useEffect(() => {
     listRecipes().then(setRecipes, () => setRecipes([]));
     const on = () => setWeek(loadWeek());
@@ -29,9 +31,9 @@ export default function TonightPage() {
   const all = recipes ?? [];
   const byId = new Map(all.map((r) => [r.id, r]));
   const meals = (week.days[today] ?? []).filter((m) => byId.has(m.id));
-  const plans = loadPlans();
+  const plans = feature("mealTime") ? loadPlans() : {};
   const idea = recipes ? suggestDinner({ recipes: all, past: pastPlans(), week, skip }) : undefined;
-  const ready = recipes
+  const ready = recipes && feature("pantry")
     ? whatCanIMake(all.filter(isDinner), 0)
         .filter((c) => c.missing.length + c.short.length + c.expired.length === 0)
         .slice(0, 3)
@@ -84,9 +86,15 @@ export default function TonightPage() {
                       </button>
                     ) : (
                       <>
-                        <button className="btn primary" onClick={() => cook(r.id)}>
-                          <Icon name="play" size={18} /> Start cooking
-                        </button>
+                        {feature("cookMode") ? (
+                          <button className="btn primary" onClick={() => cook(r.id)}>
+                            <Icon name="play" size={18} /> Start cooking
+                          </button>
+                        ) : (
+                          <a className="btn primary" href={href({ name: "recipe", id: r.id })}>
+                            Open the recipe
+                          </a>
+                        )}
                         <button className="link-btn small" onClick={() => setWeek(removeMeal(today, i))}>
                           Not tonight
                         </button>
@@ -174,9 +182,9 @@ export default function TonightPage() {
           </section>
         )}
 
-        <p className="small tonight-week">
+        {feature("weekPlanner") && <p className="small tonight-week">
           <Icon name="calendar" size={16} /> <a href={href({ name: "week" })}>Plan the rest of the week</a>
-        </p>
+        </p>}
       </main>
     </>
   );

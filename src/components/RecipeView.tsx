@@ -1,3 +1,4 @@
+import { feature } from "../lib/features";
 import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/schema";
 import { scaleAmount } from "../lib/quantity";
 import { toggleIn, useProgress } from "../lib/progress";
@@ -70,7 +71,8 @@ export default function RecipeView({
   /** The original and its versions, when there's more than one. */
   versions?: { id: string; title: string; original: boolean }[];
 }) {
-  const [units, setUnits] = useUnits();
+  const [chosenUnits, setUnits] = useUnits();
+  const units = feature("units") ? chosenUnits : "original";
   const [editingTags, setEditingTags] = useState(false);
   const [bigPhoto, setBigPhoto] = useState(false);
   const recipe = convertRecipe(original, units);
@@ -91,9 +93,9 @@ export default function RecipeView({
   });
 
   const unused = unusedIngredients(recipe);
-  const avoided = findAvoided(recipe.ingredients, loadAvoid(), new Set(swaps.keys()));
+  const avoided = feature("avoid") ? findAvoided(recipe.ingredients, loadAvoid(), new Set(swaps.keys())) : [];
   const avoidedAt = new Map(avoided.map((m) => [m.index, m.reasons]));
-  const conversions = conversionsFor(original.ingredients, scale); // works from the card's own units
+  const conversions = feature("conversions") ? conversionsFor(original.ingredients, scale) : []; // works from the card's own units
 
   return (
     <article className="recipe">
@@ -179,6 +181,7 @@ export default function RecipeView({
         ))}
         </div>
       </div>
+      {feature("units") && (
       <div className="scale-row" role="group" aria-label="Units">
         <span className="small muted">Units</span>
         <div className="segmented">
@@ -194,6 +197,7 @@ export default function RecipeView({
           ))}
         </div>
       </div>
+      )}
       {units !== "original" && (
         <p className="small muted">
           Converted from the card and rounded to kitchen-friendly amounts. Teaspoons and tablespoons stay as they are.
@@ -283,7 +287,7 @@ export default function RecipeView({
         ))}
       </section>
 
-      {!preview && (() => {
+      {!preview && feature("budget") && (() => {
         const c = recipeCost(original, scale);
         if (!c.priced) return null;
         const serves = servingsCount(original.servings);
