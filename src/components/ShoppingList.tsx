@@ -14,30 +14,11 @@ import { convertText, useUnits } from "../lib/units";
 import { useByLabel } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
 import { walmartSearchUrl } from "../lib/shopping";
-import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingItem, type ShoppingState } from "../lib/shopping";
-import { buyText, loadStaples, staplesToBuy, statusText } from "../lib/staples";
-import { loadPantry } from "../lib/pantry";
+import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
+import { staplesToBuyOrTicked } from "../lib/shoppingItems";
 import { addPrice, deletePrice, dollars, parsePrice, periodStarts, spentSince } from "../lib/prices";
 
-const ALWAYS_KEEP = "Always keep";
-
-/** Staples to buy (or already ticked this trip), as shopping-list items. */
-function staplesToBuyOrTicked(checked: string[], onListAlready: Set<string>): ShoppingItem[] {
-  const need = new Map(staplesToBuy().map((s) => [s.staple.key, s]));
-  const pantry = loadPantry();
-  return loadStaples()
-    .filter((st) => !onListAlready.has(st.key) && (need.has(st.key) || checked.includes(st.key)))
-    .map((st) => {
-      const n = need.get(st.key);
-      return {
-        key: st.key,
-        name: st.name,
-        amount: n ? buyText(n) : "",
-        recipes: [n ? `${ALWAYS_KEEP} · ${statusText[n.status].toLowerCase()}` : ALWAYS_KEEP],
-        need: n?.buy ?? pantry[st.key]?.lastBought ?? null,
-      };
-    });
-}
+import { ALWAYS_KEEP } from "../lib/shoppingItems";
 
 const scaleLabel = (s: number) => (s === 1 ? "" : ` · ×${s === 0.5 ? "½" : s === 1.5 ? "1½" : s}`);
 
@@ -46,6 +27,16 @@ export default function ShoppingList() {
   const [all, setAll] = useState<SavedRecipe[] | null>(null);
   const [toast, showToast] = useToast();
   const [units] = useUnits();
+  // A message left by the receipt import, shown once.
+  const [receiptDone] = useState(() => {
+    try {
+      const m = sessionStorage.getItem("recipe-builder.receiptDone");
+      sessionStorage.removeItem("recipe-builder.receiptDone");
+      return m;
+    } catch {
+      return null;
+    }
+  });
   const starts = periodStarts();
   const spent = { week: spentSince(starts.week), month: spentSince(starts.month) };
 
@@ -240,6 +231,10 @@ export default function ShoppingList() {
         }
       />
       <main className="page recipe">
+        {receiptDone && <div className="callout small">{receiptDone}</div>}
+        <a className="btn receipt-btn" href={href({ name: "receipt" })}>
+          <Icon name="camera" size={18} /> Import a receipt
+        </a>
         {all === null && <p className="muted">Loading…</p>}
         {all !== null && entries.length === 0 && stapleItems.length === 0 && (
           <div className="empty">
