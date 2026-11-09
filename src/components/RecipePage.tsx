@@ -40,7 +40,17 @@ export default function RecipePage({ id }: { id: string }) {
       return false;
     }
   });
-  const [cooking, setCooking] = useState(false);
+  // "Start cooking" from the Tonight screen opens straight into cooking mode.
+  const [cooking, setCooking] = useState(() => {
+    try {
+      if (sessionStorage.getItem("recipe-builder.cookOnOpen") !== id) return false;
+      sessionStorage.removeItem("recipe-builder.cookOnOpen");
+      cookStart(id);
+      return true;
+    } catch {
+      return false;
+    }
+  });
   // Bumped when cooking mode closes, so the recipe view re-reads progress made there.
   const [viewKey, setViewKey] = useState(0);
   const timers = useTimers();

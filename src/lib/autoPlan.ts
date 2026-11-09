@@ -149,3 +149,31 @@ export function setPeople(n: number): void {
     /* session only */
   }
 }
+
+/**
+ * One dinner idea for a day: a dinner recipe not made or planned within 14
+ * days, favoring ones rated well. Undefined if there's none.
+ */
+export function suggestDinner(opts: {
+  recipes: SavedRecipe[];
+  past: WeekState["days"];
+  week: WeekState;
+  skip?: Set<string>;
+  random?: () => number;
+  now?: Date;
+}): SavedRecipe | undefined {
+  const { recipes, skip = new Set(), random = Math.random } = opts;
+  const now = opts.now ?? new Date();
+  const today = new Date(now);
+  today.setHours(12, 0, 0, 0);
+  const daysFrom = (ms: number) => Math.round((new Date(new Date(ms).setHours(12, 0, 0, 0)).getTime() - today.getTime()) / 86400000);
+  const keyDays = (k: string) => {
+    const [y, m, d] = k.split("-").map(Number);
+    return daysFrom(new Date(y, m - 1, d, 12).getTime());
+  };
+  const recent = new Set<string>();
+  for (const r of recipes) if (madeDays(r).some((ms) => Math.abs(daysFrom(ms)) < NO_REPEAT_DAYS)) recent.add(r.id);
+  for (const days of [opts.past, opts.week.days])
+    for (const [k, v] of Object.entries(days)) for (const m of v) if (!m.leftover && Math.abs(keyDays(k)) < NO_REPEAT_DAYS) recent.add(m.id);
+  return pick(recipes.filter((r) => isDinner(r) && !recent.has(r.id) && !skip.has(r.id)), weight, random);
+}

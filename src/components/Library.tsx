@@ -316,11 +316,6 @@ export default function Library() {
           </a>
         )}
       </main>
-      <div className="fab-bar">
-        <a className="btn primary big" href={href({ name: "scan" })}>
-          <Icon name="plus" /> Add a recipe
-        </a>
-      </div>
     </>
   );
 }

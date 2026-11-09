@@ -15,6 +15,9 @@ import BigMealPage from "./components/BigMealPage";
 import PrintPage from "./components/PrintPage";
 import HistoryPage from "./components/HistoryPage";
 import ReceiptPage from "./components/ReceiptPage";
+import TonightPage from "./components/TonightPage";
+import BudgetPage from "./components/BudgetPage";
+import TabBar from "./components/TabBar";
 import { BookPage, FamilyPage, JoinPage, SharedRecipePage } from "./components/Family";
 
 function Screen() {
@@ -36,6 +39,10 @@ function Screen() {
       return route.book ? <BookPage id={route.book} /> : <FamilyPage />;
     case "join":
       return <JoinPage id={route.id} />;
+    case "tonight":
+      return <TonightPage />;
+    case "budget":
+      return <BudgetPage />;
     case "receipt":
       return <ReceiptPage />;
     case "history":
@@ -57,11 +64,16 @@ function Screen() {
   }
 }
 
+// Screens without the bottom bar: opening a shared link, printing, joining a cookbook.
+const NO_TAB_BAR = new Set(["import", "print", "join"]);
+
 export default function App() {
+  const route = useRoute();
   return (
     <>
       <PlanWatcher />
       <Screen />
+      {!NO_TAB_BAR.has(route.name) && <TabBar current={route.name} />}
     </>
   );
 }

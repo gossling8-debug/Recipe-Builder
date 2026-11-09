@@ -729,3 +729,36 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .spend-list { list-style: none; padding: 0; margin: 0 0 8px; }
 .spend-list li { display: grid; grid-template-columns: 1fr 92px 40px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .spend-name { min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- Bottom bar ---------- */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  display: flex; justify-content: space-around; align-items: flex-end;
+  padding: 6px 8px calc(env(safe-area-inset-bottom) + 6px);
+  background: var(--surface); border-top: 1px solid var(--line);
+}
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; color: var(--muted); text-decoration: none; font-size: 11px; font-weight: 500; min-width: 0; }
+.tab.on { color: var(--text); }
+.tab.main .tab-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--ink); color: var(--ink-text); display: flex; align-items: center; justify-content: center; margin-top: -14px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+.tab.main { color: var(--text); }
+/* Screens with their own bottom button (save, read recipe…) hide the bar. */
+body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar { display: none; }
+@media print { .tabbar { display: none; } }
+
+/* Tonight */
+.tonight-card { border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin: 10px 0; background: var(--surface); }
+.tonight-main { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; color: inherit; text-decoration: none; }
+.tonight-main img, .tonight-main .thumb-placeholder { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; }
+.tonight-actions { margin: 10px 0 0; align-items: center; }
+.tonight-week { display: flex; align-items: center; gap: 6px; margin-top: 20px; }
+
+/* Budget */
+.budget-big { font-size: 28px; margin: 4px 0 8px; font-family: var(--serif); }
+.budget-bar { height: 10px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.budget-bar > div { height: 100%; background: var(--accent); border-radius: 6px; }
+.budget-bar > div.near { background: var(--warn); }
+.budget-bar > div.over { background: var(--error); }
+.budget-edit { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.budget-edit .text-input { width: 110px; }
+.cheap-list { list-style: none; padding: 0; margin: 0; }
+.cheap-list li { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }

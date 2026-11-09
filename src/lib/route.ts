@@ -7,6 +7,8 @@ export type Route =
   | { name: "shopping" }
   | { name: "pantry" }
   | { name: "week" }
+  | { name: "tonight" }
+  | { name: "budget" }
   | { name: "receipt" }
   | { name: "history" }
   | { name: "print"; id: string }
@@ -23,6 +25,8 @@ export function parseRoute(hash: string): Route {
   if (path === "shopping") return { name: "shopping" };
   if (path === "pantry") return { name: "pantry" };
   if (path === "week") return { name: "week" };
+  if (path === "tonight") return { name: "tonight" };
+  if (path === "budget") return { name: "budget" };
   if (path === "receipt") return { name: "receipt" };
   if (path === "history") return { name: "history" };
   const fam = path.match(/^family(?:\/([^/]+))?(?:\/([^/]+))?$/);

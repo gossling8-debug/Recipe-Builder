@@ -7,7 +7,16 @@ import type { ShoppingState } from "../lib/shopping";
  * "Spent $x this week · $y this month", with Edit: correct or remove any
  * purchase, or start the totals over from today (prices are kept for recipe costs).
  */
-export default function SpendingEditor({ state, update }: { state: ShoppingState; update: (s: ShoppingState) => void }) {
+export default function SpendingEditor({
+  state,
+  update,
+  compact = false,
+}: {
+  state: ShoppingState;
+  update: (s: ShoppingState) => void;
+  /** Just an "Edit purchases" link (where the totals are already shown). */
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [, refresh] = useState(0);
   const starts = periodStarts();
@@ -28,13 +37,21 @@ export default function SpendingEditor({ state, update }: { state: ShoppingState
 
   return (
     <div className="spending">
-      <p className="small spent-line">
-        Spent <strong>{dollars(week)}</strong> this week · <strong>{dollars(month)}</strong> this month
-        <span className="muted"> (from prices you entered)</span>{" "}
-        <button className="link-btn small" onClick={() => setOpen((o) => !o)}>
-          {open ? "Done" : "Edit"}
-        </button>
-      </p>
+      {compact ? (
+        <p className="small">
+          <button className="link-btn small" onClick={() => setOpen((o) => !o)}>
+            {open ? "Done" : "Edit purchases"}
+          </button>
+        </p>
+      ) : (
+        <p className="small spent-line">
+          Spent <strong>{dollars(week)}</strong> this week · <strong>{dollars(month)}</strong> this month
+          <span className="muted"> (from prices you entered)</span>{" "}
+          <button className="link-btn small" onClick={() => setOpen((o) => !o)}>
+            {open ? "Done" : "Edit"}
+          </button>
+        </p>
+      )}
       {open && (
         <div className="plan-card spending-editor">
           {entries.length === 0 ? (
