@@ -82,3 +82,15 @@ describe("fill my week", () => {
     expect(servingsCount("6-8 servings")).toBe(6);
   });
 });
+
+describe("tonight's suggestion", () => {
+  it("skips recent, planned and passed-over recipes", async () => {
+    const { suggestDinner } = await import("./autoPlan");
+    const made = mk("made", { madeOn: [new Date(2026, 10, 5).getTime()] });
+    const planned = mk("planned");
+    const ok = mk("ok");
+    const week = { days: { [days[3]]: [{ id: "planned", scale: 1 }] } };
+    expect(suggestDinner({ recipes: [made, planned, ok], past: {}, week, now })?.id).toBe("ok");
+    expect(suggestDinner({ recipes: [made, planned, ok], past: {}, week, now, skip: new Set(["ok"]) })).toBeUndefined();
+  });
+});

@@ -128,3 +128,23 @@ export function recipeCost(r: ScannedRecipe, scale: number, prices = loadPrices(
 }
 
 export const dollars = (n: number) => `$${n.toFixed(2)}`;
+
+// ---------- weekly budget ----------
+const BUDGET_KEY = "recipe-builder.budget";
+let budgetMemory = 0;
+/** The weekly grocery budget in dollars (0 = not set). */
+export function getBudget(): number {
+  try {
+    return Number(localStorage.getItem(BUDGET_KEY)) || budgetMemory;
+  } catch {
+    return budgetMemory;
+  }
+}
+export function setBudget(dollarsPerWeek: number): void {
+  budgetMemory = dollarsPerWeek;
+  try {
+    localStorage.setItem(BUDGET_KEY, String(dollarsPerWeek));
+  } catch {
+    /* session only */
+  }
+}
