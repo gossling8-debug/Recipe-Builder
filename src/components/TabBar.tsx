@@ -2,9 +2,10 @@ import Icon, { type IconName } from "./Icon";
 import { href, type Route } from "../lib/route";
 
 const TABS: { route: Route; label: string; icon: IconName; main?: boolean }[] = [
+  // Most used on the right, where the thumb reaches.
   { route: { name: "budget" }, label: "Budget", icon: "wallet" },
-  { route: { name: "scan" }, label: "Add", icon: "plus", main: true },
   { route: { name: "tonight" }, label: "Tonight", icon: "moon" },
+  { route: { name: "scan" }, label: "Add", icon: "plus", main: true },
 ];
 
 /** The bar along the bottom of the main screens (the back arrow at the top goes to the recipe list). */
