@@ -181,7 +181,18 @@ export default function ReceiptPage() {
           </>
         )}
 
-        {receipt && (
+        {receipt && rows.length === 0 && (
+          <div className="callout warn">
+            <strong>No items found{receipt.total != null ? ` — only the total (${dollars(receipt.total)})` : ""}.</strong> In the Walmart app, scroll up
+            from the total to the list of items and take screenshots of every item (overlapping is fine), then try again.
+            <div className="button-row">
+              <button className="btn" onClick={() => (setReceipt(null), setImages([]))}>
+                Choose other screenshots
+              </button>
+            </div>
+          </div>
+        )}
+        {receipt && rows.length > 0 && (
           <>
             {duplicate && (
               <div className="callout warn small">
