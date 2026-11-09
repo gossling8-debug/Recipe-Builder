@@ -97,6 +97,18 @@ const DESCRIPTORS = new Set(
   ).split(" "),
 );
 
+/**
+ * The name to shop and match by. When the card split "boneless, skinless
+ * chicken breasts" into name "boneless" and a note "skinless chicken breasts",
+ * the note is joined back on so it names the actual thing.
+ */
+export function ingredientName(ing: { name: string; preparation: string | null }): string {
+  const name = ing.name.trim();
+  const words = name.toLowerCase().split(/[\s,-]+/).filter(Boolean);
+  const onlyDescribes = words.length > 0 && words.every((w) => DESCRIPTORS.has(w.replace(/[^a-z]/g, "")));
+  return onlyDescribes && ing.preparation?.trim() ? `${name} ${ing.preparation.trim()}` : name;
+}
+
 // Different names for the same thing (applied to the cleaned-up name).
 const SYNONYMS: [RegExp, string][] = [
   [/\b(scallions?|spring onions?)\b/, "green onion"],
@@ -162,10 +174,11 @@ export function combine(entries: { recipe: SavedRecipe; scale: number }[]): Shop
   for (const { recipe, scale } of entries) {
     for (const ing of recipe.ingredients) {
       if (!ing.name.trim()) continue;
-      const key = nameKey(ing.name);
+      const fullName = ingredientName(ing);
+      const key = nameKey(fullName);
       let g = groups.get(key);
       if (!g) {
-        g = { name: ing.name.trim(), recipes: [], sums: new Map(), other: [] };
+        g = { name: fullName, recipes: [], sums: new Map(), other: [] };
         groups.set(key, g);
       }
       if (!g.recipes.includes(recipe.title)) g.recipes.push(recipe.title);

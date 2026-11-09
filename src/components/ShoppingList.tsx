@@ -16,7 +16,8 @@ import WarnIcon from "./WarnIcon";
 import { walmartSearchUrl } from "../lib/shopping";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
 import { staplesToBuyOrTicked } from "../lib/shoppingItems";
-import { addPrice, deletePrice, dollars, parsePrice, periodStarts, spentSince } from "../lib/prices";
+import { addPrice, deletePrice, dollars, parsePrice } from "../lib/prices";
+import SpendingEditor from "./SpendingEditor";
 
 import { ALWAYS_KEEP } from "../lib/shoppingItems";
 
@@ -37,8 +38,6 @@ export default function ShoppingList() {
       return null;
     }
   });
-  const starts = periodStarts();
-  const spent = { week: spentSince(starts.week), month: spentSince(starts.month) };
 
   useEffect(() => {
     listRecipes().then(setAll, () => setAll([]));
@@ -262,12 +261,7 @@ export default function ShoppingList() {
               ))}
             </ul>
 
-            {spent.month > 0 && (
-              <p className="small spent-line">
-                Spent <strong>{dollars(spent.week)}</strong> this week · <strong>{dollars(spent.month)}</strong> this month
-                <span className="muted"> (from prices you entered)</span>
-              </p>
-            )}
+            <SpendingEditor state={state} update={update} />
             <h3>To buy · {remaining.length}</h3>
             {remaining.length > 0 && (
               <>

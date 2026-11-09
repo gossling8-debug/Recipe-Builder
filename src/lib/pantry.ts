@@ -1,6 +1,6 @@
 import { add, compare, formatQty, isEmpty, parseQty, subtract, type Qty } from "./qty";
 import { scaleAmount } from "./quantity";
-import { nameKey } from "./shopping";
+import { ingredientName, nameKey } from "./shopping";
 import { estimateUseBy, freshness } from "./shelfLife";
 import type { ScannedRecipe } from "./schema";
 
@@ -151,7 +151,7 @@ export function useForRecipe(recipe: ScannedRecipe, scale: number): { changes: U
   const changes: UseResult[] = [];
   const undo: Record<string, PantryItem | null> = {};
   for (const ing of recipe.ingredients) {
-    const key = nameKey(ing.name);
+    const key = nameKey(ingredientName(ing));
     const item = pantry[key];
     if (!item?.qty) continue;
     const used = parseQty(scaleAmount([ing.quantity, ing.unit].filter(Boolean).join(" "), scale), ing.name);
