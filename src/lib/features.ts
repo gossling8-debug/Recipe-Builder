@@ -40,7 +40,7 @@ export const FEATURES: Feature[] = [
   { id: "units", name: "US / metric", what: "The Units switch on each recipe.", plan: "free", group: "Cooking" },
   { id: "notes", name: "Notes, ratings & photos", what: "My notes, stars, made history and your dish photo.", plan: "free", group: "Cooking" },
   { id: "print", name: "Print", what: "Print or save a recipe as a PDF.", plan: "free", group: "Cooking" },
-  { id: "walmart", name: "Walmart buttons", what: "Find shopping-list items in the Walmart app.", plan: "free", group: "Shopping & pantry" },
+  { id: "walmart", name: "Walmart buttons", what: "Find shopping-list items in the Walmart app.", plan: "plus", group: "Shopping & pantry" },
   { id: "conversions", name: "Conversion chart", what: "Garlic, onion and other swaps between forms.", plan: "plus", group: "Cooking" },
   { id: "readAloud", name: "Read aloud & voice", what: "Steps read out loud; say “next”, “pause”.", plan: "plus", group: "Cooking" },
   { id: "versions", name: "My own versions", what: "Copy a recipe to make your own version.", plan: "plus", group: "Cooking" },
