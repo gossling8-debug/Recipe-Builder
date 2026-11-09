@@ -3,6 +3,8 @@ import Header from "./Header";
 import Icon from "./Icon";
 import { compressPhoto, stripDataUrl } from "../lib/image";
 import { newId, saveRecipe, storageErrorMessage } from "../lib/db";
+import TagPicker from "./TagPicker";
+import { cleanTags } from "../lib/schema";
 import { href, navigate } from "../lib/route";
 import { getApiKey } from "../lib/settings";
 import { getModel } from "../lib/models";
@@ -21,6 +23,9 @@ const MODES: { value: Mode; label: string }[] = [
 export default function Scanner() {
   const [mode, setMode] = useState<Mode>("photo");
   const [photos, setPhotos] = useState<string[]>([]);
+  // Labels picked before reading; if none, Claude's suggestions are used.
+  const [tags, setTags] = useState<string[]>([]);
+  const [showTags, setShowTags] = useState(false);
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -87,6 +92,7 @@ export default function Scanner() {
           : [];
       await saveRecipe({
         ...recipe,
+        tags: tags.length ? cleanTags(tags) : recipe.tags,
         id,
         createdAt: Date.now(),
         photos: thumbs,
@@ -241,6 +247,19 @@ export default function Scanner() {
                 e.target.value = "";
               }}
             />
+            <section className="scan-labels">
+              {showTags || tags.length ? (
+                <>
+                  <h3>Labels</h3>
+                  <p className="muted small">Pick labels for this recipe, or leave them all off and Claude will suggest some.</p>
+                  <TagPicker tags={tags} onChange={setTags} />
+                </>
+              ) : (
+                <button className="link-btn small" onClick={() => setShowTags(true)}>
+                  <Icon name="plus" size={14} /> Choose labels (optional — Claude suggests some if you skip this)
+                </button>
+              )}
+            </section>
             {error && <div className="callout error">{error}</div>}
             <p className="muted small">
               Using the {model.label.toLowerCase()} reader ({model.blurb.split(" — ")[0]}). Change it in{" "}

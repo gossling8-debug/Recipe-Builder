@@ -688,3 +688,8 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .people-row .small-btn { font-size: 22px; border: 1px solid var(--line); border-radius: 50%; width: 36px; height: 36px; }
 .leftover-night { color: var(--muted); }
 .leftover-night a { color: inherit; }
+
+/* Labels under the title */
+.title-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 6px 0 4px; }
+.small-tag { font-size: 13px; padding: 3px 10px; min-height: 0; text-decoration: none; }
+.title-tag-editor { margin: 8px 0; }
