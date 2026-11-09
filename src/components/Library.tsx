@@ -193,7 +193,12 @@ export default function Library() {
           </a>
         )}
         {(() => {
-          const today = (loadWeek().days[dayKey(new Date())] ?? []).map((m) => all.find((r) => r.id === m.id)).filter(Boolean);
+          const today = (loadWeek().days[dayKey(new Date())] ?? [])
+            .map((m) => {
+              const r = all.find((x) => x.id === m.id);
+              return r && { title: m.leftover ? `leftover ${r.title}` : r.title };
+            })
+            .filter(Boolean);
           if (!today.length) return null;
           return (
             <a className="plan-strip" href={href({ name: "week" })}>

@@ -5,7 +5,9 @@ import { useToast } from "./Toast";
 import { listRecipes } from "../lib/db";
 import { href } from "../lib/route";
 import { addToShopping } from "../lib/shopping";
-import { addMeal, countMeals, loadWeek, mealsToShop, removeMeal, upcomingDays, type WeekState } from "../lib/week";
+import { addMeal, countMeals, loadWeek, mealsToShop, pastPlans, removeMeal, saveWeek, upcomingDays, type WeekState } from "../lib/week";
+import { fillWeek, getPeople, isDinner, NO_REPEAT_DAYS, setPeople } from "../lib/autoPlan";
+import { loadLeftovers } from "../lib/leftovers";
 import type { SavedRecipe } from "../lib/schema";
 
 const sizeLabel = (s: number) => (s === 1 ? "" : ` · ×${s === 0.5 ? "½" : s === 1.5 ? "1½" : s}`);
@@ -24,6 +26,31 @@ export default function WeekPage() {
 
   const byId = new Map((recipes ?? []).map((r) => [r.id, r]));
   const planned = countMeals(week);
+  const [people, setPeopleState] = useState(getPeople);
+  const [result, setResult] = useState("");
+  const hasAuto = Object.values(week.days).some((v) => v.some((m) => m.auto));
+
+  function fill() {
+    if (!recipes) return;
+    const r = fillWeek({ week, past: pastPlans(), recipes, fridge: loadLeftovers(), people, days: days.map((d) => d.key) });
+    saveWeek(r.week);
+    setWeek(loadWeek());
+    const parts = [`${r.cooked} ${r.cooked === 1 ? "dinner" : "dinners"} picked`];
+    if (r.leftovers) parts.push(`${r.leftovers} leftovers ${r.leftovers === 1 ? "night" : "nights"}`);
+    setResult(
+      parts.join(", ") +
+        "." +
+        (r.short
+          ? ` ${r.short} ${r.short === 1 ? "day is" : "days are"} still open — you don't have enough different dinner recipes to avoid repeating one within ${NO_REPEAT_DAYS} days.`
+          : ""),
+    );
+  }
+
+  function clearPicks() {
+    saveWeek({ days: Object.fromEntries(Object.entries(week.days).map(([k, v]) => [k, v.filter((m) => !m.auto)])) });
+    setWeek(loadWeek());
+    setResult("");
+  }
 
   function shopWeek() {
     const meals = mealsToShop(week, days.map((d) => d.key)).filter((m) => byId.has(m.id));
@@ -47,6 +74,36 @@ export default function WeekPage() {
           Pick what you'll cook each day. When you're done, put the whole week on your shopping list in one tap.
         </p>
         {recipes?.length === 0 && <p className="muted">Add some recipes first — then plan them here.</p>}
+        {recipes && recipes.some(isDinner) && (
+          <div className="plan-card auto-plan">
+            <div className="people-row">
+              <span>Cooking for</span>
+              <button className="icon-btn small-btn" aria-label="Fewer people" disabled={people <= 1} onClick={() => (setPeople(people - 1), setPeopleState(people - 1))}>
+                −
+              </button>
+              <strong aria-live="polite">{people}</strong>
+              <button className="icon-btn small-btn" aria-label="More people" disabled={people >= 20} onClick={() => (setPeople(people + 1), setPeopleState(people + 1))}>
+                +
+              </button>
+              <span>{people === 1 ? "person" : "people"}</span>
+            </div>
+            <div className="button-row">
+              <button className="btn primary" onClick={fill}>
+                <Icon name="reset" size={18} /> {hasAuto ? "Shuffle again" : "Fill my week for me"}
+              </button>
+              {hasAuto && (
+                <button className="link-btn small" onClick={clearPicks}>
+                  Clear the picks
+                </button>
+              )}
+            </div>
+            {result && <p className="small">{result}</p>}
+            <p className="muted small">
+              Fills the empty days with dinners you haven't had in the last {NO_REPEAT_DAYS} days, leaves leftovers nights after big meals,
+              and uses up leftovers in your fridge first. Days you picked yourself stay as they are.
+            </p>
+          </div>
+        )}
         {recipes && recipes.length > 1 && (
           <a className="btn plan-open" href={href({ name: "meal" })}>
             <Icon name="timer" size={18} /> Plan a big meal (several dishes at once)
@@ -66,7 +123,18 @@ export default function WeekPage() {
                       const r = byId.get(m.id);
                       return (
                         <li key={i}>
-                          {r ? <a href={href({ name: "recipe", id: m.id })}>{r.title}</a> : <span className="muted">{recipes ? "(deleted recipe)" : "…"}</span>}
+                          {r ? (
+                            m.leftover ? (
+                              <span className="leftover-night">
+                                Leftovers: <a href={href({ name: "recipe", id: m.id })}>{r.title}</a>
+                              </span>
+                            ) : (
+                              <a href={href({ name: "recipe", id: m.id })}>{r.title}</a>
+                            )
+                          ) : (
+                            <span className="muted">{recipes ? "(deleted recipe)" : "…"}</span>
+                          )}
+                          {m.auto && !m.leftover && <span className="muted small"> · picked for you</span>}
                           <span className="muted small">{sizeLabel(m.scale)}</span>
                           <button
                             className="icon-btn small-btn"
@@ -80,8 +148,8 @@ export default function WeekPage() {
                     })}
                   </ul>
                 )}
-                {meals.length > 1 && (
-                  <a className="link-btn small week-add" href={href({ name: "meal", day: d.key, ids: [...new Set(meals.map((m) => m.id))] })}>
+                {meals.filter((m) => !m.leftover).length > 1 && (
+                  <a className="link-btn small week-add" href={href({ name: "meal", day: d.key, ids: [...new Set(meals.filter((m) => !m.leftover).map((m) => m.id))] })}>
                     <Icon name="timer" size={16} /> Timeline so these are ready together
                   </a>
                 )}
