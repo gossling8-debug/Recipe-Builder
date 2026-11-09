@@ -23,7 +23,7 @@ import { recipeLink } from "../lib/link";
 import { money } from "../lib/usage";
 import { loadShopping, removeFromShopping } from "../lib/shopping";
 import { useToast } from "./Toast";
-import type { SavedRecipe } from "../lib/schema";
+import { cleanTags, type SavedRecipe } from "../lib/schema";
 
 export default function RecipePage({ id }: { id: string }) {
   const [recipe, setRecipe] = useState<SavedRecipe | null | undefined>(undefined);
@@ -240,6 +240,11 @@ export default function RecipePage({ id }: { id: string }) {
               }
               recipe={applySwaps(recipe)}
               recipeId={recipe.id}
+              onTagsChange={async (tags) => {
+                const updated = { ...recipe, tags: cleanTags(tags) };
+                setRecipe(updated);
+                await saveRecipe(updated);
+              }}
               swaps={activeSwaps(recipe)}
               onUndoSwap={async (i) => {
                 const byIndex = { ...recipe.swaps!.byIndex };

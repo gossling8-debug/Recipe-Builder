@@ -2,6 +2,7 @@ import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/s
 import { scaleAmount } from "../lib/quantity";
 import { toggleIn, useProgress } from "../lib/progress";
 import Icon from "./Icon";
+import TagPicker from "./TagPicker";
 import { useState, type ReactNode } from "react";
 import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
 import { conversionsFor } from "../lib/conversions";
@@ -40,6 +41,7 @@ export default function RecipeView({
   top,
   onMade,
   made,
+  onTagsChange,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
@@ -57,8 +59,11 @@ export default function RecipeView({
   made?: { at: number; onUndo: () => void } | null;
   /** Shown under the size control (the meal planner). */
   top?: ReactNode;
+  /** Lets the labels under the title be edited in place. */
+  onTagsChange?: (tags: string[]) => void;
 }) {
   const [units, setUnits] = useUnits();
+  const [editingTags, setEditingTags] = useState(false);
   const recipe = convertRecipe(original, units);
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
@@ -84,6 +89,34 @@ export default function RecipeView({
   return (
     <article className="recipe">
       <h2 className="recipe-title">{recipe.title}</h2>
+      {(recipe.tags?.length > 0 || onTagsChange) && !editingTags && (
+        <div className="title-tags">
+          {(recipe.tags ?? []).map((t) =>
+            preview ? (
+              <span key={t} className="tag small-tag">{t}</span>
+            ) : (
+              <a key={t} className="tag small-tag" href={href({ name: "library" })} onClick={() => showTagInLibrary(t)} aria-label={`Show all ${t} recipes`}>
+                {t}
+              </a>
+            ),
+          )}
+          {onTagsChange && (
+            <button className="link-btn small" onClick={() => setEditingTags(true)}>
+              {recipe.tags?.length ? "Edit labels" : "+ Add labels"}
+            </button>
+          )}
+        </div>
+      )}
+      {editingTags && onTagsChange && (
+        <div className="plan-card title-tag-editor">
+          <TagPicker tags={recipe.tags ?? []} onChange={onTagsChange} />
+          <div className="button-row">
+            <button className="btn primary" onClick={() => setEditingTags(false)}>
+              Done
+            </button>
+          </div>
+        </div>
+      )}
       {(recipe.servings || recipe.time) && (
         <p className="meta">
           {[recipe.servings && scaleAmount(recipe.servings, scale), recipe.time]
@@ -379,6 +412,15 @@ const UNIT_CHOICES: [UnitSystem, string][] = [
   ["us", "US"],
   ["metric", "Metric"],
 ];
+
+/** Opens the recipe list filtered to one label. */
+function showTagInLibrary(tag: string) {
+  try {
+    localStorage.setItem("recipe-builder.library.filter", tag);
+  } catch {
+    /* the list just opens unfiltered */
+  }
+}
 
 function scaleLabel(scale: number): string {
   return SCALES.find(([v]) => v === scale)?.[1].replace("×", "") ?? String(scale);

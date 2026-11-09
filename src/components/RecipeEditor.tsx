@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { listRecipes } from "../lib/db";
+import { useState } from "react";
 import { fieldsToIngredient, ingredientToFields, stepToText, textToStep } from "../lib/edit";
 import { cleanTags, sanitizeRecipe, type SavedRecipe } from "../lib/schema";
 import Icon from "./Icon";
+import TagPicker from "./TagPicker";
 
 interface Row {
   key: number;
@@ -27,22 +27,6 @@ export default function RecipeEditor(props: {
   const [notes, setNotes] = useState(recipe.notes ?? "");
   const [keepWarnings, setKeepWarnings] = useState(true);
   const [tags, setTags] = useState<string[]>(recipe.tags ?? []);
-  const [newTag, setNewTag] = useState("");
-  const [knownTags, setKnownTags] = useState<string[]>([]);
-
-  // Suggest tags already used on other recipes, plus a few common ones.
-  useEffect(() => {
-    listRecipes().then(
-      (all) => setKnownTags(cleanTags([...all.flatMap((r) => r.tags ?? []), ...COMMON_TAGS])),
-      () => setKnownTags(COMMON_TAGS),
-    );
-  }, []);
-  const toggleTag = (t: string) =>
-    setTags((ts) => (ts.some((x) => x.toLowerCase() === t.toLowerCase()) ? ts.filter((x) => x.toLowerCase() !== t.toLowerCase()) : [...ts, t]));
-  const addNewTag = () => {
-    if (newTag.trim()) setTags((ts) => cleanTags([...ts, newTag]));
-    setNewTag("");
-  };
   const [rows, setRows] = useState<Row[]>(() =>
     recipe.ingredients.map((ing) => ({ key: nextKey++, ...ingredientToFields(ing), section: ing.section })),
   );
@@ -71,7 +55,7 @@ export default function RecipeEditor(props: {
       time: time.trim() || null,
       notes: notes.trim() || null,
       warnings: keepWarnings ? recipe.warnings : [],
-      tags: cleanTags([...tags, newTag]),
+      tags: cleanTags(tags),
       ingredients,
       steps: steps.filter((s) => s.trim()).map((s) => textToStep(s.trim(), ingredients)),
     });
@@ -102,30 +86,9 @@ export default function RecipeEditor(props: {
         </label>
       </div>
 
-      <h3>Tags</h3>
-      <p className="muted small">Tap to add or remove. Tags let you filter your recipe list.</p>
-      <div className="tag-picker">
-        {cleanTags([...tags, ...knownTags]).map((t) => {
-          const on = tags.some((x) => x.toLowerCase() === t.toLowerCase());
-          return (
-            <button key={t} className={on ? "tag on" : "tag"} aria-pressed={on} onClick={() => toggleTag(t)}>
-              {on && <Icon name="check" size={14} />} {t}
-            </button>
-          );
-        })}
-      </div>
-      <div className="new-tag">
-        <input
-          className="text-input"
-          placeholder="New tag"
-          value={newTag}
-          onChange={(e) => setNewTag(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addNewTag()}
-        />
-        <button className="btn" onClick={addNewTag} disabled={!newTag.trim()}>
-          Add
-        </button>
-      </div>
+      <h3>Labels</h3>
+      <p className="muted small">Tap to add or remove. Labels let you filter your recipes, and a Dinner label lets “Fill my week” pick it.</p>
+      <TagPicker tags={tags} onChange={setTags} />
 
       <h3>Ingredients</h3>
       <p className="muted small">Each ingredient has its amount on top and its name below. Add notes after a comma: “butter, softened”.</p>
@@ -225,4 +188,3 @@ export default function RecipeEditor(props: {
   );
 }
 
-const COMMON_TAGS = ["Breakfast", "Lunch", "Dinner", "Dessert", "Baking", "Side", "Appetizer", "Soup", "Holiday"];
