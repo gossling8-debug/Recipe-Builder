@@ -51,3 +51,22 @@ describe("prices", () => {
     expect(spentSince(week)).toBeCloseTo(3.5);
   });
 });
+
+describe("editing spending", () => {
+  it("corrects a price, removes a purchase, and can start over without losing prices", async () => {
+    const { addPrice, deletePrice, loadPrices, recipeCost, spentSince, startSpendingOver, updatePrice } = await import("./prices");
+    [...loadPrices()].forEach((p) => deletePrice(p.id));
+    const a = addPrice("ground beef", "1 lb", 5, 1000);
+    const b = addPrice("paper towels", "", 7, 2000);
+    expect(spentSince(0)).toBeCloseTo(12);
+    updatePrice(a, 6);
+    deletePrice(b);
+    expect(spentSince(0)).toBeCloseTo(6);
+    startSpendingOver(3000);
+    expect(spentSince(0)).toBe(0);
+    addPrice("milk", "1 gallon", 3, 4000);
+    expect(spentSince(0)).toBeCloseTo(3);
+    // the beef price still counts for recipe costs
+    expect(recipeCost({ title: "", servings: null, time: null, notes: null, tags: [], warnings: [], steps: [], ingredients: [{ quantity: "1", unit: "lb", name: "ground beef", preparation: null, section: null }] }, 1).total).toBeCloseTo(6);
+  });
+});

@@ -726,3 +726,6 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .receipt-price .text-input { width: 100%; padding: 6px 8px; }
 .total-off { color: var(--error); }
 .receipt-rows input[type=checkbox] { accent-color: var(--ink); }
+.spend-list { list-style: none; padding: 0; margin: 0 0 8px; }
+.spend-list li { display: grid; grid-template-columns: 1fr 92px 40px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.spend-name { min-width: 0; overflow-wrap: anywhere; }

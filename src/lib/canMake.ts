@@ -1,6 +1,6 @@
 import { statusFor } from "./pantry";
 import { formatQty, parseQty } from "./qty";
-import { nameKey } from "./shopping";
+import { ingredientName, nameKey } from "./shopping";
 import { applySwaps } from "./swaps";
 import type { SavedRecipe } from "./schema";
 
@@ -35,7 +35,7 @@ export function whatCanIMake(recipes: SavedRecipe[], maxMissing = 2): CanMake[] 
         continue;
       }
       const need = parseQty([ing.quantity, ing.unit].filter(Boolean).join(" "), ing.name);
-      const s = statusFor(nameKey(ing.name), ing.name, need);
+      const s = statusFor(nameKey(ingredientName(ing)), ing.name, need);
       if (s.kind === "enough") res.have++;
       else if (s.kind === "unknown") {
         res.have++;

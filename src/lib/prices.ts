@@ -1,7 +1,7 @@
 import { isBasic } from "./canMake";
 import { convert, parseQty, type Qty } from "./qty";
 import { scaleAmount } from "./quantity";
-import { nameKey } from "./shopping";
+import { ingredientName, nameKey } from "./shopping";
 import type { ScannedRecipe } from "./schema";
 
 /**
@@ -56,7 +56,38 @@ export function deletePrice(id: string): void {
   save(loadPrices().filter((p) => p.id !== id));
 }
 
-export const spentSince = (from: number) => loadPrices().filter((p) => p.at >= from).reduce((s, p) => s + p.price, 0);
+// "Start spending over": totals count from this time; the prices themselves are
+// kept, so recipe costs still work.
+const RESET_KEY = "recipe-builder.spendingFrom";
+let resetMemory = 0;
+export function spendingFrom(): number {
+  try {
+    return Number(localStorage.getItem(RESET_KEY)) || resetMemory;
+  } catch {
+    return resetMemory;
+  }
+}
+export function startSpendingOver(now = Date.now()): void {
+  resetMemory = now;
+  try {
+    localStorage.setItem(RESET_KEY, String(now));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Purchases that count toward spending since `from` (newest first). */
+export const spendingEntries = (from: number) =>
+  loadPrices()
+    .filter((p) => p.at >= Math.max(from, spendingFrom()))
+    .sort((a, b) => b.at - a.at);
+
+export const spentSince = (from: number) => spendingEntries(from).reduce((s, p) => s + p.price, 0);
+
+/** Corrects what was paid for one purchase. */
+export function updatePrice(id: string, price: number): void {
+  save(loadPrices().map((p) => (p.id === id ? { ...p, price } : p)));
+}
 
 /** Start of this week (Sunday) and of this month. */
 export function periodStarts(now = new Date()): { week: number; month: number } {
@@ -85,7 +116,7 @@ export function recipeCost(r: ScannedRecipe, scale: number, prices = loadPrices(
   for (const ing of r.ingredients) {
     if (!ing.name.trim() || isBasic(ing.name)) continue;
     of++;
-    const p = latest.get(nameKey(ing.name));
+    const p = latest.get(nameKey(ingredientName(ing)));
     const need = parseQty(scaleAmount([ing.quantity, ing.unit].filter(Boolean).join(" "), scale), ing.name);
     if (!p?.qty || !need) continue;
     const same = convert(need, p.qty, ing.name);

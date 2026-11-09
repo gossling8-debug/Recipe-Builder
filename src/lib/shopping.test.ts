@@ -36,3 +36,13 @@ describe("walmartSearchUrl", () => {
   it("keeps substitutes intact", () =>
     expect(walmartSearchUrl("dairy-free cream cheese")).toBe("https://www.walmart.com/search?q=dairy-free%20cream%20cheese"));
 });
+
+describe("ingredient names split at a comma", () => {
+  it("joins the note back on when the name only describes", async () => {
+    const { ingredientName, nameKey } = await import("./shopping");
+    expect(ingredientName({ name: "boneless", preparation: "skinless chicken breasts" })).toBe("boneless skinless chicken breasts");
+    expect(nameKey(ingredientName({ name: "boneless", preparation: "skinless chicken breasts" }))).toBe(nameKey("chicken breasts"));
+    expect(ingredientName({ name: "butter", preparation: "softened" })).toBe("butter");
+    expect(ingredientName({ name: "large", preparation: null })).toBe("large");
+  });
+});
