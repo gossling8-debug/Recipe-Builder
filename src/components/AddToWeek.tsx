@@ -14,7 +14,7 @@ export default function AddToWeek({ recipeId }: { recipeId: string }) {
     return () => window.removeEventListener("week-changed", on);
   }, []);
   const days = upcomingDays(7);
-  const plannedOn = days.filter((d) => (week.days[d.key] ?? []).some((m) => m.id === recipeId));
+  const plannedOn = days.filter((d) => (week.days[d.key] ?? []).some((m) => m.id === recipeId && !m.leftover));
 
   return (
     <div className="add-week">
