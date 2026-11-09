@@ -33,6 +33,7 @@ interface Row {
 export default function ReceiptPage() {
   const [images, setImages] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null); // reading a screen recording
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
@@ -48,9 +49,19 @@ export default function ReceiptPage() {
     if (!files?.length) return;
     setError("");
     try {
-      const pieces = (await Promise.all(Array.from(files).map((f) => receiptPieces(f)))).flat();
-      setImages((xs) => [...xs, ...pieces].slice(0, 20));
+      const pieces: string[] = [];
+      for (const f of Array.from(files)) {
+        if (f.type.startsWith("video/") || /\.(mov|mp4|m4v|webm)$/i.test(f.name)) {
+          // A screen recording: pull out frames that together show every line.
+          setProgress(0);
+          const { framesFromVideo } = await import("../lib/video");
+          pieces.push(...(await framesFromVideo(f, setProgress)));
+          setProgress(null);
+        } else pieces.push(...(await receiptPieces(f)));
+      }
+      setImages((xs) => [...xs, ...pieces].slice(0, 30));
     } catch (e) {
+      setProgress(null);
       setError(e instanceof Error ? e.message : String(e));
     }
   }
@@ -153,13 +164,18 @@ export default function ReceiptPage() {
         {hasKey && !receipt && (
           <>
             <p className="muted small">
-              Add screenshots of your order (for Walmart: the order page in the app, scrolled so every item shows) or photos of a paper
-              receipt. Long screenshots are fine — they're split up so the text stays sharp.
+              <strong>Easiest for Walmart:</strong> open the order in the app, start a screen recording, and scroll slowly from the first item
+              to the total. Screenshots of every item, or photos of a paper receipt, work too.
             </p>
-            <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
-            <button className="btn" onClick={() => fileInput.current?.click()} disabled={busy}>
-              <Icon name="image" size={18} /> {images.length ? "Add more screenshots" : "Choose screenshots or photos"}
+            <input ref={fileInput} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
+            <button className="btn" onClick={() => fileInput.current?.click()} disabled={busy || progress !== null}>
+              <Icon name="image" size={18} /> {images.length ? "Add more" : "Choose a screen recording or screenshots"}
             </button>
+            {progress !== null && (
+              <p className="small" role="status">
+                Going through the recording… {Math.round(progress * 100)}%
+              </p>
+            )}
             {images.length > 0 && (
               <>
                 <div className="receipt-thumbs">
@@ -175,7 +191,10 @@ export default function ReceiptPage() {
                     {busy ? "Reading… (about 20–40 seconds)" : "Read receipt"}
                   </button>
                 </div>
-                <p className="muted small">Uses Claude — usually a few cents per receipt.</p>
+                <p className="muted small">
+                  {images.length} {images.length === 1 ? "picture" : "pictures"} to read. Uses Claude — a few cents for a short receipt, up to about 20¢
+                  for a long order.
+                </p>
               </>
             )}
           </>
