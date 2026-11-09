@@ -8,7 +8,7 @@ import { addPrice, deletePrice, dollars, parsePrice } from "../lib/prices";
 import { alreadyImported, receiptId, receiptTime, rememberImported, type Receipt } from "../lib/receipt";
 import { href, navigate } from "../lib/route";
 import { getApiKey } from "../lib/settings";
-import { loadShopping, saveShopping, type ShoppingItem } from "../lib/shopping";
+import { loadShopping, nameKey, saveShopping, type ShoppingItem } from "../lib/shopping";
 import { shoppingItems } from "../lib/shoppingItems";
 import type { SavedRecipe } from "../lib/schema";
 
@@ -70,26 +70,25 @@ export default function ReceiptPage() {
     setBusy(true);
     setError("");
     try {
+      // Only what's on the shopping list is matched (and saved); everything else is ignored unless ticked.
       const list = shoppingItems(recipes, loadShopping());
       const pantry = loadPantry();
       const byName = new Map<string, ShoppingItem>(list.map((i) => [i.name, i]));
-      const pantryNames = Object.values(pantry).map((p) => p.name);
-      const known = [...new Set([...list.map((i) => i.name), ...pantryNames])];
       const { readReceipt } = await import("../lib/receipt");
-      const r = await readReceipt(getApiKey(), images, known);
+      const r = await readReceipt(getApiKey(), images, [...new Set(list.map((i) => i.name))]);
       setReceipt(r);
       setRows(
         r.items.map((it) => {
           const listItem = it.matches ? (byName.get(it.matches) ?? null) : null;
           return {
-            include: true,
-            name: listItem?.name ?? it.matches ?? it.name,
+            include: !!listItem,
+            name: listItem?.name ?? it.name,
             receiptText: it.receipt_text,
             size: it.size ?? "",
             price: it.price.toFixed(2),
             isFood: it.is_food,
             listItem,
-            inPantry: !!it.matches && pantryNames.includes(it.matches),
+            inPantry: !!pantry[nameKey(it.name)],
           };
         }),
       );
@@ -101,9 +100,14 @@ export default function ReceiptPage() {
 
   const id = receipt && receiptId(receipt);
   const duplicate = !!id && alreadyImported(id);
-  const itemsTotal = rows.filter((r) => r.include).reduce((s, r) => s + (parsePrice(r.price) ?? 0), 0);
-  const withTax = itemsTotal + (receipt?.tax ?? 0);
-  const totalOff = receipt?.total != null && rows.every((r) => r.include) && Math.abs(withTax - receipt.total) > 0.05;
+  const sum = (rs: Row[]) => rs.reduce((s, r) => s + (parsePrice(r.price) ?? 0), 0);
+  const allTotal = sum(rows);
+  const keptTotal = sum(rows.filter((r) => r.include));
+  // Tax is counted only for the share of the receipt being kept.
+  const taxShare = receipt?.tax && allTotal > 0 ? (receipt.tax * keptTotal) / allTotal : 0;
+  const totalOff = receipt?.total != null && Math.abs(allTotal + (receipt.tax ?? 0) - receipt.total) > 0.05;
+  const onList = rows.map((r, i) => [r, i] as const).filter(([r]) => r.listItem);
+  const offList = rows.map((r, i) => [r, i] as const).filter(([r]) => !r.listItem);
 
   function save() {
     if (!receipt) return;
@@ -139,11 +143,11 @@ export default function ReceiptPage() {
         }
       }
     }
-    if (receipt.tax) addPrice("Sales tax", "", receipt.tax, at);
+    if (taxShare >= 0.01) addPrice("Sales tax", "", Math.round(taxShare * 100) / 100, at);
     saveShopping({ ...state, checked: [...checked], bought });
     if (id) rememberImported(id);
     try {
-      sessionStorage.setItem("recipe-builder.receiptDone", `Receipt saved: ${ticked} ticked off your list, ${pantryAdded} added to your pantry.`);
+      sessionStorage.setItem("recipe-builder.receiptDone", `Receipt saved: ${ticked} ticked off your list${pantryAdded ? `, ${pantryAdded} other ${pantryAdded === 1 ? "item" : "items"} added to your pantry` : ""}.`);
     } catch {
       /* fine */
     }
@@ -151,6 +155,34 @@ export default function ReceiptPage() {
   }
 
   const set = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+  const row = (r: Row, i: number) => (
+    <li key={i} className={r.include ? "" : "off"}>
+      <input type="checkbox" checked={r.include} onChange={(e) => set(i, { include: e.target.checked })} aria-label={`Save ${r.name}`} />
+      <div className="receipt-main">
+        <div>
+          <strong>{r.name}</strong>
+          {r.size && <span className="muted"> · {r.size}</span>}
+        </div>
+        <div className="muted small">{r.receiptText}</div>
+        <div className="small receipt-where">
+          {r.listItem
+            ? "✓ Ticks off your shopping list"
+            : !r.include
+              ? "Ignored"
+              : !r.isFood
+                ? "Price only"
+                : r.inPantry
+                  ? "Adds to your pantry"
+                  : "New in your pantry"}
+        </div>
+      </div>
+      <label className="receipt-price">
+        <span>$</span>
+        <input className="text-input" inputMode="decimal" value={r.price} onChange={(e) => set(i, { price: e.target.value })} aria-label={`Price of ${r.name}`} />
+      </label>
+    </li>
+  );
 
   return (
     <>
@@ -221,10 +253,10 @@ export default function ReceiptPage() {
             <p className="small">
               {receipt.store ?? "Receipt"}
               {receipt.date ? ` · ${new Date(receiptTime(receipt.date)).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""} ·{" "}
-              {rows.length} items · {dollars(itemsTotal)}
-              {receipt.tax ? ` + ${dollars(receipt.tax)} tax = ${dollars(withTax)}` : ""}
+              {rows.length} items · {dollars(allTotal)}
+              {receipt.tax ? ` + ${dollars(receipt.tax)} tax` : ""}
               {receipt.total != null && (
-                <span className={totalOff ? " total-off" : " muted"}> (receipt total {dollars(receipt.total)}{totalOff ? " — check the prices" : " ✓"})</span>
+                <span className={totalOff ? " total-off" : " muted"}> (receipt total {dollars(receipt.total)}{totalOff ? " — some lines may be missing or misread" : " ✓"})</span>
               )}
             </p>
             {receipt.warnings.length > 0 && (
@@ -234,36 +266,36 @@ export default function ReceiptPage() {
                 ))}
               </div>
             )}
-            <p className="muted small">Untick anything you don't want saved. Prices can be corrected.</p>
-            <ul className="receipt-rows">
-              {rows.map((r, i) => (
-                <li key={i} className={r.include ? "" : "off"}>
-                  <input type="checkbox" checked={r.include} onChange={(e) => set(i, { include: e.target.checked })} aria-label={`Include ${r.name}`} />
-                  <div className="receipt-main">
-                    <div>
-                      <strong>{r.name}</strong>
-                      {r.size && <span className="muted"> · {r.size}</span>}
-                    </div>
-                    <div className="muted small">{r.receiptText}</div>
-                    <div className="small receipt-where">
-                      {r.listItem ? "✓ Ticks off your shopping list" : !r.isFood ? "Not food — price only" : r.inPantry ? "Adds to your pantry" : "New in your pantry"}
-                    </div>
-                  </div>
-                  <label className="receipt-price">
-                    <span>$</span>
-                    <input className="text-input" inputMode="decimal" value={r.price} onChange={(e) => set(i, { price: e.target.value })} aria-label={`Price of ${r.name}`} />
-                  </label>
-                </li>
-              ))}
-            </ul>
+            <h3>On your shopping list · {onList.length}</h3>
+            {onList.length === 0 ? (
+              <p className="muted small">None of these items are on your shopping list.</p>
+            ) : (
+              <>
+                <p className="muted small">These get ticked off with the size and price paid. Prices can be corrected.</p>
+                <ul className="receipt-rows">{onList.map(([r, i]) => row(r, i))}</ul>
+              </>
+            )}
+            {offList.length > 0 && (
+              <>
+                <h3>Not on your shopping list · {offList.length}</h3>
+                <p className="muted small">Ignored — nothing is saved for these. Tick one to save its price{offList.some(([r]) => r.isFood) ? " and add it to your pantry" : ""} anyway.</p>
+                <ul className="receipt-rows">{offList.map(([r, i]) => row(r, i))}</ul>
+              </>
+            )}
+            {keptTotal > 0 && (
+              <p className="small">
+                Saving {dollars(keptTotal)}
+                {taxShare >= 0.01 ? ` + ${dollars(taxShare)} of the tax` : ""} to your spending.
+              </p>
+            )}
           </>
         )}
         {error && <div className="callout error">{error}</div>}
       </main>
-      {receipt && rows.length > 0 && (
+      {receipt && rows.some((r) => r.include) && (
         <div className="fab-bar">
           <button className="btn primary big" onClick={save}>
-            Save {rows.filter((r) => r.include).length} items
+            Save {rows.filter((r) => r.include).length} {rows.filter((r) => r.include).length === 1 ? "item" : "items"}
           </button>
         </div>
       )}
