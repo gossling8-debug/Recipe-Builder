@@ -26,6 +26,7 @@ describe("feature switches and plans", () => {
     expect(feature("budget")).toBe(false);
     expect(feature("cookMode")).toBe(true);
     expect(locked("cookMode")).toBe(false);
+    expect(locked("walmart")).toBe(true); // Walmart buttons come with Plus
   });
 
   it("each feature is listed once", () => {
