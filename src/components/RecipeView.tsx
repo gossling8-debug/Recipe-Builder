@@ -43,6 +43,7 @@ export default function RecipeView({
   made,
   onTagsChange,
   photo,
+  versions,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
@@ -64,6 +65,8 @@ export default function RecipeView({
   onTagsChange?: (tags: string[]) => void;
   /** The cook's photo of the dish: a thumbnail by the title that opens full screen. */
   photo?: string;
+  /** The original and its versions, when there's more than one. */
+  versions?: { id: string; title: string; original: boolean }[];
 }) {
   const [units, setUnits] = useUnits();
   const [editingTags, setEditingTags] = useState(false);
@@ -125,6 +128,21 @@ export default function RecipeView({
             </button>
           )}
         </div>
+      )}
+      {versions && (
+        <p className="small versions">
+          Versions:{" "}
+          {versions.map((v, i) => (
+            <span key={v.id}>
+              {i > 0 && " · "}
+              {v.id === recipeId ? (
+                <strong>{v.original ? "Original" : v.title}</strong>
+              ) : (
+                <a href={href({ name: "recipe", id: v.id })}>{v.original ? "Original" : v.title}</a>
+              )}
+            </span>
+          ))}
+        </p>
       )}
       {editingTags && onTagsChange && (
         <div className="plan-card title-tag-editor">

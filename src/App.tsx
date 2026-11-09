@@ -45,7 +45,7 @@ function Screen() {
     case "shopping":
       return <ShoppingList />;
     case "recipe":
-      return <RecipePage id={route.id} />;
+      return <RecipePage key={route.id} id={route.id} />; // fresh state for each recipe
     default:
       return <Library />;
   }

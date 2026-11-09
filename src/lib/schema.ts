@@ -93,6 +93,8 @@ export interface SavedRecipe extends ScannedRecipe {
     createdAt: number;
     result: import("./nutrition").Nutrition;
   };
+  /** This is the cook's own version of another recipe (its id). */
+  variantOf?: string;
   /** The cook's own photo of the finished dish (data: URL); shown in the library instead of the card. */
   dishPhoto?: string;
   /** The cook's rating, 1–5 stars. */
