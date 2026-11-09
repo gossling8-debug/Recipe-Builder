@@ -7,6 +7,11 @@ const differ = (a: string, b: string) => expect(nameKey(a)).not.toBe(nameKey(b))
 describe("nameKey matches the same ingredient", () => {
   it.each([
     ["all-purpose flour", "flour"],
+    ["2% milk", "milk"],
+    ["2% reduced fat milk", "milk"],
+    ["80/20 ground beef", "ground beef"],
+    ["93% lean ground turkey", "ground turkey"],
+    ["fat free sour cream", "sour cream"],
     ["Flour", "plain flour"],
     ["large eggs", "egg"],
     ["eggs", "Egg"],
@@ -32,6 +37,7 @@ describe("nameKey matches the same ingredient", () => {
 describe("nameKey keeps real differences", () => {
   it.each([
     ["brown sugar", "sugar"],
+    ["bacon fat", "bacon"],
     ["powdered sugar", "sugar"],
     ["dried dill", "dill"],
     ["ground beef", "beef"],

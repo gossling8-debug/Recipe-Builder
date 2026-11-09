@@ -14,6 +14,7 @@ import WeekPage from "./components/WeekPage";
 import BigMealPage from "./components/BigMealPage";
 import PrintPage from "./components/PrintPage";
 import HistoryPage from "./components/HistoryPage";
+import ReceiptPage from "./components/ReceiptPage";
 import { BookPage, FamilyPage, JoinPage, SharedRecipePage } from "./components/Family";
 
 function Screen() {
@@ -35,6 +36,8 @@ function Screen() {
       return route.book ? <BookPage id={route.book} /> : <FamilyPage />;
     case "join":
       return <JoinPage id={route.id} />;
+    case "receipt":
+      return <ReceiptPage />;
     case "history":
       return <HistoryPage />;
     case "print":

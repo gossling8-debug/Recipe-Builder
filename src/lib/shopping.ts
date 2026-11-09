@@ -132,6 +132,10 @@ export function nameKey(name: string): string {
   const named = parts.find((p) => p.split(/[\s-]+/).some((w) => w && !DESCRIPTORS.has(w.replace(/[^a-z]/g, "")))) ?? parts[0];
   let s = named
     .replace(/\b(at )?room temperature\b|\bto taste\b|\bfor (serving|garnish|topping)\b/g, " ")
+    // Fat percentages and lean ratios don't change what it is: "2% milk" = milk, "80/20 ground beef" = ground beef.
+    .replace(/\b\d+(?:\.\d+)?\s*%(?:\s*(?:milkfat|milk fat|lean|fat))?/g, " ")
+    .replace(/\b\d{2}\s*\/\s*\d{1,2}\b/g, " ")
+    .replace(/\b(?:reduced|low|non)[- ]?fat\b|\bfat[- ]free\b/g, " ")
     .replace(/\ball[- ]purpose\b/g, "allpurpose")
     .replace(/\b(low|reduced)[- ]sodium\b/g, (m) => m.replace(/[- ]/, ""))
     .replace(/-/g, " ")
