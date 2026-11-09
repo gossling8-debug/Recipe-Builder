@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { feature } from "../lib/features";
 import Icon, { type IconName } from "./Icon";
 import { href, type Route } from "../lib/route";
 
@@ -9,9 +11,15 @@ const TABS: { route: Route; label: string; icon: IconName; main?: boolean }[] = 
 
 /** The bar along the bottom of the main screens (the back arrow at the top goes to the recipe list). */
 export default function TabBar({ current }: { current: Route["name"] }) {
+  const [, refresh] = useState(0);
+  useEffect(() => {
+    const on = () => refresh((n) => n + 1);
+    window.addEventListener("features-changed", on);
+    return () => window.removeEventListener("features-changed", on);
+  }, []);
   return (
     <nav className="tabbar" aria-label="Main">
-      {TABS.map((t) => {
+      {TABS.filter((t) => t.route.name !== "budget" || feature("budget")).map((t) => {
         const on = t.route.name === current;
         return (
           <a key={t.label} href={href(t.route)} className={["tab", on && "on", t.main && "main"].filter(Boolean).join(" ")} aria-current={on ? "page" : undefined}>

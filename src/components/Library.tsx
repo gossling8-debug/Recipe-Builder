@@ -1,3 +1,4 @@
+import { feature } from "../lib/features";
 import { useEffect, useState } from "react";
 import { saveRecipe } from "../lib/db";
 import { loadShopping } from "../lib/shopping";
@@ -62,8 +63,8 @@ export default function Library() {
   const tags = [...new Set(all.flatMap((r) => r.tags ?? []))].sort((a, b) => a.localeCompare(b));
   const hasFavorites = all.some((r) => r.favorite);
   const avoid = loadAvoid();
-  const avoiding = isActive(avoid);
-  const hasPantry = Object.keys(loadPantry()).length > 0;
+  const avoiding = feature("avoid") && isActive(avoid);
+  const hasPantry = feature("pantry") && Object.keys(loadPantry()).length > 0;
   const canMakeNow = new Set(
     hasPantry ? whatCanIMake(all, 0).filter((c) => c.missing.length + c.short.length + c.expired.length === 0).map((c) => c.recipe.id) : [],
   );
@@ -110,7 +111,7 @@ export default function Library() {
           <div className="muted small">
             {(r.tags ?? []).length ? (r.tags ?? []).join(" · ") : `${plural(r.ingredients.length, "ingredient")} · ${plural(r.steps.length, "step")}`}
           </div>
-          {(r.rating || lastMade(r) !== undefined) && (
+          {feature("notes") && (r.rating || lastMade(r) !== undefined) && (
             <div className="muted small">
               {r.rating ? <span className="row-stars" aria-label={`${r.rating} stars`}>{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</span> : null}
               {r.rating && lastMade(r) !== undefined ? " · " : ""}
@@ -139,12 +140,16 @@ export default function Library() {
         title=""
         actions={
           <>
-            <a className="icon-btn" href={href({ name: "week" })} aria-label="This week's meals">
-              <Icon name="calendar" />
-            </a>
-            <a className="icon-btn" href={href({ name: "pantry" })} aria-label="Pantry">
-              <Icon name="jar" />
-            </a>
+            {feature("weekPlanner") && (
+              <a className="icon-btn" href={href({ name: "week" })} aria-label="This week's meals">
+                <Icon name="calendar" />
+              </a>
+            )}
+            {feature("pantry") && (
+              <a className="icon-btn" href={href({ name: "pantry" })} aria-label="Pantry">
+                <Icon name="jar" />
+              </a>
+            )}
             <a className="icon-btn badge-host" href={href({ name: "shopping" })} aria-label={`Shopping list${onList ? `, ${onList} recipes` : ""}`}>
               <Icon name="bag" />
               {onList > 0 && <span className="badge">{onList}</span>}
@@ -158,7 +163,7 @@ export default function Library() {
       <main className="page">
         <h1 className="page-title">Recipes</h1>
         {(() => {
-          const soon = useSoon(all);
+          const soon = feature("pantry") ? useSoon(all) : [];
           if (!soon.length) return null;
           const first = soon[0];
           const more = soon.length - 1;
@@ -183,7 +188,7 @@ export default function Library() {
           );
         })()}
         {(() => {
-          const ago = aYearAgo(all);
+          const ago = feature("history") ? aYearAgo(all) : [];
           if (!ago.length) return null;
           return (
             <a className="plan-strip" href={href({ name: "history" })}>
@@ -195,7 +200,7 @@ export default function Library() {
             </a>
           );
         })()}
-        {fridge.length > 0 && (
+        {feature("pantry") && fridge.length > 0 && (
           <a className="plan-strip use-soon-strip" href={href({ name: "pantry" })}>
             {leftoverPast(fridge[0]) ? <WarnIcon /> : <Icon name="jar" size={18} />}
             <span>
@@ -207,7 +212,7 @@ export default function Library() {
           </a>
         )}
         {(() => {
-          const today = (loadWeek().days[dayKey(new Date())] ?? [])
+          const today = (feature("weekPlanner") ? (loadWeek().days[dayKey(new Date())] ?? []) : [])
             .map((m) => {
               const r = all.find((x) => x.id === m.id);
               return r && { title: m.leftover ? `leftover ${r.title}` : r.title };
@@ -224,7 +229,7 @@ export default function Library() {
             </a>
           );
         })()}
-        {Object.values(loadPlans())
+        {Object.values(feature("mealTime") ? loadPlans() : {})
           .sort((a, b) => a.startAt - b.startAt)
           .map((p) => (
             <a key={p.recipeId} className="plan-strip" href={href({ name: "recipe", id: p.recipeId })}>
@@ -291,8 +296,8 @@ export default function Library() {
               <select value={sort} onChange={(e) => choose("sort", e.target.value)}>
                 <option value="newest">Newest</option>
                 <option value="az">A–Z</option>
-                <option value="lastmade">Not made lately</option>
-                <option value="rating">Top rated</option>
+                {feature("notes") && <option value="lastmade">Not made lately</option>}
+                {feature("notes") && <option value="rating">Top rated</option>}
               </select>
             </label>
           </div>
@@ -306,7 +311,7 @@ export default function Library() {
         )}
         {rest.length > 0 && <ul className="recipe-list">{rest.map(row)}</ul>}
         {all.length > 0 && shown.length === 0 && <p className="muted">No matches.</p>}
-        {familyOn && (
+        {familyOn && feature("family") && (
           <a className="plan-strip family-link" href={href({ name: "family" })}>
             <Icon name="book" size={18} />
             <span>

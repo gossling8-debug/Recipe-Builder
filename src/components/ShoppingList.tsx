@@ -1,3 +1,4 @@
+import { feature } from "../lib/features";
 import { useEffect, useMemo, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
@@ -64,7 +65,7 @@ export default function ShoppingList() {
   const recipeItems = useMemo(() => combine(entries), [entries]);
   // "Always keep" staples that are out or low join the list by themselves. Once
   // ticked they stay (in the cart) until the list is cleared, so ticking can be undone.
-  const stapleItems = staplesToBuyOrTicked(state.checked, new Set(recipeItems.map((i) => i.key)));
+  const stapleItems = feature("pantry") ? staplesToBuyOrTicked(state.checked, new Set(recipeItems.map((i) => i.key))) : [];
   const items = [...recipeItems, ...stapleItems];
   const checked = new Set(state.checked);
   // Ticks saved under the older matching rule move to the current item keys.
@@ -80,7 +81,8 @@ export default function ShoppingList() {
   }, [recipeItems]);
 
   const notChecked = items.filter((i) => !checked.has(i.key));
-  const status = new Map(notChecked.map((i) => [i.key, statusFor(i.key, i.name, i.need)]));
+  // With the pantry off, nothing is "already in your pantry".
+  const status = new Map(notChecked.map((i) => [i.key, feature("pantry") ? statusFor(i.key, i.name, i.need) : ({ kind: "none" } as const)]));
   // Enough already on hand → its own section, so the list to buy stays short.
   const inPantry = notChecked.filter((i) => status.get(i.key)?.kind === "enough");
   const remaining = notChecked.filter((i) => status.get(i.key)?.kind !== "enough");
@@ -136,7 +138,7 @@ export default function ShoppingList() {
           {!checked.has(it.key) && <PantryNote status={status.get(it.key)} />}
         </span>
       </label>
-      {!checked.has(it.key) && opened.has(it.key) && (
+      {feature("walmart") && !checked.has(it.key) && opened.has(it.key) && (
         // Tapping the ✓ clears it ("not added yet") without opening Walmart again.
         <button
           className="store-undo"
@@ -146,7 +148,7 @@ export default function ShoppingList() {
           <Icon name="check" size={14} />
         </button>
       )}
-      {!checked.has(it.key) && (
+      {feature("walmart") && !checked.has(it.key) && (
         <a
           className={opened.has(it.key) ? "store-btn opened" : "store-btn"}
           href={walmartSearchUrl(it.name)}
@@ -175,14 +177,14 @@ export default function ShoppingList() {
                 value={editing.text}
                 onChange={(e) => setEditing({ ...editing, text: e.target.value })}
               />
-              <input
+              {feature("budget") && <input
                 className="text-input price-input"
                 inputMode="decimal"
                 aria-label={`What did ${it.name} cost?`}
                 placeholder="$ price"
                 value={editing.price}
                 onChange={(e) => setEditing({ ...editing, price: e.target.value })}
-              />
+              />}
               <button className="btn" type="submit">
                 Save
               </button>
@@ -201,7 +203,7 @@ export default function ShoppingList() {
                   })
                 }
               >
-                {state.bought[it.key].price === undefined ? "Change or add price" : "Change"}
+                {state.bought[it.key].price === undefined && feature("budget") ? "Change or add price" : "Change"}
               </button>
             </span>
           )}
@@ -218,9 +220,11 @@ export default function ShoppingList() {
         returnToPrevious
         actions={
           <>
-            <a className="icon-btn" href={href({ name: "pantry" })} aria-label="Pantry">
-              <Icon name="jar" />
-            </a>
+            {feature("pantry") && (
+              <a className="icon-btn" href={href({ name: "pantry" })} aria-label="Pantry">
+                <Icon name="jar" />
+              </a>
+            )}
             {items.length > 0 && (
               <button className="icon-btn" onClick={share} aria-label="Share shopping list">
                 <Icon name="share" />
@@ -231,9 +235,11 @@ export default function ShoppingList() {
       />
       <main className="page recipe">
         {receiptDone && <div className="callout small">{receiptDone}</div>}
-        <a className="btn receipt-btn" href={href({ name: "receipt" })}>
-          <Icon name="camera" size={18} /> Import a receipt
-        </a>
+        {feature("budget") && (
+          <a className="btn receipt-btn" href={href({ name: "receipt" })}>
+            <Icon name="camera" size={18} /> Import a receipt
+          </a>
+        )}
         {all === null && <p className="muted">Loading…</p>}
         {all !== null && entries.length === 0 && stapleItems.length === 0 && (
           <div className="empty">
@@ -261,9 +267,9 @@ export default function ShoppingList() {
               ))}
             </ul>
 
-            <SpendingEditor state={state} update={update} />
+            {feature("budget") && <SpendingEditor state={state} update={update} />}
             <h3>To buy · {remaining.length}</h3>
-            {remaining.length > 0 && (
+            {remaining.length > 0 && feature("walmart") && (
               <>
                 <p className="muted small">
                   Tap <strong>Walmart</strong> to find an item in the Walmart app and add it to your cart, then tick it off
@@ -287,7 +293,10 @@ export default function ShoppingList() {
             {got.length > 0 && (
               <>
                 <h3>In the cart · {got.length}</h3>
-                <p className="muted small">Ticked items go into your pantry. Tap “Change” to enter the size you bought and what you paid — prices add up your spending and show what recipes cost.</p>
+                <p className="muted small">
+                  {feature("pantry") ? "Ticked items go into your pantry. " : ""}Tap “Change” to enter the size you bought
+                  {feature("budget") ? " and what you paid — prices add up your spending and show what recipes cost" : ""}.
+                </p>
                 <ul className="ingredients">{got.map(row)}</ul>
               </>
             )}

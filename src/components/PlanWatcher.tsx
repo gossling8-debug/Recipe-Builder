@@ -1,3 +1,4 @@
+import { feature } from "../lib/features";
 import { useEffect, useState } from "react";
 import { href } from "../lib/route";
 import { loadPlans, markAlerted, timeOf, type Plan } from "../lib/plan";
@@ -16,6 +17,7 @@ export default function PlanWatcher() {
     document.addEventListener("pointerdown", unlock, { once: true });
     const check = () => {
       const now = Date.now();
+      if (!feature("mealTime")) return;
       const p = Object.values(loadPlans()).find((x) => !x.alerted && x.startAt <= now && x.eatAt > now);
       if (p) {
         markAlerted(p.recipeId);

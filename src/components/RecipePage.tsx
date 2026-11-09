@@ -27,6 +27,7 @@ import { money } from "../lib/usage";
 import { loadShopping, removeFromShopping } from "../lib/shopping";
 import { useToast } from "./Toast";
 import { cleanTags, type SavedRecipe } from "../lib/schema";
+import { feature } from "../lib/features";
 
 export default function RecipePage({ id }: { id: string }) {
   const [recipe, setRecipe] = useState<SavedRecipe | null | undefined>(undefined);
@@ -267,11 +268,15 @@ export default function RecipePage({ id }: { id: string }) {
             <TimerBar {...timers} />
             <RecipeView
               key={`${recipe.id}-${viewKey}`}
-              onStartCooking={() => {
-                cookStart(recipe.id); // starts the clock for "how long did it take?"
-                setCooking(true);
-              }}
-              onMade={madeIt}
+              onStartCooking={
+                feature("cookMode")
+                  ? () => {
+                      cookStart(recipe.id); // starts the clock for "how long did it take?"
+                      setCooking(true);
+                    }
+                  : undefined
+              }
+              onMade={feature("pantry") ? madeIt : undefined}
               made={made && { at: made.at, onUndo: () => {
                   restore(made.undo);
                   rememberMade(null);
@@ -282,15 +287,15 @@ export default function RecipePage({ id }: { id: string }) {
                 } }}
               top={
                 <>
-                  <PlanMeal recipe={{ ...applySwaps(recipe), cookLog: recipe.cookLog }} recipeId={recipe.id} />
-                  <AddToWeek recipeId={recipe.id} />
-                  <FreezeHalf key={viewKey} recipeId={recipe.id} onChange={() => setViewKey((k) => k + 1)} />
+                  {feature("mealTime") && <PlanMeal recipe={{ ...applySwaps(recipe), cookLog: recipe.cookLog }} recipeId={recipe.id} />}
+                  {feature("weekPlanner") && <AddToWeek recipeId={recipe.id} />}
+                  {feature("freezeHalf") && <FreezeHalf key={viewKey} recipeId={recipe.id} onChange={() => setViewKey((k) => k + 1)} />}
                 </>
               }
               recipe={applySwaps(recipe)}
               recipeId={recipe.id}
-              photo={recipe.dishPhoto}
-              versions={versions.length > 1 ? versions.map((v) => ({ id: v.id, title: v.title, original: !v.variantOf })) : undefined}
+              photo={feature("notes") ? recipe.dishPhoto : undefined}
+              versions={feature("versions") && versions.length > 1 ? versions.map((v) => ({ id: v.id, title: v.title, original: !v.variantOf })) : undefined}
               onTagsChange={async (tags) => {
                 const updated = { ...recipe, tags: cleanTags(tags) };
                 setRecipe(updated);
@@ -306,7 +311,7 @@ export default function RecipePage({ id }: { id: string }) {
               }}
               extra={
                 <>
-                  <MyNotes
+                  {feature("notes") && <MyNotes
                     key={recipe.id}
                     recipe={recipe}
                     onMarkedMade={() => freezeHalf() && showToast("Half is on your freezer list.")}
@@ -314,32 +319,36 @@ export default function RecipePage({ id }: { id: string }) {
                       setRecipe(updated);
                       await saveRecipe(updated);
                     }}
-                  />
-                  <Substitutes
+                  />}
+                  {feature("avoid") && <Substitutes
                     recipe={recipe}
                     onSaved={async (updated) => {
                       await saveRecipe(updated);
                       setRecipe(updated);
                     }}
-                  />
-                  <ShareToFamily recipe={recipe} />
-                  <NutritionSection
+                  />}
+                  {feature("family") && <ShareToFamily recipe={recipe} />}
+                  {feature("nutrition") && <NutritionSection
                     recipe={recipe}
                     onSaved={async (updated) => {
                       await saveRecipe(updated);
                       setRecipe(updated);
                     }}
-                  />
+                  />}
                 </>
               }
             />
             <div className="button-row print-link">
-              <a className="btn" href={href({ name: "print", id: recipe.id })}>
-                <Icon name="download" size={18} /> Print or save as PDF
-              </a>
-              <button className="btn" onClick={copyRecipe}>
-                <Icon name="plus" size={18} /> Make my own version
-              </button>
+              {feature("print") && (
+                <a className="btn" href={href({ name: "print", id: recipe.id })}>
+                  <Icon name="download" size={18} /> Print or save as PDF
+                </a>
+              )}
+              {feature("versions") && (
+                <button className="btn" onClick={copyRecipe}>
+                  <Icon name="plus" size={18} /> Make my own version
+                </button>
+              )}
             </div>
             {(recipe.source || recipe.importCost !== undefined) && (
               <p className="muted small source-line">
@@ -372,7 +381,7 @@ export default function RecipePage({ id }: { id: string }) {
           recipeId={recipe.id}
           timers={timers}
           plannedMinutes={getPlan(recipe.id)?.minutes}
-          onMade={madeIt}
+          onMade={feature("pantry") ? madeIt : undefined}
           onLog={async (minutes) => {
             const scale = loadProgress(recipe.id).scale;
             const updated = { ...recipe, cookLog: [...(recipe.cookLog ?? []), { at: Date.now(), minutes, scale }] };
