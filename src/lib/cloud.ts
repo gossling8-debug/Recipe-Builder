@@ -26,6 +26,8 @@ export interface CloudState {
   uid?: string;
   lastSync?: number;
   message?: string;
+  /** False until Firebase has said whether someone is signed in on this device. */
+  authKnown?: boolean;
 }
 
 let state: CloudState = { status: firebaseConfig ? "signed-out" : "off" };
@@ -72,6 +74,11 @@ export const user = async (): Promise<User | null> => (await fb()).auth.currentU
 let started = false;
 const PUSH_DELAY = 1500;
 const pushTimers = new Map<string, number>();
+let paused = false;
+/** Stops uploads while the account is being deleted. */
+export const pauseSync = (on: boolean) => {
+  paused = on;
+};
 const stateDirty = new Set<string>();
 let stateTimer = 0;
 
@@ -82,9 +89,9 @@ export async function startCloud(): Promise<void> {
   const { auth, a } = await fb();
   a.onAuthStateChanged(auth, (u) => {
     if (u) {
-      set({ status: "syncing", email: u.email ?? undefined, uid: u.uid, message: undefined });
+      set({ status: "syncing", email: u.email ?? undefined, uid: u.uid, message: undefined, authKnown: true });
       void syncNow();
-    } else set({ status: "signed-out", email: undefined, uid: undefined, lastSync: undefined });
+    } else set({ status: "signed-out", email: undefined, uid: undefined, lastSync: undefined, authKnown: true });
   });
 
   // Upload each change shortly after it's made (a burst of edits = one upload).
@@ -229,7 +236,7 @@ function forgetDelete(id: string) {
 
 async function upload(r: SavedRecipe, previousPhotoCount?: number): Promise<void> {
   const u = await user();
-  if (!u) return;
+  if (!u || paused) return;
   const { db, f } = await fb();
   const { photos, ...rest } = r;
   if (previousPhotoCount !== photos.length) {
@@ -274,7 +281,7 @@ async function download(id: string, remote: RemoteDoc): Promise<SavedRecipe> {
 // ---------- lists & settings ----------
 async function pushState(names: string[]): Promise<void> {
   const u = await user();
-  if (!u || !names.length) return;
+  if (!u || paused || !names.length) return;
   const { db, f } = await fb();
   const local = localEntries();
   for (const name of names) {
@@ -306,7 +313,7 @@ export function syncNow(): Promise<void> {
   syncing ??= (async () => {
     try {
       const u = await user();
-      if (!u) return;
+      if (!u || paused) return;
       set({ status: "syncing" });
       const { db, f } = await fb();
 

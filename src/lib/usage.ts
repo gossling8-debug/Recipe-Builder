@@ -3,7 +3,7 @@ import { costOf, MODELS } from "./models";
 /** A record of each paid Claude request, so the cook can see what the app actually costs. */
 export interface UsageEntry {
   at: number;
-  kind: "scan" | "website" | "text" | "substitutes" | "nutrition" | "receipt";
+  kind: "scan" | "website" | "text" | "substitutes" | "nutrition" | "receipt" | "pantryRecipe";
   model: string;
   input: number;
   output: number;

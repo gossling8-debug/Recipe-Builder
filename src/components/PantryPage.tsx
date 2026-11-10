@@ -4,6 +4,7 @@ import LeftoversList from "./LeftoversList";
 import StaplesSection from "./StaplesSection";
 import { addStaple, isStaple, removeStaple, useStaples } from "../lib/staples";
 import WarnIcon from "./WarnIcon";
+import CookWithWhatIHave from "./CookWithWhatIHave";
 import { whatCanIMake, type CanMake } from "../lib/canMake";
 import { addToShopping, loadShopping } from "../lib/shopping";
 import Header from "./Header";
@@ -166,6 +167,8 @@ export default function PantryPage() {
             <p className="muted small">Salt, pepper and water are assumed. Uses each recipe at its normal size.</p>
           </section>
         )}
+
+        {items.length > 0 && <CookWithWhatIHave />}
 
         {items.length === 0 ? (
           <div className="empty">

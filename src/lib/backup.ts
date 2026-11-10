@@ -1,6 +1,7 @@
 import * as z from "zod/v4";
 import { RecipeSchema, sanitizeRecipe, type SavedRecipe } from "./schema";
 import { listRecipes, newId, saveRecipe } from "./db";
+import { markBackedUp } from "./backupReminder";
 
 const BackupSchema = z.object({
   app: z.literal("recipe-builder"),
@@ -32,6 +33,7 @@ export async function exportBackup(): Promise<number> {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  markBackedUp();
   return recipes.length;
 }
 

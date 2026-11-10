@@ -125,6 +125,11 @@ export function applyRemote(name: string, e: Entry): void {
   writeMeta(m);
 }
 
+/** After deleting the account: a new account on this phone starts with a first sync. */
+export function forgetSyncedAccount(): void {
+  writeMeta({ times: readMeta().times });
+}
+
 export const isFirstSync = (uid: string) => readMeta().uid !== uid;
 export function markSynced(uid: string): void {
   const m = readMeta();
