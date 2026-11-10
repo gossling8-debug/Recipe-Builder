@@ -295,21 +295,6 @@ export default function RecipeView({
         ))}
       </section>
 
-      {!preview && feature("budget") && (() => {
-        const c = recipeCost(original, scale);
-        if (!c.priced) return null;
-        const serves = realServings(original);
-        return (
-          <p className="small cost-line">
-            Ingredients ≈ <strong>{dollars(c.total)}</strong>
-            {serves ? ` · ${dollars(c.total / (serves * scale))} per serving` : ""}
-            <span className="muted">
-              {" "}
-              (from prices you entered for {c.priced} of {c.of} ingredients{c.priced < c.of ? " — the rest aren't counted" : ""})
-            </span>
-          </p>
-        );
-      })()}
       {!preview && (
       <div className="list-row">
         {listed && listed.scale === scale ? (
@@ -426,6 +411,24 @@ export default function RecipeView({
           <p className="notes">{recipe.notes}</p>
         </section>
       )}
+      {!preview && feature("budget") && (() => {
+        const c = recipeCost(original, scale);
+        if (!c.priced) return null;
+        const serves = realServings(original);
+        return (
+          <section className="cost-section">
+            <h3>Cost</h3>
+            <p className="small cost-line">
+            Ingredients ≈ <strong>{dollars(c.total)}</strong>
+            {serves ? ` · ${dollars(c.total / (serves * scale))} per serving` : ""}
+            <span className="muted">
+              {" "}
+              (from prices you entered for {c.priced} of {c.of} ingredients{c.priced < c.of ? " — the rest aren't counted" : ""})
+            </span>
+            </p>
+          </section>
+        );
+      })()}
 
       {extra}
 
