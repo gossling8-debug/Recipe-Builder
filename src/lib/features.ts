@@ -18,6 +18,7 @@ export interface Feature {
 
 export type FeatureId =
   | "cookMode"
+  | "tips"
   | "units"
   | "notes"
   | "print"
@@ -39,6 +40,7 @@ export type FeatureId =
 
 export const FEATURES: Feature[] = [
   { id: "cookMode", name: "Cooking mode", what: "One step at a time, big text, timers.", plan: "free", group: "Cooking" },
+  { id: "tips", name: "Tips", what: "Safe temperatures, steak doneness, grilling and kitchen basics.", plan: "free", group: "Cooking" },
   { id: "units", name: "US / metric", what: "The Units switch on each recipe.", plan: "free", group: "Cooking" },
   { id: "notes", name: "Notes, ratings & photos", what: "My notes, stars, made history and your dish photo.", plan: "free", group: "Cooking" },
   { id: "print", name: "Print", what: "Print or save a recipe as a PDF.", plan: "free", group: "Cooking" },
