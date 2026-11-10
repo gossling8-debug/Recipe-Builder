@@ -817,3 +817,6 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .tip-bullets { padding-left: 20px; margin: 6px 0; }
 .tip-bullets li { margin-bottom: 6px; }
 .tip-note { background: var(--accent-soft); border-radius: 10px; padding: 8px 10px; }
+.tips-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; }
+.recipe-tips h4 { margin: 10px 0 2px; font-size: 14px; }
+.recipe-tips h4:first-child { margin-top: 0; }
