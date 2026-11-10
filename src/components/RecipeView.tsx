@@ -38,6 +38,7 @@ export default function RecipeView({
   recipeId,
   preview = false,
   extra,
+  myNotes,
   swaps = new Map(),
   onUndoSwap,
   onStartCooking,
@@ -53,6 +54,8 @@ export default function RecipeView({
   preview?: boolean;
   /** Shown after the notes, before the conversions (the substitutes section). */
   extra?: ReactNode;
+  /** The cook's own notes (My notes), shown after the card's notes and before the cost. */
+  myNotes?: ReactNode;
   /** Substitutes the cook chose, by ingredient index (recipe already has them applied). */
   swaps?: Map<number, Swap>;
   onUndoSwap?: (index: number) => void;
@@ -411,6 +414,7 @@ export default function RecipeView({
           <p className="notes">{recipe.notes}</p>
         </section>
       )}
+      {myNotes}
       {!preview && feature("budget") && (() => {
         const c = recipeCost(original, scale);
         if (!c.priced) return null;
