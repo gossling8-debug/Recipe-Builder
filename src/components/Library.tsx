@@ -1,3 +1,6 @@
+import { useThawReminders } from "./ThawList";
+import { dueNow, whenText } from "../lib/thaw";
+import type { Route } from "../lib/route";
 import { feature } from "../lib/features";
 import { useEffect, useState } from "react";
 import { saveRecipe } from "../lib/db";
@@ -30,6 +33,7 @@ export default function Library() {
   const [sort, setSort] = useState(() => remembered("sort", "newest"));
   const onList = loadShopping().recipes.length;
   const fridge = useLeftovers().filter((l) => !l.frozen);
+  const thawNow = dueNow(useThawReminders(recipes));
   const [cloud, setCloud] = useState(cloudState());
   useEffect(() => subscribeCloud(setCloud), []);
   const familyOn = cloud.status !== "off" && cloud.status !== "signed-out";
@@ -200,6 +204,21 @@ export default function Library() {
             </a>
           );
         })()}
+        {thawNow.length > 0 && (
+          <a className="plan-strip use-soon-strip" href={href({ name: thawNow.length === 1 ? "recipe" : "week", id: thawNow[0].recipeId } as Route)}>
+            {whenText(thawNow[0].moveBy) === "late" ? <WarnIcon /> : <Icon name="timer" size={18} />}
+            <span>
+              <strong>
+                {whenText(thawNow[0].moveBy) === "late" ? "Thaw now" : "Thaw tonight"}: {thawNow[0].item.name}
+              </strong>
+              <span className="muted small">
+                {" "}
+                · for {thawNow[0].title}
+                {thawNow.length > 1 ? ` · +${thawNow.length - 1} more` : ""}
+              </span>
+            </span>
+          </a>
+        )}
         {feature("pantry") && fridge.length > 0 && (
           <a className="plan-strip use-soon-strip" href={href({ name: "pantry" })}>
             {leftoverPast(fridge[0]) ? <WarnIcon /> : <Icon name="jar" size={18} />}

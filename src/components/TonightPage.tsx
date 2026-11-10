@@ -1,3 +1,5 @@
+import ThawList, { useThawReminders } from "./ThawList";
+import { dueNow } from "../lib/thaw";
 import { feature } from "../lib/features";
 import { useEffect, useState, type ReactNode } from "react";
 import Header from "./Header";
@@ -32,6 +34,7 @@ export default function TonightPage() {
   const byId = new Map(all.map((r) => [r.id, r]));
   const meals = (week.days[today] ?? []).filter((m) => byId.has(m.id));
   const plans = feature("mealTime") ? loadPlans() : {};
+  const thawNow = dueNow(useThawReminders(recipes));
   const idea = recipes ? suggestDinner({ recipes: all, past: pastPlans(), week, skip }) : undefined;
   const ready = recipes && feature("pantry")
     ? whatCanIMake(all.filter(isDinner), 0)
@@ -109,6 +112,13 @@ export default function TonightPage() {
                 </div>
               );
             })}
+          </section>
+        )}
+
+        {thawNow.length > 0 && (
+          <section>
+            <h3>Thaw tonight</h3>
+            <ThawList reminders={thawNow} />
           </section>
         )}
 
