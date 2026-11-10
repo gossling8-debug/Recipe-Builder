@@ -1,3 +1,4 @@
+import RecipeTips from "./RecipeTips";
 import { feature } from "../lib/features";
 import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/schema";
 import { formatNumber, scaleAmount } from "../lib/quantity";
@@ -209,6 +210,7 @@ export default function RecipeView({
         </div>
       </div>
       )}
+      {feature("tips") && !preview && <RecipeTips recipe={original} />}
       {units !== "original" && (
         <p className="small muted">
           Converted from the card and rounded to kitchen-friendly amounts. Teaspoons and tablespoons stay as they are.

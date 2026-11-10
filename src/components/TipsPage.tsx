@@ -11,7 +11,7 @@ export default function TipsPage() {
 
   return (
     <>
-      <Header title="Tips" back={href({ name: "library" })} />
+      <Header title="Tips" back={href({ name: "library" })} returnToPrevious />
       <main className="page tips">
         <input className="search" type="search" placeholder="Search tips, e.g. chicken, steak, eggs" value={q} onChange={(e) => setQ(e.target.value)} />
         {sections.length === 0 && <p className="muted">No tips match “{q.trim()}”.</p>}

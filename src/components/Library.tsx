@@ -144,11 +144,6 @@ export default function Library() {
         title=""
         actions={
           <>
-            {feature("tips") && (
-              <a className="icon-btn" href={href({ name: "tips" })} aria-label="Cooking tips">
-                <Icon name="bulb" />
-              </a>
-            )}
             {feature("weekPlanner") && (
               <a className="icon-btn" href={href({ name: "week" })} aria-label="This week's meals">
                 <Icon name="calendar" />

@@ -142,3 +142,57 @@ export function searchTips(q: string): TipSection[] {
     return rows?.length || bullets?.length ? [{ ...sec, rows, bullets, intro: undefined, note: undefined }] : [];
   });
 }
+
+// ---------- tips for one recipe ----------
+const NOT_MEAT = /\b(broth|stock|bouillon|powder|gravy|seasoning|bits|base|flavou?r)\b/;
+const row = (section: string, startsWith: string): TipRow | undefined =>
+  TIPS.find((s) => s.id === section)?.rows?.find((r) => r.what.startsWith(startsWith));
+
+const RULES: { match: RegExp; safe?: string[]; steak?: boolean; grill?: string[] }[] = [
+  { match: /\b(ground (beef|pork|lamb|veal)|hamburgers?|burgers?|meatloaf|meatballs?)\b/, safe: ["Ground beef"], grill: ["Hamburgers"] },
+  { match: /\b(chicken|turkey)\b/, safe: ["Chicken & turkey"] },
+  { match: /\bchicken breasts?\b/, grill: ["Chicken breasts"] },
+  { match: /\b(chicken|turkey) (thighs?|legs?|drumsticks?|wings?|quarters?)\b|\b(drumsticks?|wings?)\b/, grill: ["Chicken thighs"] },
+  { match: /\b(steaks?|ribeye|rib eye|sirloin|strip|filet mignon|t-bone|porterhouse|flank|skirt|tri-tip)\b/, safe: ["Beef, pork"], steak: true, grill: ["Steaks"] },
+  { match: /\b(pork chops?|pork loin|pork tenderloin|pork roast|pork shoulder|beef roast|chuck roast|pot roast|brisket|prime rib|lamb|veal)\b/, safe: ["Beef, pork"] },
+  { match: /\bpork chops?\b/, grill: ["Pork chops"] },
+  { match: /\b(ribs|baby back|spare ribs)\b/, safe: ["Beef, pork"], grill: ["Pork ribs"] },
+  { match: /\b(fish|salmon|tilapia|cod|halibut|trout|tuna steak|mahi|catfish|shrimp|prawns?|scallops?|crab|lobster|mussels?|clams?)\b/, safe: ["Fish & shellfish"] },
+  { match: /\bsalmon\b/, grill: ["Salmon"] },
+  { match: /\b(shrimp|prawns?)\b/, grill: ["Shrimp"] },
+  { match: /\bham\b/, safe: ["Fresh (raw) ham", "Fully cooked ham"] },
+  { match: /\bhot dogs?\b|\bfranks?\b/, safe: ["Hot dogs"], grill: ["Hot dogs"] },
+  { match: /\b(bratwurst|brats?|sausages?|kielbasa)\b/, safe: ["Ground beef"], grill: ["Bratwurst"] },
+];
+
+export interface RecipeTips {
+  safe: TipRow[];
+  steak: TipRow[];
+  grill: TipRow[];
+}
+
+/** The safe temperatures (and steak / grill rows) that apply to this recipe's ingredients. */
+export function tipsForRecipe(r: { title: string; ingredients: { name: string; preparation: string | null }[]; steps: { segments: { text: string }[] }[]; time?: string | null }): RecipeTips {
+  const ingText = r.ingredients
+    .map((i) => `${i.name} ${i.preparation ?? ""}`.toLowerCase())
+    .filter((t) => !NOT_MEAT.test(t))
+    .join(" | ");
+  const text = `${r.title.toLowerCase()} | ${ingText}`;
+  const grilling = /\bgrill/i.test([r.title, r.time ?? "", ...r.steps.map((s) => s.segments.map((g) => g.text).join(""))].join(" "));
+  const safe = new Map<string, TipRow>();
+  const grill = new Map<string, TipRow>();
+  let steak = false;
+  for (const rule of RULES) {
+    if (!rule.match.test(text)) continue;
+    for (const s of rule.safe ?? []) {
+      const tr = row("safe", s);
+      if (tr) safe.set(tr.what, tr);
+    }
+    if (rule.steak) steak = true;
+    if (grilling) for (const g of rule.grill ?? []) {
+      const tr = row("grill", g);
+      if (tr) grill.set(tr.what, tr);
+    }
+  }
+  return { safe: [...safe.values()], steak: steak ? (TIPS.find((s) => s.id === "steak")?.rows ?? []) : [], grill: [...grill.values()] };
+}

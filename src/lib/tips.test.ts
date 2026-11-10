@@ -24,3 +24,31 @@ describe("tips", () => {
     expect(searchTips("zzz")).toEqual([]);
   });
 });
+
+describe("tips for a recipe", () => {
+  const recipe = (title: string, ings: string[], step = "Cook.") => ({
+    title,
+    ingredients: ings.map((name) => ({ name, preparation: null })),
+    steps: [{ segments: [{ text: step }] }],
+  });
+  it("finds the safe temperatures for its meats", async () => {
+    const { tipsForRecipe } = await import("./tips");
+    const t = tipsForRecipe(recipe("Crack Chicken", ["boneless skinless chicken breasts", "bacon", "chicken broth", "ranch seasoning"]));
+    expect(t.safe.map((r) => r.value)).toEqual(["165°F (74°C)"]);
+    expect(t.grill).toEqual([]); // not grilled
+    expect(t.steak).toEqual([]);
+  });
+  it("adds steak doneness and grill rows when grilling", async () => {
+    const { tipsForRecipe } = await import("./tips");
+    const t = tipsForRecipe(recipe("Grilled Ribeye", ["2 ribeye steaks"], "Grill over high heat."));
+    expect(t.steak.map((r) => r.what)).toContain("Medium rare");
+    expect(t.grill.map((r) => r.what)).toEqual(["Steaks (1 inch)"]);
+    expect(t.safe[0].value).toMatch(/^145/);
+  });
+  it("burgers and seafood", async () => {
+    const { tipsForRecipe } = await import("./tips");
+    expect(tipsForRecipe(recipe("Burgers", ["1 lb ground beef"], "Grill 4 minutes per side.")).grill.map((r) => r.what)).toEqual(["Hamburgers (¾ inch)"]);
+    expect(tipsForRecipe(recipe("Shrimp Scampi", ["shrimp", "chicken stock"])).safe.map((r) => r.what)).toEqual(["Fish & shellfish"]);
+    expect(tipsForRecipe(recipe("Salad", ["lettuce"])).safe).toEqual([]);
+  });
+});
