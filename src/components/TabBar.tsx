@@ -19,7 +19,7 @@ export default function TabBar({ current }: { current: Route["name"] }) {
   }, []);
   return (
     <nav className="tabbar" aria-label="Main">
-      {TABS.filter((t) => t.route.name !== "budget" || feature("budget")).map((t) => {
+      {TABS.filter((t) => (t.route.name !== "budget" || feature("budget")) && (t.route.name !== "tonight" || feature("tonight"))).map((t) => {
         const on = t.route.name === current;
         return (
           <a key={t.label} href={href(t.route)} className={["tab", on && "on", t.main && "main"].filter(Boolean).join(" ")} aria-current={on ? "page" : undefined}>
