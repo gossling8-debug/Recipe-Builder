@@ -25,6 +25,7 @@ export default function MyNotes({
   const [showHistory, setShowHistory] = useState(false);
   const [askServings, setAskServings] = useState(true); // "Skip" hides it until next time
   const [otherServings, setOtherServings] = useState("");
+  const [changingServings, setChangingServings] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
@@ -82,25 +83,29 @@ export default function MyNotes({
           </button>
         )}
       </p>
-      {today && askServings && servingsCount(recipe.servings) === null && (() => {
-        // The card didn't say how many it serves: ask once it's been made, so
-        // leftovers, cost and nutrition per serving are based on the real number.
+      {(changingServings || (today && askServings && recipe.myServings === undefined)) && (() => {
+        // Ask once it's been made, even when the card lists servings — cards are often
+        // generous, and leftovers, cost and nutrition should follow what you really eat.
         const scale = loadProgress(recipe.id).scale;
+        const card = servingsCount(recipe.servings);
+        const cardNow = card === null ? null : Math.round(card * scale);
+        const choices = [...new Set([2, 4, 6, 8, ...(cardNow ? [cardNow] : [])])].sort((a, b) => a - b);
         const save = (n: number) => {
           if (!(n > 0)) return;
-          const base = Math.max(1, Math.round(n / scale)); // servings at the recipe's usual size
-          void onSaved({ ...recipe, servings: `Makes ${base} ${base === 1 ? "serving" : "servings"}` });
+          setChangingServings(false);
+          void onSaved({ ...recipe, myServings: Math.max(1, Math.round(n / scale)) }); // at the recipe's usual size
         };
         return (
           <div className="plan-card servings-ask">
             <p className="small">
-              <strong>How many servings did this make?</strong>
-              {scale !== 1 && <span className="muted"> (you made it at ×{scale === 0.5 ? "½" : scale === 1.5 ? "1½" : scale})</span>}
+              <strong>{cardNow ? `The card says ${cardNow} — how many servings did it really make?` : "How many servings did this make?"}</strong>
+              {scale !== 1 && <span className="muted"> (at ×{scale === 0.5 ? "½" : scale === 1.5 ? "1½" : scale})</span>}
             </p>
             <div className="day-chips">
-              {[2, 4, 6, 8].map((n) => (
-                <button key={n} className="tag" onClick={() => save(n)}>
+              {choices.map((n) => (
+                <button key={n} className={recipe.myServings !== undefined && Math.round(recipe.myServings * scale) === n ? "tag on" : "tag"} onClick={() => save(n)}>
                   {n}
+                  {n === cardNow && <span className="muted"> (card)</span>}
                 </button>
               ))}
               <input
@@ -118,13 +123,29 @@ export default function MyNotes({
                 </button>
               )}
             </div>
-            <button className="link-btn small" onClick={() => setAskServings(false)}>
-              Skip
+            <button
+              className="link-btn small"
+              onClick={() => {
+                setAskServings(false);
+                setChangingServings(false);
+              }}
+            >
+              {changingServings ? "Cancel" : "Skip"}
             </button>
-            <p className="muted small">Used for leftover nights in Fill my week, and cost and nutrition per serving.</p>
+            <p className="muted small">Used for leftover nights in Fill my week, and cost and nutrition per serving. The card's own number stays as printed.</p>
           </div>
         );
       })()}
+      {recipe.myServings !== undefined && !changingServings && (
+        <p className="small made-line">
+          <span>
+            Makes about <strong>{recipe.myServings}</strong> {recipe.myServings === 1 ? "serving" : "servings"} for you
+          </span>
+          <button className="link-btn small" onClick={() => setChangingServings(true)}>
+            Change
+          </button>
+        </p>
+      )}
       {showHistory && last !== undefined && (
         <div className="plan-card made-history">
           <ul>

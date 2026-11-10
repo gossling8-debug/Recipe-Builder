@@ -32,9 +32,12 @@ export function servingsCount(servings: string | null): number | null {
   return m ? Number(m[1]) : null;
 }
 
+/** Servings it really makes: the cook's own count if given, else the card's. null if neither says. */
+export const realServings = (r: { servings: string | null; myServings?: number }): number | null => r.myServings ?? servingsCount(r.servings);
+
 /** How many leftovers nights after cooking this for `people` (0–2). Unknown servings count as 4. */
 export function leftoverNights(r: SavedRecipe, people: number, scale = 1): number {
-  const s = (servingsCount(r.servings) ?? 4) * scale;
+  const s = (realServings(r) ?? 4) * scale;
   return Math.max(0, Math.min(2, Math.floor(s / Math.max(1, people)) - 1));
 }
 
