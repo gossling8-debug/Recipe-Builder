@@ -1,3 +1,4 @@
+import TipsPage from "./components/TipsPage";
 import { useEffect } from "react";
 import { useRoute } from "./lib/route";
 import { requestPersistentStorage } from "./lib/db";
@@ -39,6 +40,8 @@ function Screen() {
       return route.book ? <BookPage id={route.book} /> : <FamilyPage />;
     case "join":
       return <JoinPage id={route.id} />;
+    case "tips":
+      return <TipsPage />;
     case "tonight":
       return <TonightPage />;
     case "budget":
