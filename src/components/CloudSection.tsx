@@ -44,7 +44,7 @@ export default function CloudSection() {
       <section>
         <h3>Cloud backup &amp; sync</h3>
         <p className="muted small">
-          Sign in to back up your recipes and use them on any device. Free. Your Anthropic key is never uploaded.
+          Sign in to back up your recipes, lists and settings and use them on any device. Free. Your Anthropic key is never uploaded.
         </p>
         <form
           className="cloud-form"
@@ -92,7 +92,7 @@ export default function CloudSection() {
       </p>
       <p className={s.status === "error" ? "small cloud-status error" : "small cloud-status"} role="status">
         {s.status === "syncing" && "Syncing…"}
-        {s.status === "synced" && `All recipes backed up · ${ago(s.lastSync)}`}
+        {s.status === "synced" && `Everything backed up · ${ago(s.lastSync)}`}
         {(s.status === "offline" || s.status === "error") && s.message}
       </p>
       <div className="button-row">
@@ -103,7 +103,7 @@ export default function CloudSection() {
           Sign out
         </button>
       </div>
-      <p className="muted small">Signing out keeps your recipes on this phone and in the cloud.</p>
+      <p className="muted small">Backed up: recipes, photos, pantry, shopping list, week plan, prices and budget, and settings (except your Anthropic key). Signing out keeps everything on this phone and in the cloud.</p>
       <p>
         <a href={href({ name: "family" })}>Family cookbooks</a>
         <span className="muted small"> — share chosen recipes with family or friends</span>

@@ -4,6 +4,7 @@ import type { Firestore } from "firebase/firestore";
 import { firebaseConfig } from "./firebaseConfig";
 import { deleteRecipeFromCloud, listRecipes, onRecipeChange, saveRecipeFromCloud } from "./db";
 import type { SavedRecipe } from "./schema";
+import { announceChanges, applyRemote, isFirstSync, localEntries, markSynced, plan, trackLocalChanges, type Entry } from "./stateSync";
 
 /**
  * Cloud backup & sync (Firebase, free plan).
@@ -16,6 +17,8 @@ import type { SavedRecipe } from "./schema";
  *   users/{uid}/recipes/{id}  { recipe, updatedAt, photoCount, deleted }
  *   users/{uid}/photos/{id_n} { recipeId, index, data }  — one per photo, to stay
  *                                                       under the 1 MB document limit
+ *   users/{uid}/state/{name}  { value, updatedAt }   — pantry, shopping list, week
+ *                                                       plan, prices, settings… (stateSync.ts)
  */
 export interface CloudState {
   status: "off" | "signed-out" | "syncing" | "synced" | "offline" | "error";
@@ -69,6 +72,8 @@ export const user = async (): Promise<User | null> => (await fb()).auth.currentU
 let started = false;
 const PUSH_DELAY = 1500;
 const pushTimers = new Map<string, number>();
+const stateDirty = new Set<string>();
+let stateTimer = 0;
 
 /** Called once when the app opens. Does nothing until cloud backup is set up. */
 export async function startCloud(): Promise<void> {
@@ -104,6 +109,24 @@ export async function startCloud(): Promise<void> {
         );
       }, PUSH_DELAY),
     );
+  });
+
+  // Lists and settings: upload shortly after they change.
+  trackLocalChanges((name) => {
+    if (!auth.currentUser) return; // noted with its time; uploaded at the next sign-in sync
+    stateDirty.add(name);
+    window.clearTimeout(stateTimer);
+    stateTimer = window.setTimeout(() => {
+      const names = [...stateDirty];
+      stateDirty.clear();
+      void pushState(names).then(
+        () => set({ status: "synced", lastSync: Date.now(), message: undefined }),
+        () => {
+          names.forEach((n) => stateDirty.add(n));
+          set({ status: "offline", message: "Changes will upload when you're back online." });
+        },
+      );
+    }, PUSH_DELAY);
   });
 
   // Catch up with other devices when the app comes back to the foreground.
@@ -248,9 +271,37 @@ async function download(id: string, remote: RemoteDoc): Promise<SavedRecipe> {
   return { ...(remote.recipe as SavedRecipe), photos, updatedAt: remote.updatedAt };
 }
 
+// ---------- lists & settings ----------
+async function pushState(names: string[]): Promise<void> {
+  const u = await user();
+  if (!u || !names.length) return;
+  const { db, f } = await fb();
+  const local = localEntries();
+  for (const name of names) {
+    const e = local[name];
+    if (e) await f.setDoc(f.doc(db, "users", u.uid, "state", name), { value: e.value, updatedAt: e.updatedAt } satisfies Entry);
+  }
+}
+
+/** Two-way sync of everything besides recipes. Returns true if this device changed. */
+async function syncState(uid: string): Promise<boolean> {
+  const { db, f } = await fb();
+  const snap = await f.getDocs(f.collection(db, "users", uid, "state"));
+  const remote: Record<string, Entry> = {};
+  for (const d of snap.docs) {
+    const data = d.data() as Partial<Entry>;
+    if (typeof data.updatedAt === "number") remote[d.id] = { value: typeof data.value === "string" ? data.value : null, updatedAt: data.updatedAt };
+  }
+  const todo = plan(localEntries(), remote, isFirstSync(uid));
+  for (const name of todo.apply) applyRemote(name, remote[name]);
+  await pushState(todo.upload);
+  markSynced(uid);
+  return todo.apply.length > 0;
+}
+
 let syncing: Promise<void> | null = null;
 
-/** Two-way sync: newest version of each recipe wins; deletions carry over. */
+/** Two-way sync of recipes and everything else: the newest version of each wins; deletions carry over. */
 export function syncNow(): Promise<void> {
   syncing ??= (async () => {
     try {
@@ -277,6 +328,8 @@ export function syncNow(): Promise<void> {
         const rd = remote.get(id);
         if (!rd || stamp(lr) > rd.updatedAt) await upload(lr, rd && !rd.deleted ? rd.photoCount : undefined);
       }
+      stateDirty.clear(); // covered by the full sync below
+      if (await syncState(u.uid)) announceChanges();
       set({ status: "synced", lastSync: Date.now(), message: undefined });
       window.dispatchEvent(new Event("recipes-synced"));
     } catch (e) {

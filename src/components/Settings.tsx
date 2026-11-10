@@ -4,6 +4,7 @@ import { feature } from "../lib/features";
 import Header from "./Header";
 import Icon from "./Icon";
 import CloudSection from "./CloudSection";
+import { cloudState, subscribeCloud } from "../lib/cloud";
 import { applyTextSize, getTextSize, TEXT_SIZES, type TextSize } from "../lib/textSize";
 import { getApiKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
@@ -20,6 +21,8 @@ export default function Settings() {
     window.addEventListener("features-changed", on);
     return () => window.removeEventListener("features-changed", on);
   }, []);
+  const [signedIn, setSignedIn] = useState(() => !!cloudState().uid);
+  useEffect(() => subscribeCloud((c) => setSignedIn(!!c.uid)), []);
   const [key, setKey] = useState(getApiKey());
   const [saved, setSaved] = useState(false);
   const [keyError, setKeyError] = useState("");
@@ -259,8 +262,9 @@ export default function Settings() {
         <section>
           <h3>Backup</h3>
           <p className="muted small">
-            Recipes are saved on this phone. Clearing this site's data in your browser settings (or deleting the app) erases
-            them, so export a backup now and then.
+            {signedIn
+              ? "Everything is backed up to the cloud while you're signed in. A backup file is an extra copy of your recipes that you keep yourself."
+              : "Recipes are saved on this phone. Clearing this site's data in your browser settings (or deleting the app) erases them, so sign in to cloud backup above or export a backup now and then."}
             {persisted === true && " This browser has agreed not to clear them on its own to free up space."}
           </p>
           {mode && (
