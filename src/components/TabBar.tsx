@@ -17,9 +17,20 @@ export default function TabBar({ current }: { current: Route["name"] }) {
     window.addEventListener("features-changed", on);
     return () => window.removeEventListener("features-changed", on);
   }, []);
+  const tabs = TABS.filter((t) => (t.route.name !== "budget" || feature("budget")) && (t.route.name !== "tonight" || feature("tonight")));
+  // Only Add Recipe left (e.g. the free plan): one wide button across the bar.
+  if (tabs.length === 1 && tabs[0].main) {
+    return (
+      <nav className="tabbar tabbar-single" aria-label="Main">
+        <a href={href(tabs[0].route)} className="btn primary big tabbar-wide">
+          <Icon name="plus" size={22} /> Add Recipe
+        </a>
+      </nav>
+    );
+  }
   return (
     <nav className="tabbar" aria-label="Main">
-      {TABS.filter((t) => (t.route.name !== "budget" || feature("budget")) && (t.route.name !== "tonight" || feature("tonight"))).map((t) => {
+      {tabs.map((t) => {
         const on = t.route.name === current;
         return (
           <a key={t.label} href={href(t.route)} className={["tab", on && "on", t.main && "main"].filter(Boolean).join(" ")} aria-current={on ? "page" : undefined}>
