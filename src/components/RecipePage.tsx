@@ -311,7 +311,7 @@ export default function RecipePage({ id }: { id: string }) {
                 setRecipe(updated);
                 await saveRecipe(updated);
               }}
-              extra={
+              myNotes={
                 <>
                   {feature("notes") && <MyNotes
                     key={recipe.id}
@@ -322,6 +322,10 @@ export default function RecipePage({ id }: { id: string }) {
                       await saveRecipe(updated);
                     }}
                   />}
+                </>
+              }
+              extra={
+                <>
                   {feature("avoid") && <Substitutes
                     recipe={recipe}
                     onSaved={async (updated) => {

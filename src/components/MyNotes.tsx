@@ -136,13 +136,18 @@ export default function MyNotes({
           </div>
         );
       })()}
-      {recipe.myServings !== undefined && !changingServings && (
+      {!changingServings && !(today && askServings && recipe.myServings === undefined) && (
+        // Always reachable, not just right after making it.
         <p className="small made-line">
-          <span>
-            Makes about <strong>{recipe.myServings}</strong> {recipe.myServings === 1 ? "serving" : "servings"} for you
-          </span>
+          {recipe.myServings !== undefined ? (
+            <span>
+              Makes about <strong>{recipe.myServings}</strong> {recipe.myServings === 1 ? "serving" : "servings"} for you
+            </span>
+          ) : (
+            <span className="muted">Servings for you: not set</span>
+          )}
           <button className="link-btn small" onClick={() => setChangingServings(true)}>
-            Change
+            {recipe.myServings !== undefined ? "Change" : "Set"}
           </button>
         </p>
       )}
