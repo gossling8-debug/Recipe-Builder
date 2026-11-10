@@ -8,7 +8,7 @@ import { listRecipes } from "../lib/db";
 import { href } from "../lib/route";
 import { addToShopping } from "../lib/shopping";
 import { addMeal, countMeals, loadWeek, mealsToShop, pastPlans, removeMeal, saveWeek, upcomingDays, type WeekState } from "../lib/week";
-import { fillWeek, getPeople, isDinner, NO_REPEAT_DAYS, setPeople } from "../lib/autoPlan";
+import { fillWeek, getPeople, isDinner, NO_REPEAT_DAYS, servingsCount, setPeople } from "../lib/autoPlan";
 import { loadLeftovers } from "../lib/leftovers";
 import type { SavedRecipe } from "../lib/schema";
 
@@ -109,7 +109,8 @@ export default function WeekPage() {
             {result && <p className="small">{result}</p>}
             <p className="muted small">
               Fills the empty days with dinners you haven't had in the last {NO_REPEAT_DAYS} days, leaves leftovers nights after big meals,
-              and uses up leftovers in your fridge first. Days you picked yourself stay as they are.
+              and uses up leftovers in your fridge first. Days you picked yourself stay as they are. When a recipe doesn't say how many it
+              serves, 4 is assumed (“servings guessed”) — after you make it, you'll be asked.
             </p>
           </div>
         )}
@@ -148,6 +149,9 @@ export default function WeekPage() {
                             <span className="muted">{recipes ? "(deleted recipe)" : "…"}</span>
                           )}
                           {m.auto && !m.leftover && <span className="muted small"> · picked for you</span>}
+                          {m.auto && !m.leftover && r && servingsCount(r.servings) === null && (
+                            <span className="muted small"> · servings guessed</span>
+                          )}
                           <span className="muted small">{sizeLabel(m.scale)}</span>
                           <button
                             className="icon-btn small-btn"

@@ -1,4 +1,6 @@
 import { feature } from "../lib/features";
+import { servingsCount } from "../lib/autoPlan";
+import { loadProgress } from "../lib/progress";
 import { useRef, useState } from "react";
 import { compressPhoto } from "../lib/image";
 import { addLeftover, eatByLabel, useLeftovers } from "../lib/leftovers";
@@ -21,6 +23,8 @@ export default function MyNotes({
   const [text, setText] = useState(recipe.myNotes ?? "");
   const [editing, setEditing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [askServings, setAskServings] = useState(true); // "Skip" hides it until next time
+  const [otherServings, setOtherServings] = useState("");
   const [photoError, setPhotoError] = useState("");
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
@@ -78,6 +82,49 @@ export default function MyNotes({
           </button>
         )}
       </p>
+      {today && askServings && servingsCount(recipe.servings) === null && (() => {
+        // The card didn't say how many it serves: ask once it's been made, so
+        // leftovers, cost and nutrition per serving are based on the real number.
+        const scale = loadProgress(recipe.id).scale;
+        const save = (n: number) => {
+          if (!(n > 0)) return;
+          const base = Math.max(1, Math.round(n / scale)); // servings at the recipe's usual size
+          void onSaved({ ...recipe, servings: `Makes ${base} ${base === 1 ? "serving" : "servings"}` });
+        };
+        return (
+          <div className="plan-card servings-ask">
+            <p className="small">
+              <strong>How many servings did this make?</strong>
+              {scale !== 1 && <span className="muted"> (you made it at ×{scale === 0.5 ? "½" : scale === 1.5 ? "1½" : scale})</span>}
+            </p>
+            <div className="day-chips">
+              {[2, 4, 6, 8].map((n) => (
+                <button key={n} className="tag" onClick={() => save(n)}>
+                  {n}
+                </button>
+              ))}
+              <input
+                className="text-input servings-other"
+                inputMode="numeric"
+                placeholder="Other"
+                aria-label="Other number of servings"
+                value={otherServings}
+                onChange={(e) => setOtherServings(e.target.value.replace(/[^0-9]/g, ""))}
+                onKeyDown={(e) => e.key === "Enter" && save(Number(otherServings))}
+              />
+              {otherServings && (
+                <button className="btn" onClick={() => save(Number(otherServings))}>
+                  Save
+                </button>
+              )}
+            </div>
+            <button className="link-btn small" onClick={() => setAskServings(false)}>
+              Skip
+            </button>
+            <p className="muted small">Used for leftover nights in Fill my week, and cost and nutrition per serving.</p>
+          </div>
+        );
+      })()}
       {showHistory && last !== undefined && (
         <div className="plan-card made-history">
           <ul>
