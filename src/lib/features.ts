@@ -27,6 +27,7 @@ export type FeatureId =
   | "versions"
   | "freezeHalf"
   | "weekPlanner"
+  | "tonight"
   | "mealTime"
   | "thaw"
   | "history"
@@ -46,6 +47,7 @@ export const FEATURES: Feature[] = [
   { id: "readAloud", name: "Read aloud & voice", what: "Steps read out loud; say “next”, “pause”.", plan: "plus", group: "Cooking" },
   { id: "versions", name: "My own versions", what: "Copy a recipe to make your own version.", plan: "plus", group: "Cooking" },
   { id: "freezeHalf", name: "Double & freeze half", what: "Cook once, eat twice.", plan: "plus", group: "Planning" },
+  { id: "tonight", name: "Tonight", what: "What's for dinner tonight, ideas, and what to thaw.", plan: "plus", group: "Planning" },
   { id: "weekPlanner", name: "Week planner", what: "Plan the week, Fill my week, big-meal timeline.", plan: "plus", group: "Planning" },
   { id: "mealTime", name: "Meal times", what: "“Eat at 6” → when to start, with reminders.", plan: "plus", group: "Planning" },
   { id: "thaw", name: "Thaw reminders", what: "When to move frozen meat to the fridge for planned meals.", plan: "plus", group: "Planning" },
