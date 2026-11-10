@@ -1,11 +1,11 @@
 import { feature } from "../lib/features";
 import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/schema";
-import { scaleAmount } from "../lib/quantity";
+import { formatNumber, scaleAmount } from "../lib/quantity";
 import { toggleIn, useProgress } from "../lib/progress";
 import Icon from "./Icon";
 import TagPicker from "./TagPicker";
 import { dollars, recipeCost } from "../lib/prices";
-import { servingsCount } from "../lib/autoPlan";
+import { realServings, servingsCount } from "../lib/autoPlan";
 import { useState, type ReactNode } from "react";
 import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
 import { conversionsFor } from "../lib/conversions";
@@ -76,6 +76,10 @@ export default function RecipeView({
   const [editingTags, setEditingTags] = useState(false);
   const [bigPhoto, setBigPhoto] = useState(false);
   const recipe = convertRecipe(original, units);
+  // The cook's own servings count (saved recipes only).
+  // (Not repeated when it matches the card.)
+  const mine = (original as { myServings?: number }).myServings;
+  const myServings = mine !== undefined && mine !== servingsCount(original.servings) ? mine : undefined;
   const [progress, update] = useProgress(recipeId);
   const { scale } = progress;
   const have = new Set(progress.have);
@@ -158,9 +162,13 @@ export default function RecipeView({
           </div>
         </div>
       )}
-      {(recipe.servings || recipe.time) && (
+      {(recipe.servings || recipe.time || myServings) && (
         <p className="meta">
-          {[recipe.servings && scaleAmount(recipe.servings, scale), recipe.time]
+          {[
+            recipe.servings && scaleAmount(recipe.servings, scale) + (myServings ? " (card)" : ""),
+            myServings && `about ${formatNumber(myServings * scale)} ${myServings * scale === 1 ? "serving" : "servings"} for you`,
+            recipe.time,
+          ]
             .filter(Boolean)
             .join(" · ")}
         </p>
@@ -290,7 +298,7 @@ export default function RecipeView({
       {!preview && feature("budget") && (() => {
         const c = recipeCost(original, scale);
         if (!c.priced) return null;
-        const serves = servingsCount(original.servings);
+        const serves = realServings(original);
         return (
           <p className="small cost-line">
             Ingredients ≈ <strong>{dollars(c.total)}</strong>

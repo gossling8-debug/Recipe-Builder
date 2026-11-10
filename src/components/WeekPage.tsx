@@ -8,7 +8,7 @@ import { listRecipes } from "../lib/db";
 import { href } from "../lib/route";
 import { addToShopping } from "../lib/shopping";
 import { addMeal, countMeals, loadWeek, mealsToShop, pastPlans, removeMeal, saveWeek, upcomingDays, type WeekState } from "../lib/week";
-import { fillWeek, getPeople, isDinner, NO_REPEAT_DAYS, servingsCount, setPeople } from "../lib/autoPlan";
+import { fillWeek, getPeople, isDinner, NO_REPEAT_DAYS, realServings, setPeople } from "../lib/autoPlan";
 import { loadLeftovers } from "../lib/leftovers";
 import type { SavedRecipe } from "../lib/schema";
 
@@ -149,7 +149,7 @@ export default function WeekPage() {
                             <span className="muted">{recipes ? "(deleted recipe)" : "…"}</span>
                           )}
                           {m.auto && !m.leftover && <span className="muted small"> · picked for you</span>}
-                          {m.auto && !m.leftover && r && servingsCount(r.servings) === null && (
+                          {m.auto && !m.leftover && r && realServings(r) === null && (
                             <span className="muted small"> · servings guessed</span>
                           )}
                           <span className="muted small">{sizeLabel(m.scale)}</span>

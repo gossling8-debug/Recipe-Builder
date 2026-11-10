@@ -95,6 +95,8 @@ export interface SavedRecipe extends ScannedRecipe {
   };
   /** This is the cook's own version of another recipe (its id). */
   variantOf?: string;
+  /** How many servings it really makes for this household (at 1×), from the cook. The card's own text stays in `servings`. */
+  myServings?: number;
   /** The cook's own photo of the finished dish (data: URL); shown in the library instead of the card. */
   dishPhoto?: string;
   /** The cook's rating, 1–5 stars. */

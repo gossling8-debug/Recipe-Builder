@@ -3,7 +3,7 @@ import Header from "./Header";
 import Icon from "./Icon";
 import SpendingEditor from "./SpendingEditor";
 import { listRecipes } from "../lib/db";
-import { isDinner, servingsCount } from "../lib/autoPlan";
+import { isDinner, realServings } from "../lib/autoPlan";
 import { dollars, getBudget, parsePrice, periodStarts, recipeCost, setBudget, spentSince } from "../lib/prices";
 import { href } from "../lib/route";
 import { loadShopping, saveShopping, type ShoppingState } from "../lib/shopping";
@@ -51,7 +51,7 @@ export default function BudgetPage() {
     .filter(isDinner)
     .map((r) => {
       const c = recipeCost(applySwaps(r), 1);
-      const serves = servingsCount(r.servings);
+      const serves = realServings(r);
       return { r, c, per: serves ? c.total / serves : null };
     })
     .filter((x) => x.per !== null && x.c.priced > 0 && x.c.priced >= x.c.of / 2)

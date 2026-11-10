@@ -7,7 +7,7 @@ import { activeSwaps, ingredientsKey, type Swap } from "../lib/swaps";
 import { caloriesWithSwaps, type Nutrition } from "../lib/nutrition";
 import type { SavedRecipe } from "../lib/schema";
 import { formatNumber } from "../lib/quantity";
-import { servingsCount } from "../lib/autoPlan";
+import { realServings } from "../lib/autoPlan";
 import { convertText, useUnits } from "../lib/units";
 
 type Healthier = Nutrition["healthier"][number];
@@ -58,7 +58,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
   // If you've since said how many servings it really makes, per-serving numbers
   // follow your count (the whole-recipe totals stay the same). A card's own
   // nutrition facts are left as printed.
-  const yours = servingsCount(recipe.servings);
+  const yours = realServings(recipe);
   const factor = raw && yours && raw.servings > 0 && raw.source !== "card" && yours !== raw.servings ? raw.servings / yours : 1;
   const n: typeof raw =
     raw && factor !== 1
