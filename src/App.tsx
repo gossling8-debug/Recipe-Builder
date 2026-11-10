@@ -1,5 +1,6 @@
 import TipsPage from "./components/TipsPage";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { applyTextSize, getTextSize } from "./lib/textSize";
 import { useRoute } from "./lib/route";
 import { requestPersistentStorage } from "./lib/db";
 import Library from "./components/Library";
@@ -23,11 +24,6 @@ import { BookPage, FamilyPage, JoinPage, SharedRecipePage } from "./components/F
 
 function Screen() {
   const route = useRoute();
-  useEffect(() => {
-    requestPersistentStorage().catch(() => {});
-    startCloud().catch(() => {});
-  }, []);
-
   switch (route.name) {
     case "scan":
       return <Scanner />;
@@ -70,12 +66,27 @@ function Screen() {
 // Screens without the bottom bar: opening a shared link, printing, joining a cookbook.
 const NO_TAB_BAR = new Set(["import", "print", "join"]);
 
+// Screens that simply show saved lists; they reload when another device's changes arrive.
+// (Not screens where you might be mid-edit, like adding a recipe or a receipt.)
+const RELOAD_ON_SYNC = new Set(["library", "settings", "tips", "tonight", "budget", "history", "week", "pantry", "shopping"]);
+
 export default function App() {
   const route = useRoute();
+  const [synced, setSynced] = useState(0);
+  useEffect(() => {
+    requestPersistentStorage().catch(() => {});
+    startCloud().catch(() => {});
+    const on = () => {
+      applyTextSize(getTextSize());
+      setSynced((n) => n + 1);
+    };
+    window.addEventListener("state-synced", on);
+    return () => window.removeEventListener("state-synced", on);
+  }, []);
   return (
     <>
       <PlanWatcher />
-      <Screen />
+      <Screen key={RELOAD_ON_SYNC.has(route.name) ? synced : -1} />
       {!NO_TAB_BAR.has(route.name) && <TabBar current={route.name} />}
     </>
   );
