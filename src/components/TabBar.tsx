@@ -4,7 +4,6 @@ import Icon, { type IconName } from "./Icon";
 import { href, type Route } from "../lib/route";
 
 const TABS: { route: Route; label: string; icon: IconName; main?: boolean }[] = [
-  { route: { name: "tips" }, label: "Tips", icon: "bulb" },
   { route: { name: "budget" }, label: "Budget", icon: "receipt" },
   { route: { name: "scan" }, label: "Add", icon: "plus", main: true },
   { route: { name: "tonight" }, label: "Tonight", icon: "plate" },
@@ -19,7 +18,7 @@ export default function TabBar({ current }: { current: Route["name"] }) {
     return () => window.removeEventListener("features-changed", on);
   }, []);
   const tabs = TABS.filter(
-    (t) => (t.route.name !== "budget" || feature("budget")) && (t.route.name !== "tonight" || feature("tonight")) && (t.route.name !== "tips" || feature("tips")),
+    (t) => (t.route.name !== "budget" || feature("budget")) && (t.route.name !== "tonight" || feature("tonight")),
   );
   // Only Add Recipe left (e.g. the free plan): one wide button across the bar.
   if (tabs.length === 1 && tabs[0].main) {
