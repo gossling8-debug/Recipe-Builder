@@ -1,3 +1,4 @@
+import ThawList, { useThawReminders } from "./ThawList";
 import { feature } from "../lib/features";
 import { useEffect, useState } from "react";
 import Header from "./Header";
@@ -27,6 +28,7 @@ export default function WeekPage() {
 
   const byId = new Map((recipes ?? []).map((r) => [r.id, r]));
   const planned = countMeals(week);
+  const thaw = useThawReminders(recipes);
   const [people, setPeopleState] = useState(getPeople);
   const [result, setResult] = useState("");
   const hasAuto = Object.values(week.days).some((v) => v.some((m) => m.auto));
@@ -75,6 +77,12 @@ export default function WeekPage() {
           Pick what you'll cook each day. When you're done, put the whole week on your shopping list in one tap.
         </p>
         {recipes?.length === 0 && <p className="muted">Add some recipes first — then plan them here.</p>}
+        {thaw.length > 0 && (
+          <section className="thaw-section">
+            <h3>Thaw ahead</h3>
+            <ThawList reminders={thaw} calendar />
+          </section>
+        )}
         {recipes && recipes.some(isDinner) && (
           <div className="plan-card auto-plan">
             <div className="people-row">

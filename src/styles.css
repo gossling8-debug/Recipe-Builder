@@ -787,3 +787,16 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .toggle-row input[type=checkbox][role=switch]:checked { background: var(--ink); }
 .toggle-row input[type=checkbox][role=switch]:checked::after { transform: translateX(18px); }
 .toggle-row input[type=checkbox][role=switch]:disabled { cursor: not-allowed; }
+
+/* Thaw reminders */
+.thaw-list ul { list-style: none; padding: 0; margin: 0 0 8px; }
+.thaw-list li { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.thaw-list li.today strong:first-child { color: var(--accent); }
+.thaw-list li.late { color: var(--error); }
+.thaw-list li.late .muted, .thaw-list li.late a { color: inherit; }
+.thaw-list li > div:first-child { display: block; }
+.thaw-actions { display: flex; gap: 16px; margin-top: 2px; }
+.thaw-actions .link-btn { display: inline-flex; align-items: center; gap: 4px; }
+.thaw-tip { background: var(--accent-soft); border-radius: 10px; padding: 8px 10px; }
+.thaw-note { margin-top: 10px; }
+.thaw-note .small .icon { vertical-align: -3px; }

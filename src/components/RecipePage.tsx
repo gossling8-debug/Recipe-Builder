@@ -13,6 +13,7 @@ import { ShareToFamily } from "./Family";
 import { markMade, unmarkMadeToday } from "../lib/made";
 import { freezeHalfIfPlanned } from "../lib/leftovers";
 import FreezeHalf from "./FreezeHalf";
+import ThawNote from "./ThawNote";
 import { clearPlan, getPlan } from "../lib/plan";
 import { restore, useForRecipe, type PantryItem } from "../lib/pantry";
 import { TimerBar, useTimers } from "./Timers";
@@ -289,6 +290,7 @@ export default function RecipePage({ id }: { id: string }) {
                 <>
                   {feature("mealTime") && <PlanMeal recipe={{ ...applySwaps(recipe), cookLog: recipe.cookLog }} recipeId={recipe.id} />}
                   {feature("weekPlanner") && <AddToWeek recipeId={recipe.id} />}
+                  {feature("thaw") && <ThawNote key={`thaw-${viewKey}`} recipe={applySwaps(recipe)} saved={recipe} scale={loadProgress(recipe.id).scale} />}
                   {feature("freezeHalf") && <FreezeHalf key={viewKey} recipeId={recipe.id} onChange={() => setViewKey((k) => k + 1)} />}
                 </>
               }
