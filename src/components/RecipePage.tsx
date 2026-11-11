@@ -204,7 +204,7 @@ export default function RecipePage({ id }: { id: string }) {
     const result = link
       ? await shareText(
           recipe.title,
-          `${recipe.title}${activeSwaps(recipe).size ? " (my version, with substitutions)" : ""}\nOpen the recipe in Recipe Builder:`,
+          `${recipe.title}${activeSwaps(recipe).size ? " (my version, with substitutions)" : ""}\nOpen the recipe in Cardamix:`,
           link,
         )
       : await shareText(recipe.title, recipeToText(applySwaps(recipe), loadProgress(recipe.id).scale));

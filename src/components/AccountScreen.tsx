@@ -23,7 +23,7 @@ export default function AccountScreen({ cloud }: { cloud: CloudState }) {
   if (!cloud.authKnown) {
     return (
       <main className="page account-screen" aria-busy="true">
-        <h1 className="page-title">Recipe Builder</h1>
+        <h1 className="page-title">Cardamix</h1>
         <p className="muted">Loading…</p>
       </main>
     );
@@ -44,7 +44,7 @@ export default function AccountScreen({ cloud }: { cloud: CloudState }) {
 
   return (
     <main className="page account-screen">
-      <h1 className="page-title">Recipe Builder</h1>
+      <h1 className="page-title">Cardamix</h1>
       <p>Your recipe cards, cleaned up and ready to cook — backed up and on all your devices.</p>
       {localCount > 0 && mode === "create" && (
         <div className="callout small">

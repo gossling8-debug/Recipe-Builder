@@ -41,10 +41,10 @@ export async function importBackup(file: File): Promise<number> {
   try {
     data = JSON.parse(await file.text());
   } catch {
-    throw new Error("That file isn't a Recipe Builder backup.");
+    throw new Error("That file isn't a Cardamix backup.");
   }
   const parsed = BackupSchema.safeParse(data);
-  if (!parsed.success) throw new Error("That file isn't a Recipe Builder backup (or it's damaged).");
+  if (!parsed.success) throw new Error("That file isn't a Cardamix backup (or it's damaged).");
   for (const r of parsed.data.recipes) {
     const recipe: SavedRecipe = {
       ...sanitizeRecipe({ ...r, tags: r.tags ?? [] }),

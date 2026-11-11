@@ -154,7 +154,7 @@ const icsText = (s: string) => s.replace(/\\/g, "\\\\").replace(/([,;])/g, "\\$1
 
 /** One calendar file with an alert at each "move it to the fridge" time. */
 export function thawIcs(list: ThawReminder[], link: (r: ThawReminder) => string, now = Date.now()): string {
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Recipe Builder//EN", "CALSCALE:GREGORIAN"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cardamix//EN", "CALSCALE:GREGORIAN"];
   for (const r of list) {
     const meal = new Date(r.mealAt).toLocaleDateString([], { weekday: "long" });
     lines.push(

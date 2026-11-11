@@ -107,8 +107,8 @@ export async function enableBiometric(): Promise<void> {
   try {
     cred = await navigator.credentials.create({
       publicKey: {
-        rp: { name: "Recipe Builder" },
-        user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "Recipe Builder app lock", displayName: "Recipe Builder app lock" },
+        rp: { name: "Cardamix" },
+        user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "Cardamix app lock", displayName: "Cardamix app lock" },
         challenge: crypto.getRandomValues(new Uint8Array(32)),
         pubKeyCredParams: [
           { type: "public-key", alg: -7 },

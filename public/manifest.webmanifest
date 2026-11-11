@@ -1,6 +1,6 @@
 {
-  "name": "Recipe Builder",
-  "short_name": "Recipes",
+  "name": "Cardamix",
+  "short_name": "Cardamix",
   "description": "Scan recipe cards into easy-to-follow recipes with amounts shown in every step.",
   "start_url": "./",
   "scope": "./",
