@@ -14,7 +14,7 @@ export default function PrivacyPage() {
         <p className="muted small">Last updated {PRIVACY_UPDATED}</p>
 
         <p>
-          Recipe Builder is built to keep your recipes yours. There are no ads, no tracking or analytics, and your information is never
+          Cardamix is built to keep your recipes yours. There are no ads, no tracking or analytics, and your information is never
           sold or shared for marketing. This page explains what is stored, where, and who can see it.
         </p>
 
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
 
         <h3>Your account and cloud backup</h3>
         <p>
-          Recipe Builder needs an account, so your recipes are never only on one phone. Your email address and account are handled by
+          Cardamix needs an account, so your recipes are never only on one phone. Your email address and account are handled by
           Google Firebase Authentication. Passwords are
           stored by Google in scrambled (hashed) form; neither the app nor its developer can see them. Your recipes, photos, lists and
           settings — everything except your Anthropic API key — are copied to Google Cloud Firestore so they can sync between your
@@ -87,7 +87,7 @@ export default function PrivacyPage() {
         </ul>
 
         <h3>Children</h3>
-        <p>Recipe Builder is not directed at children under 13, and cloud accounts are not meant for them.</p>
+        <p>Cardamix is not directed at children under 13, and cloud accounts are not meant for them.</p>
 
         <h3>Changes and contact</h3>
         <p>

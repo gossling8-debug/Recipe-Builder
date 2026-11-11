@@ -161,7 +161,7 @@ export function reminderIcs(p: Plan, link: string): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Recipe Builder//EN",
+    "PRODID:-//Cardamix//EN",
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:${p.recipeId}-${p.eatAt}@recipe-builder`,

@@ -52,7 +52,7 @@ function NeedsSignIn({ s }: { s: CloudState }) {
 async function invite(book: Cookbook, toast: (m: string) => void) {
   const r = await shareText(
     `Join “${book.name}”`,
-    `Join our family cookbook “${book.name}” in Recipe Builder. Open this link (you'll need a free account):`,
+    `Join our family cookbook “${book.name}” in Cardamix. Open this link (you'll need a free account):`,
     inviteLink(book),
   );
   if (r === "copied") toast("Invite link copied — paste it in a message");

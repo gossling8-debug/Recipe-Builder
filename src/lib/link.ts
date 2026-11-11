@@ -57,7 +57,7 @@ const SharedSchema = RecipeSchema.extend({ tags: z.array(z.string()).optional() 
 
 export async function decodeRecipe(data: string): Promise<ScannedRecipe> {
   if (!data || data.length > MAX_LINK_DATA) throw new Error("This link is damaged or too long.");
-  if (data[0] !== "z" && data[0] !== "j") throw new Error("This link isn't a Recipe Builder recipe.");
+  if (data[0] !== "z" && data[0] !== "j") throw new Error("This link isn't a Cardamix recipe.");
   let json: unknown;
   try {
     let bytes = fromBase64Url(data.slice(1));

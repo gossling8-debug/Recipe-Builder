@@ -40,7 +40,7 @@ export default function Welcome({ onDone }: { onDone: () => void }) {
 
       {current === "people" && (
         <>
-          <h1 className="page-title">Welcome to Recipe Builder</h1>
+          <h1 className="page-title">Welcome to Cardamix</h1>
           <p>Snap a photo of any recipe card, cookbook page or screenshot, and it becomes a clean recipe you can cook from, scale and shop for.</p>
           <h3>How many people do you usually cook for?</h3>
           <div className="people-row">

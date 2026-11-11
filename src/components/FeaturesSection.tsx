@@ -22,7 +22,7 @@ export default function FeaturesSection() {
       </p>
 
       <div className={plus ? "callout small plan-card-plus" : "callout small"}>
-        <strong>{plus ? "Recipe Builder Plus" : "Free plan"}</strong>
+        <strong>{plus ? "Cardamix Plus" : "Free plan"}</strong>
         {previewPlus() ? (
           <> — previewing every Plus feature for free while payments aren't set up yet.</>
         ) : (
