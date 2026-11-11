@@ -1,4 +1,5 @@
 import TipsPage from "./components/TipsPage";
+import PrivacyPage from "./components/PrivacyPage";
 import { useEffect, useState } from "react";
 import { applyTextSize, getTextSize } from "./lib/textSize";
 import { useRoute } from "./lib/route";
@@ -38,6 +39,8 @@ function Screen() {
       return <JoinPage id={route.id} />;
     case "tips":
       return <TipsPage />;
+    case "privacy":
+      return <PrivacyPage />;
     case "tonight":
       return <TonightPage />;
     case "budget":

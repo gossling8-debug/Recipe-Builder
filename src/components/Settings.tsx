@@ -292,6 +292,10 @@ export default function Settings() {
           />
           {message && <div className="callout">{message}</div>}
         </section>
+
+        <p className="small settings-footer">
+          <a href={href({ name: "privacy" })}>Privacy policy</a>
+        </p>
       </main>
     </>
   );

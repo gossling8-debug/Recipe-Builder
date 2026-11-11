@@ -12,6 +12,7 @@ export type Route =
   | { name: "budget" }
   | { name: "receipt" }
   | { name: "history" }
+  | { name: "privacy" }
   | { name: "print"; id: string }
   | { name: "meal"; day?: string; ids?: string[] }
   | { name: "family"; book?: string; recipe?: string }
@@ -31,6 +32,7 @@ export function parseRoute(hash: string): Route {
   if (path === "budget") return { name: "budget" };
   if (path === "receipt") return { name: "receipt" };
   if (path === "history") return { name: "history" };
+  if (path === "privacy") return { name: "privacy" };
   const fam = path.match(/^family(?:\/([^/]+))?(?:\/([^/]+))?$/);
   if (fam) return { name: "family", book: fam[1] && decodeURIComponent(fam[1]), recipe: fam[2] && decodeURIComponent(fam[2]) };
   const pr = path.match(/^print\/(.+)$/);
