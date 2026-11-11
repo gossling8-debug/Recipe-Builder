@@ -851,3 +851,11 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 /* Settings: AI setup tucked away */
 .advanced { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 14px; }
 .advanced > summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+
+/* Account screen */
+.account-screen { max-width: 440px; margin: 0 auto; padding-top: 48px; }
+.account-tabs { margin: 18px 0 12px; display: flex; }
+.account-tabs .chip { flex: 1; }
+.password-row { display: flex; align-items: center; gap: 6px; }
+.password-row .text-input { flex: 1; }
+.account-fine-print { margin-top: 18px; }

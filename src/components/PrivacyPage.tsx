@@ -38,9 +38,10 @@ export default function PrivacyPage() {
           and its terms for API customers. Nothing is sent to Anthropic unless you start one of these features.
         </p>
 
-        <h3>Cloud backup (optional)</h3>
+        <h3>Your account and cloud backup</h3>
         <p>
-          If you sign in to cloud backup, your email address and account are handled by Google Firebase Authentication. Passwords are
+          Recipe Builder needs an account, so your recipes are never only on one phone. Your email address and account are handled by
+          Google Firebase Authentication. Passwords are
           stored by Google in scrambled (hashed) form; neither the app nor its developer can see them. Your recipes, photos, lists and
           settings — everything except your Anthropic API key — are copied to Google Cloud Firestore so they can sync between your
           devices. Data is encrypted in transit and at rest by Google.
@@ -76,11 +77,12 @@ export default function PrivacyPage() {
         <h3>Deleting your data</h3>
         <ul>
           <li>
-            <strong>Cloud:</strong> Settings → Cloud backup &amp; sync → <em>Delete my account</em> permanently removes your account and
-            everything backed up with it, including recipes you shared to cookbooks.
+            <strong>Everything:</strong> Settings → Account → <em>Delete my account</em> permanently removes your account and everything
+            backed up with it, including recipes you shared to cookbooks, and clears this phone.
           </li>
           <li>
-            <strong>This phone:</strong> delete recipes in the app, or clear this site's data in your browser settings.
+            <strong>Signing out</strong> keeps your data in your account and on this phone. If someone else signs in on the same phone,
+            the app shows their data instead; yours stays in your account.
           </li>
         </ul>
 

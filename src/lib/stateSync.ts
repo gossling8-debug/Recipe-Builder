@@ -12,7 +12,7 @@ const PREFIX = "recipe-builder.";
 const SYNCED = new Set([
   "week", "plans", "units", "textSize", "staples", "shopping", "receipts", "prices", "spendingFrom", "budget",
   "pantry", "leftovers", "people", "avoid", "featuresOff", "previewPlus", "plan", "model", "usage", "waitForTap",
-  "thaw.notFrozen", "thaw.done",
+  "thaw.notFrozen", "thaw.done", "welcomeDone",
 ]);
 const SYNCED_PREFIXES = ["progress."];
 const META_KEY = PREFIX + "syncMeta";
@@ -129,6 +129,9 @@ export function applyRemote(name: string, e: Entry): void {
 export function forgetSyncedAccount(): void {
   writeMeta({ times: readMeta().times });
 }
+
+/** The account this phone's data belongs to (the last one that synced here), if any. */
+export const lastAccount = () => readMeta().uid;
 
 export const isFirstSync = (uid: string) => readMeta().uid !== uid;
 export function markSynced(uid: string): void {

@@ -1,6 +1,8 @@
 import TipsPage from "./components/TipsPage";
 import PrivacyPage from "./components/PrivacyPage";
 import LockScreen from "./components/LockScreen";
+import AccountScreen from "./components/AccountScreen";
+import { cloudState, subscribeCloud } from "./lib/cloud";
 import { loadLock, shouldRelock } from "./lib/appLock";
 import { useEffect, useState } from "react";
 import { applyTextSize, getTextSize } from "./lib/textSize";
@@ -79,6 +81,10 @@ export default function App() {
   const route = useRoute();
   const [synced, setSynced] = useState(0);
   const [locked, setLocked] = useState(() => !!loadLock());
+  const [cloud, setCloud] = useState(cloudState());
+  useEffect(() => subscribeCloud(setCloud), []);
+  // An account is required (when the cloud is set up). The privacy policy is readable without one.
+  const needsAccount = cloud.status !== "off" && !cloud.uid && route.name !== "privacy";
   // Lock again after time away. With "Immediately", lock as the app is hidden so the app switcher shows the lock.
   useEffect(() => {
     let hiddenAt: number | null = null;
@@ -105,9 +111,15 @@ export default function App() {
   return (
     <>
       {locked && <LockScreen onUnlock={() => setLocked(false)} />}
-      <PlanWatcher />
-      <Screen key={RELOAD_ON_SYNC.has(route.name) ? synced : -1} />
-      {!NO_TAB_BAR.has(route.name) && <TabBar current={route.name} />}
+      {needsAccount ? (
+        <AccountScreen cloud={cloud} />
+      ) : (
+        <>
+          <PlanWatcher />
+          <Screen key={RELOAD_ON_SYNC.has(route.name) ? synced : -1} />
+          {!NO_TAB_BAR.has(route.name) && <TabBar current={route.name} />}
+        </>
+      )}
     </>
   );
 }
