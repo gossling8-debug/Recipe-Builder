@@ -46,7 +46,8 @@ export default function CloudSection() {
       <section>
         <h3>Cloud backup &amp; sync</h3>
         <p className="muted small">
-          Sign in to back up your recipes, lists and settings and use them on any device. Free. Your Anthropic key is never uploaded.
+          Sign in to back up your recipes, lists and settings and use them on any device. Free. Your Anthropic key is never uploaded.{" "}
+          <a href={href({ name: "privacy" })}>How your data is handled</a>
         </p>
         <form
           className="cloud-form"
