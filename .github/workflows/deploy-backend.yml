@@ -51,5 +51,7 @@ jobs:
           done
       - name: Deploy
         run: npx --yes $FIREBASE_TOOLS deploy --only functions,firestore:rules --project "$PROJECT" --non-interactive --force
+      - name: Remove old secret versions (keeps Secret Manager free)
+        run: npx --yes $FIREBASE_TOOLS functions:secrets:prune --project "$PROJECT" --non-interactive --force
       - if: always()
         run: rm -f "$RUNNER_TEMP/sa.json"
