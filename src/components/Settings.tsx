@@ -174,7 +174,7 @@ export default function Settings() {
           <h3>Backup</h3>
           <p className="muted small">
             {signedIn
-              ? "Everything is backed up to the cloud while you're signed in. A backup file is an extra copy of your recipes that you keep yourself."
+              ? "Everything is backed up to your account automatically. A backup file is an extra copy of your recipes that you keep yourself."
               : "Recipes are saved on this phone. Clearing this site's data in your browser settings (or deleting the app) erases them, so sign in to cloud backup above or export a backup now and then."}
             {persisted === true && " This browser has agreed not to clear them on its own to free up space."}
           </p>

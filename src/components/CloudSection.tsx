@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { href } from "../lib/route";
-import { deleteAccount } from "../lib/account";
-import { cloudState, createAccount, resetPassword, signIn, signOut, subscribeCloud, syncNow, type CloudState } from "../lib/cloud";
+import { deleteAccount, signOutAndClear } from "../lib/account";
+import { cloudState, subscribeCloud, syncNow, type CloudState } from "../lib/cloud";
 
 const ago = (ms?: number) => {
   if (!ms) return "";
@@ -9,10 +9,9 @@ const ago = (ms?: number) => {
   return s < 60 ? "just now" : s < 3600 ? `${Math.round(s / 60)} min ago` : new Date(ms).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
 };
 
-/** Settings: sign in to back up and sync recipes across devices. */
+/** Settings: the account, its backup status, sign out and delete. */
 export default function CloudSection() {
   const [s, setS] = useState<CloudState>(cloudState());
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -41,55 +40,11 @@ export default function CloudSection() {
     );
   }
 
-  if (s.status === "signed-out") {
-    return (
-      <section>
-        <h3>Cloud backup &amp; sync</h3>
-        <p className="muted small">
-          Sign in to back up your recipes, lists and settings and use them on any device. Free. Your Anthropic key is never uploaded.{" "}
-          <a href={href({ name: "privacy" })}>How your data is handled</a>
-        </p>
-        <form
-          className="cloud-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void run(() => signIn(email, password));
-          }}
-        >
-          <input className="text-input" type="email" autoComplete="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input
-            className="text-input"
-            type="password"
-            autoComplete="current-password"
-            placeholder="Password (6+ characters)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <div className="button-row">
-            <button type="submit" className="btn primary" disabled={busy || !email || !password}>
-              Sign in
-            </button>
-            <button type="button" className="btn" disabled={busy || !email || !password} onClick={() => run(() => createAccount(email, password))}>
-              Create account
-            </button>
-          </div>
-          <button
-            type="button"
-            className="link-btn small"
-            disabled={busy || !email}
-            onClick={() => run(() => resetPassword(email), "Check your email for a link to reset your password.")}
-          >
-            Forgot password?
-          </button>
-        </form>
-        {message && <div className="callout small">{message}</div>}
-      </section>
-    );
-  }
+  if (!s.uid) return null; // the account screen handles signing in
 
   return (
     <section>
-      <h3>Cloud backup &amp; sync</h3>
+      <h3>Account</h3>
       <p>
         Signed in as <strong>{s.email}</strong>
       </p>
@@ -102,11 +57,21 @@ export default function CloudSection() {
         <button className="btn" disabled={busy || s.status === "syncing"} onClick={() => run(syncNow)}>
           Sync now
         </button>
-        <button className="btn" disabled={busy} onClick={() => run(signOut)}>
+        <button
+          className="btn"
+          disabled={busy}
+          onClick={() => {
+            if (!confirm("Sign out? Everything stays in your account; this phone's copy is removed until you sign in again.")) return;
+            void run(async () => {
+              if ((await signOutAndClear()) !== "unsynced") return;
+              if (confirm("Your latest changes couldn't be backed up (are you offline?). Sign out anyway and lose them?")) await signOutAndClear(true);
+            });
+          }}
+        >
           Sign out
         </button>
       </div>
-      <p className="muted small">Backed up: recipes, photos, pantry, shopping list, week plan, prices and budget, and settings (except your Anthropic key). Signing out keeps everything on this phone and in the cloud.</p>
+      <p className="muted small">Backed up: recipes, photos, pantry, shopping list, week plan, prices and budget, and settings (except your Anthropic key). Signing out removes this phone's copy; it all comes back when you sign in.</p>
       <p>
         <a href={href({ name: "family" })}>Family cookbooks</a>
         <span className="muted small"> — share chosen recipes with family or friends</span>
@@ -123,16 +88,14 @@ export default function CloudSection() {
             e.preventDefault();
             if (!confirm("Delete your account and everything backed up in the cloud? This can't be undone.")) return;
             void run(async () => {
-              await deleteAccount(password);
-              setDeleting(false);
-              setPassword("");
-            }, "Your account and its cloud data are deleted. Your recipes and lists are still on this phone.");
+              await deleteAccount(password); // reloads the app when done
+            });
           }}
         >
           <p className="small">
             This deletes your account and everything backed up with it: recipes, photos, lists and settings, cookbooks you
-            made, and recipes you shared with others. <strong>What's on this phone stays.</strong> Export a backup first if
-            you want a copy.
+            made, and recipes you shared with others — and clears this phone. <strong>Export a backup first</strong> (below)
+            if you want a copy.
           </p>
           <input
             className="text-input"

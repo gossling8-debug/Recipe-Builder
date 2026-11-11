@@ -18,7 +18,6 @@ import { cloudState, subscribeCloud } from "../lib/cloud";
 import { eatByLabel, leftoverPast, useLeftovers } from "../lib/leftovers";
 import { aYearAgo } from "../lib/history";
 import Header from "./Header";
-import BackupNudge from "./BackupNudge";
 import Welcome from "./Welcome";
 import { welcomeDone } from "../lib/welcome";
 import Icon from "./Icon";
@@ -41,6 +40,13 @@ export default function Library() {
   useEffect(() => subscribeCloud(setCloud), []);
   const familyOn = cloud.status !== "off" && cloud.status !== "signed-out";
   const [showWelcome, setShowWelcome] = useState(() => !welcomeDone());
+  // A new phone downloads its recipes on the first sync — only then do we know the box is really empty.
+  const [syncedOnce, setSyncedOnce] = useState(false);
+  useEffect(() => {
+    if (!cloud.lastSync || syncedOnce) return;
+    listRecipes().then((rs) => (setRecipes(rs), setSyncedOnce(true)), () => setSyncedOnce(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloud.lastSync]);
   // Re-render every 30 s so "start by … in 20 min" stays current.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -143,7 +149,7 @@ export default function Library() {
   );
 
   // First open on a phone with no recipes (and nobody signed in): quick setup.
-  if (showWelcome && recipes && recipes.length === 0 && (cloud.status === "off" || (cloud.authKnown && cloud.status === "signed-out")))
+  if (showWelcome && !welcomeDone() && recipes && recipes.length === 0 && (cloud.status === "off" || syncedOnce))
     return <Welcome onDone={() => setShowWelcome(false)} />;
 
   return (
@@ -276,7 +282,6 @@ export default function Library() {
             <a href={href({ name: "settings" })}>Open Settings</a>
           </div>
         )}
-        {recipes && <BackupNudge recipes={recipes} cloud={cloud} />}
         {error && <div className="callout error">{error}</div>}
         {mode === "memory" && <div className="callout error">{STORAGE_MODE_TEXT.memory}</div>}
         {mode === "local" && <div className="callout warn small">{STORAGE_MODE_TEXT.local}</div>}

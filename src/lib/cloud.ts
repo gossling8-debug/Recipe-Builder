@@ -65,6 +65,10 @@ export function fb(): Promise<Fb> {
     }
     return { app, auth, db, a, f };
   })();
+  // A failed load (e.g. offline on first open) can be tried again later.
+  fbPromise.catch(() => {
+    fbPromise = null;
+  });
   return fbPromise;
 }
 
@@ -86,7 +90,16 @@ let stateTimer = 0;
 export async function startCloud(): Promise<void> {
   if (!firebaseConfig || started) return;
   started = true;
-  const { auth, a } = await fb();
+  let loaded: Fb;
+  try {
+    loaded = await fb();
+  } catch {
+    started = false; // try again on the next sign-in attempt or when back online
+    set({ status: "signed-out", authKnown: true, message: "Couldn't reach the cloud. Check your internet connection." });
+    window.addEventListener("online", () => void startCloud(), { once: true });
+    return;
+  }
+  const { auth, a } = loaded;
   a.onAuthStateChanged(auth, (u) => {
     if (u) {
       set({ status: "syncing", email: u.email ?? undefined, uid: u.uid, message: undefined, authKnown: true });

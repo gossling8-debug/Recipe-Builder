@@ -127,7 +127,7 @@ function Forgot({ onBack, onUnlock }: { onBack: () => void; onUnlock: () => void
               }
             }}
           >
-            <p className="small">Enter your cloud backup password ({cloud.email}). This turns the app lock off; you can set a new passcode in Settings.</p>
+            <p className="small">Enter your account password ({cloud.email}). This turns the app lock off; you can set a new passcode in Settings.</p>
             <input className="text-input" type="password" autoComplete="current-password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
             <div className="button-row">
               <button type="submit" className="btn primary" disabled={busy || !password}>

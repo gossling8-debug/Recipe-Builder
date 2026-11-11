@@ -1,12 +1,49 @@
 import { fb, pauseSync, user } from "./cloud";
 import { myCookbooks, type Cookbook } from "./family";
 import { forgetSyncedAccount } from "./stateSync";
+import { cloudState, syncNow } from "./cloud";
+import { eraseThisPhone } from "./appLock";
+
+const NOTE_KEY = "recipe-builder.accountNote";
+/** A message for the sign-in screen after the page reloads (e.g. "Your account is deleted."). */
+export function takeAccountNote(): string {
+  try {
+    const n = sessionStorage.getItem(NOTE_KEY) ?? "";
+    sessionStorage.removeItem(NOTE_KEY);
+    return n;
+  } catch {
+    return "";
+  }
+}
+function leaveNote(n: string) {
+  try {
+    sessionStorage.setItem(NOTE_KEY, n);
+  } catch {
+    /* ignore */
+  }
+}
 
 /**
- * "Delete my account": removes the cloud account and everything stored with
- * it — backed-up recipes, photos, lists and settings, cookbooks this person
- * owns, and recipes they shared into other people's cookbooks. What's on this
- * phone stays (it's theirs; Settings → Export backup still works).
+ * Signs out and clears this phone, so the next person to sign in here never
+ * gets this account's recipes. Backs up first; returns "unsynced" (and does
+ * nothing) if the latest changes couldn't be uploaded, unless forced.
+ */
+export async function signOutAndClear(force = false): Promise<"unsynced" | void> {
+  await syncNow();
+  if (!force && cloudState().status !== "synced") return "unsynced";
+  const { auth, a } = await fb();
+  pauseSync(true);
+  await a.signOut(auth);
+  await eraseThisPhone();
+  leaveNote("You're signed out. Your recipes are safe in your account.");
+  location.replace(location.pathname); // back to the start, without the current screen's address
+}
+
+/**
+ * "Delete my account": removes the account and everything stored with it —
+ * backed-up recipes, photos, lists and settings, cookbooks this person owns,
+ * and recipes they shared into other people's cookbooks — then clears this
+ * phone too. (Settings → Export backup first keeps a copy.)
  *
  * Firebase asks for the password again before deleting an account.
  */
@@ -70,12 +107,11 @@ export async function deleteAccount(password: string): Promise<void> {
 
     await a.deleteUser(u);
     forgetSyncedAccount();
-    try {
-      localStorage.removeItem("recipe-builder.cloud.deletes");
-    } catch {
-      /* ignore */
-    }
-  } finally {
+    await eraseThisPhone();
+  } catch (e) {
     pauseSync(false);
+    throw e;
   }
+  leaveNote("Your account and all its data are deleted.");
+  location.replace(location.pathname); // back to the start, without the current screen's address
 }

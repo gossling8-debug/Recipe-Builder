@@ -177,7 +177,9 @@ export function saveTries(t: { wrong: number; until: number }): void {
 /** Forgot the passcode with no cloud account: start this phone over. */
 export async function eraseThisPhone(): Promise<void> {
   try {
-    for (const k of Object.keys(localStorage)) if (k.startsWith("recipe-builder.")) localStorage.removeItem(k);
+    // Twice: removing synced items notes the removal in the sync bookkeeping, which the second pass clears.
+    for (let pass = 0; pass < 2; pass++)
+      for (const k of Object.keys(localStorage)) if (k.startsWith("recipe-builder.")) localStorage.removeItem(k);
   } catch {
     /* ignore */
   }

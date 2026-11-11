@@ -59,12 +59,6 @@ export default function Welcome({ onDone }: { onDone: () => void }) {
               Next
             </button>
           </div>
-          <p className="small">
-            Already use Recipe Builder on another device?{" "}
-            <a href={href({ name: "settings" })} onClick={() => finishWelcome()}>
-              Sign in to cloud backup
-            </a>
-          </p>
         </>
       )}
 
