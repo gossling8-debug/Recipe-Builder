@@ -17,6 +17,11 @@ const PROJECT: FirebaseOptions = {
   appId: "1:902652553131:web:9c474941b8223123e854ee",
 };
 
+/** The AI relay (Cloud Function "ai"): AI requests go here with the app's own Anthropic key. */
+export const AI_URL = import.meta.env.VITE_FIREBASE_EMULATOR
+  ? "http://127.0.0.1:5001/demo-recipe-builder/us-central1/ai"
+  : "https://us-central1-recipe-relief.cloudfunctions.net/ai";
+
 export const firebaseConfig: FirebaseOptions | null = import.meta.env.VITE_FIREBASE_EMULATOR
   ? { apiKey: "demo-key", authDomain: "demo-recipe-builder.firebaseapp.com", projectId: "demo-recipe-builder", appId: "demo" }
   : PROJECT;

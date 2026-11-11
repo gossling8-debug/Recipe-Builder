@@ -1,7 +1,7 @@
 import Header from "./Header";
 import { href } from "../lib/route";
 
-export const PRIVACY_UPDATED = "November 11, 2026";
+export const PRIVACY_UPDATED = "November 12, 2026";
 const CONTACT = "https://github.com/gossling8-debug/Recipe-Builder/issues";
 
 /** Plain-language privacy policy. Keep it in step with what the app actually does. */
@@ -29,9 +29,11 @@ export default function PrivacyPage() {
         <h3>When you use AI features</h3>
         <p>
           Reading a recipe card, importing a web page or pasted text, nutrition estimates, substitutes, receipt import and “Cook with what
-          I have” send what's needed for that task to Anthropic's Claude service, using your own API key. That can include photos,
-          screenshots or video frames you choose, recipe text, a web address, pantry items and foods you avoid. Anthropic handles this
-          under{" "}
+          I have” send what's needed for that task to Anthropic's Claude service. That can include photos, screenshots or video frames you
+          choose, recipe text, a web address, pantry items and foods you avoid. It passes through Cardamix's server, which checks that
+          you're signed in and records how much AI you've used this month (amounts only, not what you sent); the content isn't stored
+          there. If you add your own Anthropic API key, requests go straight from your device to Anthropic instead. Anthropic handles
+          this under{" "}
           <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noreferrer">
             its own privacy policy
           </a>{" "}
@@ -50,6 +52,17 @@ export default function PrivacyPage() {
           Database rules allow only your signed-in account to read or change your data. As the operator of the service, the app's
           developer can technically view stored data in the Firebase console, and will only do so if needed to fix a problem you report
           or if required by law. Data is not end-to-end encrypted.
+        </p>
+
+        <h3>Payments</h3>
+        <p>
+          Cardamix Plus is paid through Stripe. Your card details go directly to Stripe and are never seen or stored by Cardamix. Cardamix
+          keeps only your Stripe customer number and whether your subscription is active, so it knows to unlock Plus. Stripe handles
+          payment information under{" "}
+          <a href="https://stripe.com/privacy" target="_blank" rel="noreferrer">
+            its own privacy policy
+          </a>
+          .
         </p>
 
         <h3>Family cookbooks</h3>

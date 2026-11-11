@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { avoidKey, ALLERGEN_GROUPS, findAvoided, isActive, loadAvoid } from "../lib/avoid";
-import { getApiKey } from "../lib/settings";
+import { getApiKey, aiReady } from "../lib/settings";
 import { href } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
 import { activeSwaps, ingredientsKey, shortName, type Swap } from "../lib/swaps";
@@ -38,7 +38,7 @@ export default function Substitutes({ recipe, onSaved }: { recipe: SavedRecipe; 
 
   const saved = recipe.substitutions;
   const current = saved && saved.avoidKey === avoidKey(avoid) && saved.ingredientsKey === ingredientsKey(recipe);
-  const hasKey = !!getApiKey();
+  const hasKey = aiReady();
 
   async function ask() {
     setBusy(true);
@@ -146,7 +146,7 @@ export default function Substitutes({ recipe, onSaved }: { recipe: SavedRecipe; 
             {!saved && (
               <p className="muted small">
                 Get swaps chosen for how {flagged.length === 1 ? "this ingredient is" : "these ingredients are"} used in this
-                recipe, with an honest note on how close each one comes. Uses Claude (about 1–3 cents); the answer is saved
+                recipe, with an honest note on how close each one comes. Uses a little of your monthly AI; the answer is saved
                 with the recipe.
               </p>
             )}

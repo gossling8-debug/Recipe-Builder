@@ -60,7 +60,21 @@ export function getModel(): ModelOption {
   } catch {
     /* blocked */
   }
-  return MODELS.find((m) => m.id === id) ?? MODELS[0];
+  const chosen = MODELS.find((m) => m.id === id);
+  // The app pays for Balanced and Budget; Best needs your own key.
+  const allowed = availableModels();
+  return chosen && allowed.includes(chosen) ? chosen : (allowed.find((m) => m.id === "claude-sonnet-5-5") ?? allowed[0]);
+}
+
+/** Models you can pick: all of them with your own key, otherwise the ones the app pays for. */
+export function availableModels(): ModelOption[] {
+  let own = false;
+  try {
+    own = !!localStorage.getItem("recipe-builder.apiKey");
+  } catch {
+    /* blocked */
+  }
+  return own ? MODELS : MODELS.filter((m) => m.id !== "claude-opus-5-5");
 }
 
 export function setModel(id: string): void {

@@ -10,6 +10,8 @@ describe("routes", () => {
     { name: "receipt" },
     { name: "history" },
     { name: "privacy" },
+    { name: "plus" },
+    { name: "plus", done: true },
     { name: "family" },
     { name: "family", book: "abc123" },
     { name: "family", book: "abc123", recipe: "uid_r1" },

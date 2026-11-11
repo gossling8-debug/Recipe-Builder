@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { FEATURES, hasPlus, locked, previewPlus, setPreviewPlus, setSwitchedOn, switchedOn, type Feature } from "../lib/features";
+import { FEATURES, hasPlus, locked, setSwitchedOn, switchedOn, type Feature } from "../lib/features";
+import { href } from "../lib/route";
 
 const GROUPS: Feature["group"][] = ["Cooking", "Planning", "Shopping & pantry", "Health", "Extras"];
 
@@ -23,15 +24,8 @@ export default function FeaturesSection() {
 
       <div className={plus ? "callout small plan-card-plus" : "callout small"}>
         <strong>{plus ? "Cardamix Plus" : "Free plan"}</strong>
-        {previewPlus() ? (
-          <> — previewing every Plus feature for free while payments aren't set up yet.</>
-        ) : (
-          <> — features marked Plus are locked. Plus is coming soon.</>
-        )}
-        <label className="toggle-row preview-row">
-          <span>Preview Plus (testing)</span>
-          <input type="checkbox" role="switch" checked={previewPlus()} onChange={(e) => setPreviewPlus(e.target.checked)} />
-        </label>
+        {plus ? <> — every feature is included. </> : <> — features marked Plus are locked. </>}
+        <a href={href({ name: "plus" })}>{plus ? "Your subscription" : "See Plus"}</a>
       </div>
 
       {GROUPS.map((g) => (
@@ -48,7 +42,7 @@ export default function FeaturesSection() {
                         {f.name}
                         {f.plan === "plus" && <span className="plus-badge">Plus</span>}
                       </span>
-                      <span className="muted small feature-what">{isLocked ? "Comes with Plus." : f.what}</span>
+                      <span className="muted small feature-what">{isLocked ? <>Comes with <a href={href({ name: "plus" })}>Plus</a>.</> : f.what}</span>
                     </span>
                     <input
                       type="checkbox"

@@ -7,7 +7,7 @@ import { loadPantry, recordPurchase, setItem } from "../lib/pantry";
 import { addPrice, deletePrice, dollars, parsePrice } from "../lib/prices";
 import { alreadyImported, receiptId, receiptTime, rememberImported, type Receipt } from "../lib/receipt";
 import { href, navigate } from "../lib/route";
-import { getApiKey } from "../lib/settings";
+import { getApiKey, aiReady } from "../lib/settings";
 import { loadShopping, nameKey, saveShopping, type ShoppingItem } from "../lib/shopping";
 import { shoppingItems } from "../lib/shoppingItems";
 import type { SavedRecipe } from "../lib/schema";
@@ -39,7 +39,7 @@ export default function ReceiptPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [recipes, setRecipes] = useState<SavedRecipe[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
-  const hasKey = !!getApiKey();
+  const hasKey = aiReady();
 
   useEffect(() => {
     listRecipes().then(setRecipes, () => {});
@@ -224,8 +224,7 @@ export default function ReceiptPage() {
                   </button>
                 </div>
                 <p className="muted small">
-                  {images.length} {images.length === 1 ? "picture" : "pictures"} to read. Uses Claude — a few cents for a short receipt, up to about 20¢
-                  for a long order.
+                  {images.length} {images.length === 1 ? "picture" : "pictures"} to read. Uses some of your monthly AI — more for a long order.
                 </p>
               </>
             )}

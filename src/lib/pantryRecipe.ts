@@ -75,7 +75,7 @@ export interface PantryRecipeResult {
 }
 
 export async function cookWithWhatIHave(apiKey: string, input: PantryPromptInput): Promise<PantryRecipeResult> {
-  const client = makeClient(apiKey);
+  const client = await makeClient(apiKey);
   const m = getModel();
   let response;
   try {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Icon from "./Icon";
 import { ALLERGEN_GROUPS, isActive, loadAvoid } from "../lib/avoid";
-import { getApiKey } from "../lib/settings";
+import { getApiKey, aiReady } from "../lib/settings";
 import { href } from "../lib/route";
 import { activeSwaps, ingredientsKey, type Swap } from "../lib/swaps";
 import { caloriesWithSwaps, type Nutrition } from "../lib/nutrition";
@@ -23,7 +23,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
   const saved = recipe.nutrition;
   const current = saved && saved.ingredientsKey === ingredientsKey(recipe);
   const swaps = activeSwaps(recipe);
-  const hasKey = !!getApiKey();
+  const hasKey = aiReady();
   const [units] = useUnits();
 
   const swapFor = (h: Healthier): Swap => ({ name: h.short_name, amount: h.amount, closeness: "Healthier", original: recipe.ingredients[h.ingredient_index].name });
@@ -99,7 +99,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
               <button className="link-btn small" onClick={ask} disabled={busy}>
                 {busy ? "Working… (about 15–30 seconds)" : "Add the serving size"}
               </button>{" "}
-              <span className="muted">(reads it from your card — a few cents)</span>
+              <span className="muted">(reads it from your card)</span>
             </p>
           )}
           {n.serving_size && (
@@ -196,8 +196,8 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
           <>
             {!n && (
               <p className="muted small">
-                See calories, protein, carbs, fat and sodium per serving, plus a few honest swaps to make it lighter. Uses Claude
-                (a few cents); the answer is saved with the recipe.
+                See calories, protein, carbs, fat and sodium per serving, plus a few honest swaps to make it lighter. Uses a
+                little of your monthly AI; the answer is saved with the recipe.
               </p>
             )}
             <button className="btn" onClick={ask} disabled={busy}>

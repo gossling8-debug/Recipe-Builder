@@ -1,10 +1,10 @@
+import { myPlan } from "./subscription";
 /**
  * Features the cook can switch on or off (to keep the app uncluttered), and
  * which plan each belongs to. A feature shows only when it's switched on AND
  * the plan includes it. Switching off only hides things — nothing is deleted.
  *
- * Payments aren't set up yet, so "Preview Plus" (on by default) unlocks Plus
- * features for now. At launch, that becomes the real Upgrade.
+ * Plus comes from the server (Stripe or a complimentary account), see subscription.ts.
  */
 export type Plan = "free" | "plus";
 
@@ -62,10 +62,7 @@ export const FEATURES: Feature[] = [
 ];
 
 const OFF_KEY = "recipe-builder.featuresOff";
-const PLAN_KEY = "recipe-builder.plan";
-const PREVIEW_KEY = "recipe-builder.previewPlus";
 let offMemory: string[] = [];
-let previewMemory = true;
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -84,15 +81,9 @@ function write(key: string, value: unknown) {
   if (typeof window !== "undefined") window.dispatchEvent(new Event("features-changed"));
 }
 
-/** The paid plan, once payments exist. Until then only "free" is ever stored. */
-export const plan = (): Plan => read<Plan>(PLAN_KEY, "free");
-/** Testing switch: unlock Plus features before payments exist. On by default so nothing disappears. */
-export const previewPlus = (): boolean => read<boolean>(PREVIEW_KEY, previewMemory);
-export function setPreviewPlus(on: boolean): void {
-  previewMemory = on;
-  write(PREVIEW_KEY, on);
-}
-export const hasPlus = () => plan() === "plus" || previewPlus();
+/** Your plan, as last confirmed by the server. */
+export const plan = (): Plan => myPlan().plan;
+export const hasPlus = () => plan() === "plus";
 
 const offList = (): string[] => read<string[]>(OFF_KEY, offMemory);
 /** The cook's own on/off switch (regardless of plan). */

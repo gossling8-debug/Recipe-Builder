@@ -45,7 +45,7 @@ You are given the names on the cook's shopping list. Set "matches" to one of tho
 If something is unreadable, give your best reading and add a short warning.`;
 
 export async function readReceipt(apiKey: string, images: string[], knownNames: string[]): Promise<Receipt> {
-  const client = makeClient(apiKey);
+  const client = await makeClient(apiKey);
   const m = getModel();
   const content = [
     ...images.flatMap((p) => {

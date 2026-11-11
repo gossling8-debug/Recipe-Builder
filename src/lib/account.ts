@@ -81,6 +81,10 @@ export async function deleteAccount(password: string): Promise<void> {
 
   pauseSync(true);
   try {
+    // Stop any subscription first — if that fails, nothing is deleted.
+    const { closeMyAccount } = await import("./subscription");
+    await closeMyAccount();
+
     // Family cookbooks
     const books: Cookbook[] = await myCookbooks();
     for (const book of books) {

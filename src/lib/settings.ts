@@ -1,4 +1,11 @@
+import { firebaseConfig } from "./firebaseConfig";
+
 const KEY = "recipe-builder.apiKey";
+
+/** AI works for everyone through the app's server; your own key (advanced) is optional. */
+export const aiReady = () => !!firebaseConfig || !!getApiKey();
+/** Using your own Anthropic key instead of the app's AI allowance. */
+export const ownKey = () => !!getApiKey();
 
 // If the browser blocks storage, the key is kept in memory for this session only.
 let sessionKey = "";

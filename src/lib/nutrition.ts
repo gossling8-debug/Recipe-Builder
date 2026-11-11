@@ -66,7 +66,7 @@ Then suggest a few healthier swaps that keep the dish recognisably itself. Be ca
  * didn't copy them into the text.
  */
 export async function estimateNutrition(apiKey: string, recipe: ScannedRecipe, avoidLabels: string[], photos: string[] = []): Promise<Nutrition> {
-  const client = makeClient(apiKey);
+  const client = await makeClient(apiKey);
   const m = getModel();
   const list = recipe.ingredients.map((ing, i) => `[${i}] ${[ing.quantity, ing.unit, ing.name, ing.preparation].filter(Boolean).join(" ")}`);
   const prompt = [

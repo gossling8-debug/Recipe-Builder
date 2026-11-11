@@ -23,7 +23,7 @@ import { welcomeDone } from "../lib/welcome";
 import Icon from "./Icon";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 import { href } from "../lib/route";
-import { getApiKey } from "../lib/settings";
+import { aiReady } from "../lib/settings";
 import type { SavedRecipe } from "../lib/schema";
 
 export default function Library() {
@@ -276,7 +276,7 @@ export default function Library() {
               </span>
             </a>
           ))}
-        {!getApiKey() && !error && (
+        {!aiReady() && !error && (
           <div className="callout">
             <strong>Welcome!</strong> To scan cards, add your Anthropic API key first.{" "}
             <a href={href({ name: "settings" })}>Open Settings</a>
