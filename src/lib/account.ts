@@ -10,6 +10,21 @@ import { forgetSyncedAccount } from "./stateSync";
  *
  * Firebase asks for the password again before deleting an account.
  */
+/** Checks the cloud account's password (used to reset a forgotten app passcode). */
+export async function verifyPassword(password: string): Promise<void> {
+  const u = await user();
+  if (!u || !u.email) throw new Error("You're not signed in.");
+  const { a } = await fb();
+  try {
+    await a.reauthenticateWithCredential(u, a.EmailAuthProvider.credential(u.email, password));
+  } catch (e) {
+    const code = (e as { code?: string })?.code ?? "";
+    if (code === "auth/too-many-requests") throw new Error("Too many tries. Wait a few minutes and try again.");
+    if (code === "auth/network-request-failed") throw new Error("Couldn't reach the cloud. Check your internet connection.");
+    throw new Error("That password is wrong.");
+  }
+}
+
 export async function deleteAccount(password: string): Promise<void> {
   const u = await user();
   if (!u || !u.email) throw new Error("You're not signed in.");

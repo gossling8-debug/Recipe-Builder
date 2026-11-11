@@ -826,3 +826,28 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .privacy ul { padding-left: 20px; }
 .privacy li { margin: 6px 0; }
 .settings-footer { margin: 28px 0 8px; text-align: center; }
+
+/* App lock */
+.lock-screen {
+  position: fixed; inset: 0; z-index: 1000; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+}
+.lock-inner { width: 100%; max-width: 320px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.lock-inner h2 { font-family: var(--serif); font-size: 26px; margin: 0; }
+.lock-forgot { align-items: stretch; text-align: left; }
+.lock-dots { display: flex; gap: 14px; min-height: 16px; }
+.lock-dots .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--text); }
+.lock-dots .dot.on { background: var(--text); }
+.lock-msg { min-height: 20px; margin: 0; color: var(--error); font-size: 14px; }
+.keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 16px 24px; justify-content: center; }
+.key {
+  width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface);
+  color: var(--text); font: inherit; font-size: 28px; cursor: pointer;
+}
+.key:disabled { opacity: 0.4; }
+.key-text { font-size: 15px; border-color: transparent; background: transparent; }
+.lock-after-label { margin: 12px 0 6px; }
+
+/* Settings: AI setup tucked away */
+.advanced { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 14px; }
+.advanced > summary { cursor: pointer; font-weight: 600; padding: 6px 0; }

@@ -1,5 +1,7 @@
 import TipsPage from "./components/TipsPage";
 import PrivacyPage from "./components/PrivacyPage";
+import LockScreen from "./components/LockScreen";
+import { loadLock, shouldRelock } from "./lib/appLock";
 import { useEffect, useState } from "react";
 import { applyTextSize, getTextSize } from "./lib/textSize";
 import { useRoute } from "./lib/route";
@@ -76,6 +78,20 @@ const RELOAD_ON_SYNC = new Set(["library", "settings", "tips", "tonight", "budge
 export default function App() {
   const route = useRoute();
   const [synced, setSynced] = useState(0);
+  const [locked, setLocked] = useState(() => !!loadLock());
+  // Lock again after time away. With "Immediately", lock as the app is hidden so the app switcher shows the lock.
+  useEffect(() => {
+    let hiddenAt: number | null = null;
+    const on = () => {
+      const lock = loadLock();
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+        if (lock && lock.after === 0) setLocked(true);
+      } else if (shouldRelock(lock, hiddenAt, Date.now())) setLocked(true);
+    };
+    document.addEventListener("visibilitychange", on);
+    return () => document.removeEventListener("visibilitychange", on);
+  }, []);
   useEffect(() => {
     requestPersistentStorage().catch(() => {});
     startCloud().catch(() => {});
@@ -88,6 +104,7 @@ export default function App() {
   }, []);
   return (
     <>
+      {locked && <LockScreen onUnlock={() => setLocked(false)} />}
       <PlanWatcher />
       <Screen key={RELOAD_ON_SYNC.has(route.name) ? synced : -1} />
       {!NO_TAB_BAR.has(route.name) && <TabBar current={route.name} />}
