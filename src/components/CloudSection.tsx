@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { href } from "../lib/route";
+import { deleteAccount } from "../lib/account";
 import { cloudState, createAccount, resetPassword, signIn, signOut, subscribeCloud, syncNow, type CloudState } from "../lib/cloud";
 
 const ago = (ms?: number) => {
@@ -15,6 +16,7 @@ export default function CloudSection() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => subscribeCloud(setS), []);
 
@@ -109,6 +111,46 @@ export default function CloudSection() {
         <span className="muted small"> — share chosen recipes with family or friends</span>
       </p>
       {message && <div className="callout small">{message}</div>}
+      {!deleting ? (
+        <button className="link-btn small" onClick={() => (setDeleting(true), setPassword(""), setMessage(""))}>
+          Delete my account
+        </button>
+      ) : (
+        <form
+          className="cloud-form delete-account"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!confirm("Delete your account and everything backed up in the cloud? This can't be undone.")) return;
+            void run(async () => {
+              await deleteAccount(password);
+              setDeleting(false);
+              setPassword("");
+            }, "Your account and its cloud data are deleted. Your recipes and lists are still on this phone.");
+          }}
+        >
+          <p className="small">
+            This deletes your account and everything backed up with it: recipes, photos, lists and settings, cookbooks you
+            made, and recipes you shared with others. <strong>What's on this phone stays.</strong> Export a backup first if
+            you want a copy.
+          </p>
+          <input
+            className="text-input"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Your password, to confirm"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <div className="button-row">
+            <button type="submit" className="btn danger-solid" disabled={busy || !password}>
+              {busy ? "Deleting…" : "Delete account"}
+            </button>
+            <button type="button" className="btn" disabled={busy} onClick={() => (setDeleting(false), setMessage(""))}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
     </section>
   );
 }
