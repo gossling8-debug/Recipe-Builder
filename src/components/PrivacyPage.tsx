@@ -81,7 +81,8 @@ export default function PrivacyPage() {
             backed up with it, including recipes you shared to cookbooks, and clears this phone.
           </li>
           <li>
-            <strong>This phone only:</strong> signing out removes this phone's copy; it stays in your account.
+            <strong>Signing out</strong> keeps your data in your account and on this phone. If someone else signs in on the same phone,
+            the app shows their data instead; yours stays in your account.
           </li>
         </ul>
 

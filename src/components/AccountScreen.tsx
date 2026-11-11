@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { takeAccountNote } from "../lib/account";
 import { createAccount, resetPassword, signIn, startCloud, type CloudState } from "../lib/cloud";
 import { listRecipes } from "../lib/db";
+import { lastAccount } from "../lib/stateSync";
 import { href } from "../lib/route";
 
 /** Everyone has an account: shown until someone signs in (or while we find out). */
@@ -15,7 +16,8 @@ export default function AccountScreen({ cloud }: { cloud: CloudState }) {
   const [localCount, setLocalCount] = useState(0);
 
   useEffect(() => {
-    listRecipes().then((rs) => setLocalCount(rs.length), () => {});
+    // Only recipes that don't belong to an account yet move into a new one.
+    if (!lastAccount()) listRecipes().then((rs) => setLocalCount(rs.length), () => {});
   }, []);
 
   if (!cloud.authKnown) {

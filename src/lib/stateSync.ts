@@ -130,6 +130,9 @@ export function forgetSyncedAccount(): void {
   writeMeta({ times: readMeta().times });
 }
 
+/** The account this phone's data belongs to (the last one that synced here), if any. */
+export const lastAccount = () => readMeta().uid;
+
 export const isFirstSync = (uid: string) => readMeta().uid !== uid;
 export function markSynced(uid: string): void {
   const m = readMeta();

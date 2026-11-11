@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { href } from "../lib/route";
-import { deleteAccount, signOutAndClear } from "../lib/account";
+import { deleteAccount, signOutHere } from "../lib/account";
 import { cloudState, subscribeCloud, syncNow, type CloudState } from "../lib/cloud";
 
 const ago = (ms?: number) => {
@@ -60,18 +60,12 @@ export default function CloudSection() {
         <button
           className="btn"
           disabled={busy}
-          onClick={() => {
-            if (!confirm("Sign out? Everything stays in your account; this phone's copy is removed until you sign in again.")) return;
-            void run(async () => {
-              if ((await signOutAndClear()) !== "unsynced") return;
-              if (confirm("Your latest changes couldn't be backed up (are you offline?). Sign out anyway and lose them?")) await signOutAndClear(true);
-            });
-          }}
+          onClick={() => void run(signOutHere)}
         >
           Sign out
         </button>
       </div>
-      <p className="muted small">Backed up: recipes, photos, pantry, shopping list, week plan, prices and budget, and settings (except your Anthropic key). Signing out removes this phone's copy; it all comes back when you sign in.</p>
+      <p className="muted small">Backed up: recipes, photos, pantry, shopping list, week plan, prices and budget, and settings (except your Anthropic key). Signing out keeps everything in your account and on this phone.</p>
       <p>
         <a href={href({ name: "family" })}>Family cookbooks</a>
         <span className="muted small"> — share chosen recipes with family or friends</span>

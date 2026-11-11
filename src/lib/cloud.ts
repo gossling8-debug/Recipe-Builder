@@ -4,7 +4,8 @@ import type { Firestore } from "firebase/firestore";
 import { firebaseConfig } from "./firebaseConfig";
 import { deleteRecipeFromCloud, listRecipes, onRecipeChange, saveRecipeFromCloud } from "./db";
 import type { SavedRecipe } from "./schema";
-import { announceChanges, applyRemote, isFirstSync, localEntries, markSynced, plan, trackLocalChanges, type Entry } from "./stateSync";
+import { announceChanges, applyRemote, isFirstSync, lastAccount, localEntries, markSynced, plan, trackLocalChanges, type Entry } from "./stateSync";
+import { eraseThisPhone } from "./appLock";
 
 /**
  * Cloud backup & sync (Firebase, free plan).
@@ -100,10 +101,17 @@ export async function startCloud(): Promise<void> {
     return;
   }
   const { auth, a } = loaded;
-  a.onAuthStateChanged(auth, (u) => {
+  a.onAuthStateChanged(auth, async (u) => {
     if (u) {
       set({ status: "syncing", email: u.email ?? undefined, uid: u.uid, message: undefined, authKnown: true });
-      void syncNow();
+      const previous = lastAccount();
+      if (previous && previous !== u.uid) {
+        // This phone holds another account's data: show this account's instead.
+        // Nothing is deleted from either account — the other person's data stays in theirs.
+        await eraseThisPhone(DEVICE_KEYS);
+        await syncNow();
+        announceChanges();
+      } else void syncNow();
     } else set({ status: "signed-out", email: undefined, uid: undefined, lastSync: undefined, authKnown: true });
   });
 
@@ -159,6 +167,9 @@ export async function startCloud(): Promise<void> {
   });
   window.addEventListener("online", () => auth.currentUser && void syncNow());
 }
+
+/** Belong to the phone, not an account: kept when a different account signs in here. */
+const DEVICE_KEYS = ["recipe-builder.lock", "recipe-builder.lockTries", "recipe-builder.textSize"];
 
 // ---------- account ----------
 function friendly(err: unknown): string {

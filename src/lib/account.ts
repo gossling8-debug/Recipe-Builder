@@ -24,19 +24,21 @@ function leaveNote(n: string) {
 }
 
 /**
- * Signs out and clears this phone, so the next person to sign in here never
- * gets this account's recipes. Backs up first; returns "unsynced" (and does
- * nothing) if the latest changes couldn't be uploaded, unless forced.
+ * Signs out. Nothing is cleared: the data waits on this phone (behind the
+ * sign-in screen) for this account. If a different account signs in here
+ * instead, the phone switches to that account's data (see startCloud).
  */
-export async function signOutAndClear(force = false): Promise<"unsynced" | void> {
-  await syncNow();
-  if (!force && cloudState().status !== "synced") return "unsynced";
+export async function signOutHere(): Promise<void> {
+  await syncNow().catch(() => {});
+  const unsynced = cloudState().status !== "synced";
   const { auth, a } = await fb();
-  pauseSync(true);
+  leaveNote(
+    unsynced
+      ? "You're signed out. Some recent changes haven't uploaded yet — they will when you sign in again on this phone."
+      : "You're signed out. Everything is saved in your account.",
+  );
   await a.signOut(auth);
-  await eraseThisPhone();
-  leaveNote("You're signed out. Your recipes are safe in your account.");
-  location.replace(location.pathname); // back to the start, without the current screen's address
+  if (location.hash) location.hash = "";
 }
 
 /**
