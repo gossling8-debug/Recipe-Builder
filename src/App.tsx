@@ -1,6 +1,7 @@
 import TipsPage from "./components/TipsPage";
 import PrivacyPage from "./components/PrivacyPage";
 import PlusPage from "./components/PlusPage";
+import DuplicatesPage from "./components/DuplicatesPage";
 import LockScreen from "./components/LockScreen";
 import AccountScreen from "./components/AccountScreen";
 import { cloudState, subscribeCloud } from "./lib/cloud";
@@ -46,6 +47,8 @@ function Screen() {
       return <TipsPage />;
     case "privacy":
       return <PrivacyPage />;
+    case "duplicates":
+      return <DuplicatesPage />;
     case "plus":
       return <PlusPage key={String(route.done)} done={route.done} />;
     case "tonight":

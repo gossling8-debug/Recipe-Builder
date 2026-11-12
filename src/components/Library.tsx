@@ -2,7 +2,7 @@ import { useThawReminders } from "./ThawList";
 import { dueNow, whenText } from "../lib/thaw";
 import type { Route } from "../lib/route";
 import { feature } from "../lib/features";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { saveRecipe } from "../lib/db";
 import { loadShopping } from "../lib/shopping";
 import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
@@ -19,6 +19,7 @@ import { eatByLabel, leftoverPast, useLeftovers } from "../lib/leftovers";
 import { aYearAgo } from "../lib/history";
 import Header from "./Header";
 import RecipeActions, { HoldLink } from "./RecipeActions";
+import { duplicatePairs, notDuplicates } from "../lib/duplicates";
 import { useToast } from "./Toast";
 import { deleteRecipe } from "../lib/db";
 import { addToShopping, removeFromShopping } from "../lib/shopping";
@@ -62,6 +63,19 @@ export default function Library() {
     remember(kind, value);
     (kind === "filter" ? setFilter : setSort)(value);
   };
+
+  // Recipes that look like they were saved twice.
+  const [dupIgnored, setDupIgnored] = useState(notDuplicates);
+  useEffect(() => {
+    const on = () => setDupIgnored(notDuplicates());
+    window.addEventListener("duplicates-changed", on);
+    window.addEventListener("state-synced", on);
+    return () => {
+      window.removeEventListener("duplicates-changed", on);
+      window.removeEventListener("state-synced", on);
+    };
+  }, []);
+  const dupCount = useMemo(() => (recipes ? duplicatePairs(recipes, dupIgnored).length : 0), [recipes, dupIgnored]);
 
   // Press-and-hold menu, and "Deleted · Undo".
   const [menuFor, setMenuFor] = useState<SavedRecipe | null>(null);
@@ -388,6 +402,17 @@ export default function Library() {
         )}
         {rest.length > 0 && <ul className="recipe-list">{rest.map(row)}</ul>}
         {all.length > 0 && shown.length === 0 && <p className="muted">No matches.</p>}
+        {dupCount > 0 && (
+          <a className="plan-strip dup-strip" href={href({ name: "duplicates" })}>
+            <Icon name="warning" size={18} />
+            <span>
+              <strong>
+                {dupCount} possible {dupCount === 1 ? "duplicate" : "duplicates"}
+              </strong>
+              <span className="muted small"> · Review</span>
+            </span>
+          </a>
+        )}
         {holdTip && all.length > 0 && (
           <p className="muted small hold-tip">
             Tip: press and hold a recipe for more options, like delete or share.{" "}

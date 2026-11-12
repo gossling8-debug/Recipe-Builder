@@ -4,7 +4,8 @@ import Icon from "./Icon";
 import RecipeView from "./RecipeView";
 import { useToast } from "./Toast";
 import { cloudState, subscribeCloud, type CloudState } from "../lib/cloud";
-import { newId, saveRecipe } from "../lib/db";
+import { listRecipes, newId, saveRecipe } from "../lib/db";
+import { duplicatesOf } from "../lib/duplicates";
 import {
   bookRecipes,
   createCookbook,
@@ -157,6 +158,14 @@ export function BookPage({ id }: { id: string }) {
 
   const myUid = book && s.uid;
   const owner = !!book && book.owner === s.uid;
+  // Duplicates inside the cookbook, and ones already in your own recipes.
+  const [mine, setMine] = useState<SavedRecipe[]>([]);
+  useEffect(() => {
+    listRecipes().then(setMine, () => {});
+  }, []);
+  const asComparable = (r: SharedRecipe) => ({ ...r.recipe, id: r.id });
+  const twinsInBook = (r: SharedRecipe) => duplicatesOf(asComparable(r), (recipes ?? []).filter((x) => x.id !== r.id).map(asComparable));
+  const inMine = (r: SharedRecipe) => r.sharedBy === s.uid || duplicatesOf({ ...r.recipe }, mine).length > 0;
 
   async function leave() {
     if (!book) return;
@@ -211,6 +220,10 @@ export function BookPage({ id }: { id: string }) {
                       <div>
                         <div className="recipe-card-title">{r.recipe.title}</div>
                         <div className="muted small">Shared by {r.sharedBy === myUid ? "you" : r.sharedByName}</div>
+                        {twinsInBook(r).length > 0 && (
+                          <div className="small dup-flag">Possible duplicate of “{twinsInBook(r)[0].recipe.title}”</div>
+                        )}
+                        {r.sharedBy !== myUid && inMine(r) && <div className="muted small">✓ Already in your recipes</div>}
                       </div>
                     </a>
                   </li>
@@ -240,6 +253,11 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
   const [saving, setSaving] = useState(false);
   const on = signedIn(s);
   useState(() => clearProgress(PREVIEW_ID));
+  const [haveIt, setHaveIt] = useState<SavedRecipe | null>(null);
+  useEffect(() => {
+    if (!item) return;
+    listRecipes().then((all) => setHaveIt(duplicatesOf({ ...item.recipe }, all)[0]?.recipe ?? null), () => {});
+  }, [item]);
 
   useEffect(() => {
     if (!on) return;
@@ -282,6 +300,11 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
             <p className="muted small shared-note">
               Shared by {item.sharedBy === s.uid ? "you" : item.sharedByName}. Save it to cook from it, check things off and make it your own.
             </p>
+            {haveIt && item.sharedBy !== s.uid && (
+              <div className="callout small">
+                You already have this in your recipes: <a href={href({ name: "recipe", id: haveIt.id })}>“{haveIt.title}”</a>.
+              </div>
+            )}
             <RecipeView recipe={item.recipe} recipeId={PREVIEW_ID} preview />
             {canRemove && (
               <div className="button-row">
@@ -295,7 +318,7 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
       {item && item.sharedBy !== s.uid && (
         <div className="fab-bar">
           <button className="btn primary big" onClick={save} disabled={saving}>
-            {saving ? "Saving…" : "Save to my recipes"}
+            {saving ? "Saving…" : haveIt ? "Save another copy" : "Save to my recipes"}
           </button>
         </div>
       )}
@@ -439,6 +462,10 @@ export function ShareToFamily({ recipe }: { recipe: SavedRecipe }) {
               className="btn"
               disabled={!!busy}
               onClick={() => run(b.id, async () => {
+                // Someone may have shared the same recipe already.
+                const there = (await bookRecipes(b.id)).filter((x) => x.sharedBy !== s.uid);
+                const twin = duplicatesOf(recipe, there.map((x) => ({ ...x.recipe, id: x.id, sharedByName: x.sharedByName })))[0]?.recipe;
+                if (twin && !confirm(`“${twin.title}” (shared by ${twin.sharedByName}) looks like the same recipe. Share yours to ${b.name} anyway?`)) return;
                 await shareToCookbook(b, recipe, applySwaps(recipe));
                 setShared((x) => ({ ...x, [b.id]: Date.now() }));
               })}

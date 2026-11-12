@@ -888,3 +888,10 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .undo-toast { display: flex; align-items: center; gap: 14px; }
 .undo-toast .link-btn { color: inherit; font-weight: 600; padding: 0; }
 .hold-tip { margin-top: 10px; }
+
+/* Duplicates */
+.duplicate-note { margin-bottom: 12px; }
+.dup-list { list-style: none; padding: 0; margin: 0; }
+.dup-pair { padding: 12px 0 16px; border-bottom: 1px solid var(--line); }
+.dup-card { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; margin: 6px 0; border: 1px solid var(--line); border-radius: 10px; color: var(--text); text-decoration: none; background: var(--surface); }
+.dup-flag { color: var(--warn-text, #9a5b13); }

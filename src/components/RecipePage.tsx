@@ -21,6 +21,7 @@ import { activeSwaps, applySwaps } from "../lib/swaps";
 import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
 import { deleteRecipe, getRecipe, listRecipes, newId, saveRecipe } from "../lib/db";
 import { family, makeVariant } from "../lib/variants";
+import { duplicatesOf, markNotDuplicates, notDuplicates } from "../lib/duplicates";
 import { href, navigate } from "../lib/route";
 import { recipeToText, shareText } from "../lib/share";
 import { recipeLink } from "../lib/link";
@@ -110,9 +111,16 @@ export default function RecipePage({ id }: { id: string }) {
   const [toast, showToast] = useToast();
   // The original and its versions ("my version"), for the line under the title.
   const [versions, setVersions] = useState<SavedRecipe[]>([]);
+  // Another saved recipe that looks like this one.
+  const [twins, setTwins] = useState<{ recipe: SavedRecipe; reason: string }[]>([]);
+  const [dupTick, setDupTick] = useState(0);
   useEffect(() => {
-    if (recipe) listRecipes().then((all) => setVersions(family(recipe, all)), () => {});
-  }, [recipe]);
+    if (!recipe) return;
+    listRecipes().then((all) => {
+      setVersions(family(recipe, all));
+      setTwins(duplicatesOf(recipe, all, notDuplicates()));
+    }, () => {});
+  }, [recipe, dupTick]);
 
   async function copyRecipe() {
     if (!recipe) return;
@@ -263,6 +271,27 @@ export default function RecipePage({ id }: { id: string }) {
               window.scrollTo(0, 0);
             }}
           />
+        )}
+        {recipe && !editing && twins.length > 0 && (
+          <div className="callout small duplicate-note">
+            <strong>Possible duplicate</strong> of{" "}
+            {twins.map((t, i) => (
+              <span key={t.recipe.id}>
+                {i > 0 && ", "}
+                <a href={href({ name: "recipe", id: t.recipe.id })}>“{t.recipe.title}”</a>
+              </span>
+            ))}{" "}
+            <span className="muted">({twins[0].reason})</span>.{" "}
+            <button
+              className="link-btn small"
+              onClick={() => {
+                twins.forEach((t) => markNotDuplicates(recipe.id, t.recipe.id));
+                setDupTick((n) => n + 1);
+              }}
+            >
+              Not a duplicate
+            </button>
+          </div>
         )}
         {recipe && !editing && (
           <>
