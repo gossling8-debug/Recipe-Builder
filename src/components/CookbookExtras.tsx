@@ -14,53 +14,57 @@ async function fitForBook(url: string): Promise<string> {
   return smaller;
 }
 
-function PhotoPicker({ photo, onChange, label }: { photo: string | null; onChange: (p: string | null) => void; label: string }) {
-  const input = useRef<HTMLInputElement>(null);
+/** Two ways in: "Scan a page" (find edges, crop, straighten) or "Add a photo" (as it is). */
+function PhotoPicker({ photo, onChange, scanLabel, photoLabel }: { photo: string | null; onChange: (p: string | null) => void; scanLabel: string; photoLabel: string }) {
+  const scanInput = useRef<HTMLInputElement>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [cropping, setCropping] = useState<CropSource | null>(null);
+  const take = (scan: boolean) => async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setError("");
+    setBusy(true);
+    try {
+      if (scan) setCropping(await prepareCrop(file));
+      else onChange(await fitForBook(await compressPhoto(file, 1100, 0.72)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+    setBusy(false);
+  };
   return (
     <div className="photo-picker">
       {photo && <img src={photo} alt="" />}
       <div className="button-row">
-        <button type="button" className="btn" onClick={() => input.current?.click()}>
-          <Icon name="image" size={18} /> {photo ? "Change photo" : label}
+        <button type="button" className="btn" disabled={busy} onClick={() => scanInput.current?.click()}>
+          <Icon name="camera" size={18} /> {scanLabel}
         </button>
-        {photo && (
-          <button type="button" className="link-btn small" onClick={() => onChange(null)}>
-            Remove photo
-          </button>
-        )}
+        <button type="button" className="btn" disabled={busy} onClick={() => photoInput.current?.click()}>
+          <Icon name="image" size={18} /> {photoLabel}
+        </button>
       </div>
-      <input
-        ref={input}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          e.target.value = "";
-          if (!file) return;
-          setError("");
-          try {
-            // Like scanning a recipe card: find the page's edges, adjust, straighten.
-            setCropping(await prepareCrop(file));
-          } catch (err) {
-            setError(err instanceof Error ? err.message : String(err));
-          }
-        }}
-      />
+      {photo && (
+        <button type="button" className="link-btn small" onClick={() => onChange(null)}>
+          Remove photo
+        </button>
+      )}
+      <input ref={scanInput} type="file" accept="image/*" hidden data-testid="scan-page-input" onChange={take(true)} />
+      <input ref={photoInput} type="file" accept="image/*" hidden data-testid="add-photo-input" onChange={take(false)} />
+      {busy && !cropping && <p className="muted small">Working on the photo…</p>}
       {cropping && (
         <CropEditor
           source={cropping}
           maxEdge={1100}
           quality={0.72}
-          wholeIfNotFound
-          cancelLabel="Don't use this photo"
+          cancelLabel="Don't use this scan"
           onCancel={() => setCropping(null)}
-          onDone={async (photo) => {
+          onDone={async (scanned) => {
             setCropping(null);
             try {
-              onChange(await fitForBook(photo));
+              onChange(await fitForBook(scanned));
             } catch (err) {
               setError(err instanceof Error ? err.message : String(err));
             }
@@ -86,7 +90,12 @@ export function CookbookCover({ book, isOwner }: { book: Cookbook; isOwner: bool
     return (
       <section className="book-cover editing">
         <h3>Cover page</h3>
-        <PhotoPicker photo={editing.photo} onChange={(photo) => setEditing({ ...editing, photo })} label="Add a cover photo" />
+        <PhotoPicker
+          photo={editing.photo}
+          onChange={(photo) => setEditing({ ...editing, photo })}
+          scanLabel={editing.photo ? "Scan a new page" : "Scan our cover page"}
+          photoLabel={editing.photo ? "Use a different photo" : "Add a cover photo"}
+        />
         {editing.photo && (
           <label className="check-line cover-photo-only">
             <input type="checkbox" checked={!!editing.photoOnly} onChange={(e) => setEditing({ ...editing, photoOnly: e.target.checked })} />
@@ -252,7 +261,7 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
       </ul>
       {adding ? (
         <div className="memory-form">
-          <PhotoPicker photo={photo} onChange={setPhoto} label="Add a photo — of a moment, or of a written page" />
+          <PhotoPicker photo={photo} onChange={setPhoto} scanLabel={photo ? "Scan a new page" : "Scan a written page"} photoLabel={photo ? "Use a different photo" : "Add a photo"} />
           {photo && aiReady() && (
             <button type="button" className="link-btn small" disabled={reading} onClick={typeItOut}>
               {reading ? "Reading the page…" : "Type out the writing in this photo"}
