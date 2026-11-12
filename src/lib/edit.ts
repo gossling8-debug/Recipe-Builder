@@ -1,5 +1,5 @@
 import type { Ingredient, Segment, Step } from "./schema";
-import { splitAmount } from "./quantity";
+import { fixPlurals, parseNumber, scaleAmount, splitAmount } from "./quantity";
 
 /**
  * Steps are edited as plain text, with ingredients in square brackets and the
@@ -83,4 +83,44 @@ export function fieldsToIngredient(amount: string, name: string, section: string
     preparation: comma >= 0 ? name.slice(comma + 1).trim() || null : null,
     section,
   };
+}
+
+// ---------- keeping step amounts in step with the ingredient list ----------
+const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+const unitWord = (u: string) => norm(u).replace(/\.$/, "").replace(/(es|s)$/, "");
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * The amount a step should show after an ingredient's amount changed from
+ * `before` to `after` in the list:
+ *  - the whole amount ("1 cup") becomes the new amount;
+ *  - a mention of it ("half of the 1 cup") gets the new amount in place;
+ *  - a portion in the same unit ("1/2 cup" of 1 cup → of 2 cups) is scaled to match;
+ *  - anything else (e.g. "remaining", or a change of unit) is left alone.
+ */
+export function updatedMentionAmount(mentionAmount: string, before: string, after: string): string {
+  const b = norm(before);
+  const a = after.trim();
+  if (!mentionAmount.trim() || !b || !a || b === norm(after)) return mentionAmount;
+  if (norm(mentionAmount) === b) return a;
+  const inside = new RegExp(`(^|[^\\d/.])${escapeRe(b).replace(/ /g, "\\s+")}(?![a-z\\d])`, "i");
+  if (inside.test(mentionAmount)) return mentionAmount.replace(inside, (_m, pre: string) => pre + a);
+  const B = splitAmount(before);
+  const A = splitAmount(after);
+  if (B.quantity && A.quantity && unitWord(B.unit) === unitWord(A.unit)) {
+    const ratio = parseNumber(A.quantity) / parseNumber(B.quantity);
+    if (Number.isFinite(ratio) && ratio > 0 && ratio !== 1) return fixPlurals(scaleAmount(mentionAmount, ratio));
+  }
+  return mentionAmount;
+}
+
+/** Rewrites the steps' [ingredient: amount] tags for ingredient `index` after its amount changed. */
+export function updateStepsForAmount(stepTexts: string[], ingredients: Ingredient[], index: number, before: string, after: string): string[] {
+  return stepTexts.map((t) =>
+    t.replace(MENTION, (whole: string, mention: string, amount: string | undefined) => {
+      if (amount === undefined || !amount.trim() || matchIngredient(mention.trim(), ingredients) !== index) return whole;
+      const next = updatedMentionAmount(amount.trim(), before, after);
+      return next === amount.trim() ? whole : `[${mention.trim()}: ${next}]`;
+    }),
+  );
 }

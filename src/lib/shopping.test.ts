@@ -46,3 +46,18 @@ describe("ingredient names split at a comma", () => {
     expect(ingredientName({ name: "large", preparation: null })).toBe("large");
   });
 });
+
+describe("crossed-off ingredients", () => {
+  it("are left off the shopping list", () => {
+    const r = {
+      id: "x", title: "Chili", createdAt: 0, photos: [], servings: null, time: null, notes: null, tags: [], warnings: [], steps: [],
+      ingredients: [
+        { quantity: "1", unit: "lb", name: "ground beef", preparation: null, section: null },
+        { quantity: "1", unit: "can", name: "beans", preparation: null, section: null },
+        { quantity: "1", unit: "tsp", name: "cumin", preparation: null, section: null },
+      ],
+    };
+    expect(combine([{ recipe: r, scale: 1, skip: [1, 2] }]).map((i) => i.name)).toEqual(["ground beef"]);
+    expect(combine([{ recipe: r, scale: 1 }]).length).toBe(3);
+  });
+});

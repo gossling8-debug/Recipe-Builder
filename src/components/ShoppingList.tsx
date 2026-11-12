@@ -54,11 +54,11 @@ export default function ShoppingList() {
     () =>
       (all ?? []).length
         ? state.recipes
-            .map(({ id, scale }) => {
+            .map(({ id, scale, skip }) => {
               const r = all!.find((x) => x.id === id);
-              return { recipe: r && { ...r, ...applySwaps(r) }, scale };
+              return { recipe: r && { ...r, ...applySwaps(r) }, scale, skip };
             })
-            .filter((e): e is { recipe: SavedRecipe; scale: number } => !!e.recipe)
+            .filter((e): e is { recipe: SavedRecipe; scale: number; skip: number[] | undefined } => !!e.recipe)
         : [],
     [all, state.recipes],
   );

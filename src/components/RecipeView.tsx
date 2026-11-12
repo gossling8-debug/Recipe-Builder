@@ -91,6 +91,8 @@ export default function RecipeView({
   const added = new Set(progress.added);
   const started = have.size + done.size + added.size > 0;
   const [listed, setListed] = useState(() => loadShopping().recipes.find((r) => r.id === recipeId));
+  // Ingredients crossed off in the list ("have it") are left off the shopping list.
+  const crossedOff = [...progress.have].filter((i) => i >= 0 && i < recipe.ingredients.length).sort((a, b) => a - b);
 
   // Group ingredients under their card sub-headings, keeping card order.
   const groups: { section: string | null; items: number[] }[] = [];
@@ -260,6 +262,7 @@ export default function RecipeView({
 
       <section>
         <h3>Ingredients</h3>
+        {!preview && <p className="muted small">Cross off what you already have — it's left off the shopping list.</p>}
         {groups.map((g, gi) => (
           <div key={gi}>
             {g.section && <h4>{g.section}</h4>}
@@ -302,10 +305,11 @@ export default function RecipeView({
 
       {!preview && (
       <div className="list-row">
-        {listed && listed.scale === scale ? (
+        {listed && listed.scale === scale && sameSkip(listed.skip, crossedOff) ? (
           <>
             <span className="small">
               <Icon name="check" size={16} /> On your <a href={href({ name: "shopping" })}>shopping list</a>
+              {crossedOff.length > 0 && <span className="muted"> · {crossedOff.length} crossed-off left off</span>}
             </span>
             <button
               className="link-btn small"
@@ -321,11 +325,13 @@ export default function RecipeView({
           <button
             className="btn"
             onClick={() => {
-              addToShopping(recipeId, scale);
-              setListed({ id: recipeId, scale });
+              addToShopping(recipeId, scale, crossedOff);
+              setListed({ id: recipeId, scale, skip: crossedOff });
             }}
           >
-            <Icon name="bag" size={18} /> {listed ? "Update shopping list to this size" : "Add to shopping list"}
+            <Icon name="bag" size={18} />{" "}
+            {!listed ? "Add to shopping list" : listed.scale !== scale ? "Update shopping list to this size" : "Update shopping list"}
+            {crossedOff.length > 0 && <span className="btn-note"> (without {crossedOff.length} crossed off)</span>}
           </button>
         )}
       </div>
@@ -532,3 +538,5 @@ export function IngredientMention(props: { text: string; amount: string | null; 
     </span>
   );
 }
+
+const sameSkip = (a: number[] | undefined, b: number[]) => (a ?? []).length === b.length && (a ?? []).every((x, i) => x === b[i]);

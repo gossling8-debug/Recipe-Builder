@@ -28,11 +28,11 @@ export function staplesToBuyOrTicked(checked: string[], onListAlready: Set<strin
 /** Everything on the shopping list right now: recipe ingredients plus staples to buy. */
 export function shoppingItems(all: SavedRecipe[], state: ShoppingState): ShoppingItem[] {
   const entries = state.recipes
-    .map(({ id, scale }) => {
+    .map(({ id, scale, skip }) => {
       const r = all.find((x) => x.id === id);
-      return r && { recipe: { ...r, ...applySwaps(r) }, scale };
+      return r && { recipe: { ...r, ...applySwaps(r) }, scale, skip };
     })
-    .filter((e): e is { recipe: SavedRecipe; scale: number } => !!e);
+    .filter((e): e is { recipe: SavedRecipe; scale: number; skip: number[] | undefined } => !!e);
   const recipeItems = combine(entries);
   return [...recipeItems, ...staplesToBuyOrTicked(state.checked, new Set(recipeItems.map((i) => i.key)))];
 }
