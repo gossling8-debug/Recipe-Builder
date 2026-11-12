@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
-import { compressPhoto, stripDataUrl } from "../lib/image";
+import { compressPhoto, prepareCrop, stripDataUrl, type CropSource } from "../lib/image";
+import type { Quad } from "../lib/docscan";
+import CropEditor from "./CropEditor";
 import { newId, saveRecipe, storageErrorMessage } from "../lib/db";
 import TagPicker from "./TagPicker";
 import { cleanTags } from "../lib/schema";
@@ -23,6 +25,10 @@ const MODES: { value: Mode; label: string }[] = [
 export default function Scanner() {
   const [mode, setMode] = useState<Mode>("photo");
   const [photos, setPhotos] = useState<string[]>([]);
+  // Each photo's original and chosen corners, so it can be re-cropped; and photos waiting to be cropped.
+  const [originals, setOriginals] = useState<({ source: CropSource; quad: Quad | null } | null)[]>([]);
+  const [cropQueue, setCropQueue] = useState<{ source: CropSource; quad?: Quad; index?: number }[]>([]);
+  const [preparing, setPreparing] = useState(false);
   // Labels picked before reading; if none, Claude's suggestions are used.
   const [tags, setTags] = useState<string[]>([]);
   const [showTags, setShowTags] = useState(false);
@@ -46,11 +52,35 @@ export default function Scanner() {
   async function addFiles(files: FileList | null) {
     if (!files?.length) return;
     setError("");
+    setPreparing(true);
     try {
-      const added = await Promise.all(Array.from(files).map((f) => compressPhoto(f)));
-      setPhotos((p) => [...p, ...added].slice(0, MAX_PHOTOS));
+      // Find the card in each photo, then show the crop screen for each in turn.
+      const room = MAX_PHOTOS - photos.length;
+      const sources = await Promise.all(Array.from(files).slice(0, Math.max(0, room)).map((f) => prepareCrop(f)));
+      setCropQueue((q) => [...q, ...sources.map((source) => ({ source }))]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      // Fall back to the plain photo if this browser can't crop.
+      try {
+        const added = await Promise.all(Array.from(files).map((f) => compressPhoto(f)));
+        setPhotos((p) => [...p, ...added].slice(0, MAX_PHOTOS));
+        setOriginals((o) => [...o, ...added.map(() => null)].slice(0, MAX_PHOTOS));
+      } catch {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    }
+    setPreparing(false);
+  }
+
+  function cropDone(photo: string, quad: Quad | null) {
+    const job = cropQueue[0];
+    setCropQueue((q) => q.slice(1));
+    if (!job) return;
+    if (job.index !== undefined) {
+      setPhotos((p) => p.map((x, i) => (i === job.index ? photo : x)));
+      setOriginals((o) => o.map((x, i) => (i === job.index ? { source: job.source, quad } : x)));
+    } else {
+      setPhotos((p) => [...p, photo].slice(0, MAX_PHOTOS));
+      setOriginals((o) => [...o, { source: job.source, quad }].slice(0, MAX_PHOTOS));
     }
   }
 
@@ -164,11 +194,21 @@ export default function Scanner() {
                   <ul className="photo-grid">
                     {photos.map((p, i) => (
                       <li key={i}>
-                        <img src={p} alt={`Photo ${i + 1}`} />
+                        <img
+                          src={p}
+                          alt={`Photo ${i + 1}`}
+                          onClick={() => {
+                            const o = originals[i];
+                            if (o) setCropQueue((q) => [...q, { source: o.source, quad: o.quad ?? undefined, index: i }]);
+                          }}
+                        />
                         <button
                           className="remove"
                           aria-label={`Remove photo ${i + 1}`}
-                          onClick={() => setPhotos((all) => all.filter((_, j) => j !== i))}
+                          onClick={() => {
+                            setPhotos((all) => all.filter((_, j) => j !== i));
+                            setOriginals((all) => all.filter((_, j) => j !== i));
+                          }}
                         >
                           <Icon name="close" size={18} />
                         </button>
@@ -176,6 +216,8 @@ export default function Scanner() {
                     ))}
                   </ul>
                 )}
+                {photos.length > 0 && originals.some(Boolean) && <p className="muted small">Tap a photo to adjust its crop.</p>}
+                {preparing && <p className="muted small">Finding the card…</p>}
                 {photos.length < MAX_PHOTOS && (
                   <div className="button-row">
                     <button className="btn" onClick={() => cameraInput.current?.click()}>
@@ -274,6 +316,15 @@ export default function Scanner() {
             Read recipe
           </button>
         </div>
+      )}
+      {cropQueue[0] && (
+        <CropEditor
+          key={cropQueue.length + (cropQueue[0].index ?? -1)}
+          source={cropQueue[0].source}
+          quad={cropQueue[0].quad}
+          onDone={cropDone}
+          onCancel={() => setCropQueue((q) => q.slice(1))}
+        />
       )}
     </>
   );
