@@ -309,7 +309,6 @@ export default function RecipeView({
           <>
             <span className="small">
               <Icon name="check" size={16} /> On your <a href={href({ name: "shopping" })}>shopping list</a>
-              {crossedOff.length > 0 && <span className="muted"> · {crossedOff.length} crossed-off left off</span>}
             </span>
             <button
               className="link-btn small"
@@ -331,7 +330,6 @@ export default function RecipeView({
           >
             <Icon name="bag" size={18} />{" "}
             {!listed ? "Add to shopping list" : listed.scale !== scale ? "Update shopping list to this size" : "Update shopping list"}
-            {crossedOff.length > 0 && <span className="btn-note"> (without {crossedOff.length} crossed off)</span>}
           </button>
         )}
       </div>
