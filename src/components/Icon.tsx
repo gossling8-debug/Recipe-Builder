@@ -1,6 +1,7 @@
 /** Thin line icons (24×24, 1.6 stroke) so the app reads as calm and consistent. */
 const PATHS = {
   back: "M15 18l-6-6 6-6",
+  home: "M4 11l8-6.5 8 6.5 M6 9.5V19.5h4.5v-5h3v5H18V9.5",
   settings: "M4 7h9 M17 7h3 M15 5v4 M4 17h3 M11 17h9 M9 15v4",
   camera:
     "M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z M12 16a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z",

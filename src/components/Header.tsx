@@ -5,6 +5,7 @@ import Icon from "./Icon";
  * back: where the arrow goes. With returnToPrevious, the arrow goes back to the
  * screen you came from inside the app (e.g. the recipe you opened the shopping
  * list from), falling back to `back` when there's nothing to go back to.
+ * Pages deeper than one step from home also get a Home button.
  */
 export default function Header({
   title,
@@ -18,7 +19,7 @@ export default function Header({
   returnToPrevious?: boolean;
 }) {
   return (
-    <header className="topbar">
+    <header className={back && back !== "#/" ? "topbar with-home" : "topbar"}>
       {back ? (
         <a
           className="icon-btn"
@@ -35,6 +36,11 @@ export default function Header({
         </a>
       ) : (
         <span className="icon-btn placeholder" aria-hidden />
+      )}
+      {back && back !== "#/" && (
+        <a className="icon-btn home-btn" href="#/" aria-label="Home">
+          <Icon name="home" />
+        </a>
       )}
       <h1>{title}</h1>
       <div className="topbar-actions">{actions}</div>
