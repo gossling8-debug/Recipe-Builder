@@ -5,7 +5,7 @@ import { costOf, getModel } from "../lib/models";
 import { listRecipes, newId, saveRecipe, storageErrorMessage } from "../lib/db";
 import { loadPantry } from "../lib/pantry";
 import { href, navigate } from "../lib/route";
-import { getApiKey } from "../lib/settings";
+import { getApiKey, aiReady, ownKey } from "../lib/settings";
 import { money } from "../lib/usage";
 import Icon from "./Icon";
 
@@ -58,7 +58,7 @@ export default function CookWithWhatIHave() {
       <p className="muted small">
         Claude creates a brand-new recipe from your pantry, using up what's about to go off first and skipping anything you avoid.
       </p>
-      {!apiKey ? (
+      {!aiReady() ? (
         <p className="small">
           Needs your Anthropic API key. <a href={href({ name: "settings" })}>Add it in Settings</a>
         </p>
@@ -83,7 +83,7 @@ export default function CookWithWhatIHave() {
               <Icon name="bulb" size={20} /> {busy ? "Creating your recipe…" : "Create a recipe"}
             </button>
           </div>
-          <p className="muted small">{busy ? "This takes about half a minute." : `About ${estimate} per recipe. It's saved with your other recipes.`}</p>
+          <p className="muted small">{busy ? "This takes about half a minute." : ownKey() ? `About ${estimate} per recipe. It's saved with your other recipes.` : "Uses a little of your monthly AI. It's saved with your other recipes."}</p>
           {error && <div className="callout error small">{error}</div>}
         </>
       )}

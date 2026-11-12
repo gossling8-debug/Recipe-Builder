@@ -6,7 +6,7 @@ import { newId, saveRecipe, storageErrorMessage } from "../lib/db";
 import TagPicker from "./TagPicker";
 import { cleanTags } from "../lib/schema";
 import { href, navigate } from "../lib/route";
-import { getApiKey } from "../lib/settings";
+import { getApiKey, aiReady } from "../lib/settings";
 import { getModel } from "../lib/models";
 import type { RecipeSource } from "../lib/claude";
 
@@ -106,7 +106,7 @@ export default function Scanner() {
     }
   }
 
-  if (!apiKey) {
+  if (!aiReady()) {
     return (
       <>
         <Header title="Add a recipe" back={href({ name: "library" })} />

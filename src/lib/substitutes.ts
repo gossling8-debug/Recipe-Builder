@@ -58,7 +58,7 @@ export async function suggestSubstitutes(
   flagged: { index: number; ingredient: string; reasons: string[] }[],
   avoidLabels: string[],
 ): Promise<Substitutions> {
-  const client = makeClient(apiKey);
+  const client = await makeClient(apiKey);
   const m = getModel();
   const prompt = [
     `Avoid list: ${avoidLabels.join(", ")}`,

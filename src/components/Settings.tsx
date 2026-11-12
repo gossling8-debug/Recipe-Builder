@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import FeaturesSection from "./FeaturesSection";
-import { feature } from "../lib/features";
+import { feature, hasPlus } from "../lib/features";
 import Header from "./Header";
 import Icon from "./Icon";
 import CloudSection from "./CloudSection";
 import AppLockSection from "./AppLockSection";
 import { cloudState, subscribeCloud } from "../lib/cloud";
 import { applyTextSize, getTextSize, TEXT_SIZES, type TextSize } from "../lib/textSize";
-import { getApiKey, setApiKey } from "../lib/settings";
+import { getApiKey, ownKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
 import { ALLERGEN_GROUPS, loadAvoid, saveAvoid, type AvoidList } from "../lib/avoid";
-import { costOf, getModel, MODELS, setModel } from "../lib/models";
+import { availableModels, costOf, getModel, MODELS, setModel } from "../lib/models";
+import { ALLOWANCE } from "../lib/subscription";
+import AiAllowance from "./AiAllowance";
 import { loadUsage, money } from "../lib/usage";
 import { exportBackup, importBackup } from "../lib/backup";
 import { storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
@@ -204,43 +206,16 @@ export default function Settings() {
           {message && <div className="callout">{message}</div>}
         </section>
 
-        <details className="advanced" open={!getApiKey()}>
-          <summary>AI setup (advanced)</summary>
-          <p className="muted small">
-            Reading recipes, nutrition, receipts and “Cook with what I have” use Claude. For now each person adds their own
-            Anthropic API key here.
-          </p>
-        <section>
-          <h3>Anthropic API key</h3>
-          <p className="muted small">
-            Reading recipes sends the photo, page or text to Claude. Create a key at console.anthropic.com → API Keys.
-            Each request is billed to your Anthropic account (see Recipe reader for typical costs). The key is stored only
-            on this phone.
-          </p>
-          <input
-            className="text-input"
-            type="password"
-            autoComplete="off"
-            placeholder="sk-ant-…"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-          />
-          <div className="button-row">
-            <button className="btn primary" onClick={save}>
-              {saved ? "Saved ✓" : "Save key"}
-            </button>
-          </div>
-          {keyError && <div className="callout warn">{keyError}</div>}
-        </section>
+        <AiAllowance />
 
         <section>
           <h3>Recipe reader</h3>
           <p className="muted small">
-            Which Claude model reads your cards, websites and text, and suggests substitutes. Cheaper models cost far less
-            but may misread messy handwriting — you can always fix a mistake with Edit.
+            Which Claude model reads your cards, websites and text. Budget stretches your AI much further but may misread messy
+            handwriting — you can always fix a mistake with Edit.
           </p>
           <div className="model-list" role="radiogroup" aria-label="Recipe reader">
-            {MODELS.map((m) => {
+            {availableModels().map((m) => {
               const mine = avgFor(m.id);
               // Typical card scan: ~3,500 tokens in (photo + instructions), ~4,000 out (reasoning + recipe).
               const typical = costOf(m, 3500, 4000);
@@ -258,7 +233,7 @@ export default function Settings() {
                   <span className="model-head">
                     <strong>{m.label}</strong>
                     <span className="model-cost">
-                      {mine ? `your average ${money(mine.avg)}` : `≈ ${money(typical)} per card`}
+                      {ownKey() ? (mine ? `your average ${money(mine.avg)}` : `≈ ${money(typical)} per card`) : `≈ ${Math.round(ALLOWANCE[hasPlus() ? "plus" : "free"] / typical)} scans a month`}
                     </span>
                   </span>
                   <span className="muted small">{m.blurb}</span>
@@ -268,6 +243,32 @@ export default function Settings() {
           </div>
         </section>
 
+        <details className="advanced">
+          <summary>Your own API key (advanced)</summary>
+        <section>
+          <h3>Your own Anthropic key</h3>
+          <p className="muted small">
+            Optional, for advanced users. With your own key, AI is billed to your Anthropic account instead of using your monthly
+            allowance, and the Best model is available. Create one at console.anthropic.com → API Keys. It's stored only on this
+            phone. Leave it empty to use Cardamix's AI.
+          </p>
+          <input
+            className="text-input"
+            type="password"
+            autoComplete="off"
+            placeholder="sk-ant-…"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+          />
+          <div className="button-row">
+            <button className="btn primary" onClick={save}>
+              {saved ? "Saved ✓" : "Save key"}
+            </button>
+          </div>
+          {keyError && <div className="callout warn">{keyError}</div>}
+        </section>
+
+        {ownKey() && (
         <section>
           <h3>Spending</h3>
           {usage.length === 0 ? (
@@ -301,6 +302,7 @@ export default function Settings() {
             Console. Cheapest to most expensive: pasted text, websites, card photos.
           </p>
         </section>
+        )}
         </details>
 
         <p className="small settings-footer">

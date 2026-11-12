@@ -112,6 +112,8 @@ export async function startCloud(): Promise<void> {
         await syncNow();
         announceChanges();
       } else void syncNow();
+      // Free or Plus comes from the server.
+      void import("./subscription").then((m) => m.refreshMyPlan()).catch(() => {});
     } else set({ status: "signed-out", email: undefined, uid: undefined, lastSync: undefined, authKnown: true });
   });
 

@@ -2,6 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { RecipeSchema, sanitizeRecipe, type ScannedRecipe } from "./schema";
 import { getModel, type ModelOption } from "./models";
+import { getApiKey } from "./settings";
+import { AI_URL } from "./firebaseConfig";
 import { recordUsage, type UsageEntry } from "./usage";
 
 const SYSTEM_PROMPT = `You turn recipes — photos of recipe cards (handwritten or printed), web pages, or pasted text — into a structured recipe that is easy to cook from.
@@ -24,10 +26,18 @@ If anything is unreadable or you had to guess, make your best reading and add a 
 
 export class ScanError extends Error {}
 
-export function makeClient(apiKey: string): Anthropic {
-  // The key is the user's own and lives only on their phone. The SDK refuses
-  // browser use unless told this is intentional.
-  return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+/**
+ * A Claude client. With your own key (advanced), requests go straight to
+ * Anthropic. Otherwise they go through the app's AI relay, signed with your
+ * account, which uses the app's key within your monthly allowance.
+ */
+export async function makeClient(apiKey: string): Promise<Anthropic> {
+  // The SDK refuses browser use unless told this is intentional.
+  if (apiKey) return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+  const { user } = await import("./cloud");
+  const u = await user();
+  if (!u) throw new ScanError("Sign in to use AI features.");
+  return new Anthropic({ apiKey: null, authToken: await u.getIdToken(), baseURL: AI_URL, dangerouslyAllowBrowser: true, maxRetries: 1 });
 }
 
 export type RecipeSource =
@@ -40,16 +50,16 @@ export interface ImportResult {
   usage: UsageEntry;
 }
 
-/** Shared request settings for the chosen model (effort, refusal fallback). */
+/** Shared request settings for the chosen model (refusal fallback only with your own key). */
 export function requestOptions(m: ModelOption) {
   return {
     model: m.id,
-    ...(m.fallbacks ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+    ...(m.fallbacks && getApiKey() ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
   };
 }
 
 export async function importRecipe(apiKey: string, source: RecipeSource): Promise<ImportResult> {
-  const client = makeClient(apiKey);
+  const client = await makeClient(apiKey);
   const m = getModel();
 
   let content: Anthropic.Beta.BetaContentBlockParam[];
@@ -103,6 +113,10 @@ export async function importRecipe(apiKey: string, source: RecipeSource): Promis
 }
 
 export function describeApiError(err: unknown): string {
+  // Messages from the app's AI relay (allowance used up, sign in again…) are written for people already.
+  const relay = !getApiKey() && err instanceof Anthropic.APIError ? (err.error as { error?: { message?: string } } | undefined)?.error?.message : undefined;
+  if (relay && err instanceof Anthropic.APIError && [401, 413, 429, 503].includes(err.status ?? 0)) return relay;
+  if (!getApiKey() && err instanceof Anthropic.APIError && (err.status ?? 0) >= 500) return "AI is having trouble right now. Try again in a minute.";
   if (err instanceof Anthropic.AuthenticationError) return "Your API key was rejected. Check it in Settings.";
   if (err instanceof Anthropic.PermissionDeniedError) return "This API key isn't allowed to use this model. Check your Anthropic Console.";
   if (err instanceof Anthropic.RateLimitError) return "Too many requests at once (or your API credit ran out). Wait a minute, and check your balance in the Anthropic Console.";

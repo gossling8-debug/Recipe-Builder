@@ -776,7 +776,6 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .toggle-row > span { display: flex; flex-direction: column; min-width: 0; }
 .feature-name { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
 .plus-badge { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); border: 1px solid currentColor; border-radius: 999px; padding: 0 7px; }
-.preview-row { margin-top: 8px; padding: 6px 0 0; border-top: 1px solid var(--line); }
 /* iPhone-style switch */
 .toggle-row input[type=checkbox][role=switch] {
   appearance: none; -webkit-appearance: none; flex: none; width: 46px; height: 28px; border-radius: 999px;
@@ -859,3 +858,12 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .password-row { display: flex; align-items: center; gap: 6px; }
 .password-row .text-input { flex: 1; }
 .account-fine-print { margin-top: 18px; }
+
+/* Plus */
+.plus-interval { display: flex; margin: 8px 0 6px; }
+.plus-interval .chip { flex: 1; }
+.plus-list { list-style: none; padding: 0; margin: 0; }
+.plus-list li { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; }
+.plus-list li svg { flex: none; margin-top: 4px; color: var(--accent, #c98b5e); }
+.ai-meter { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin: 6px 0; }
+.ai-meter > span { display: block; height: 100%; background: var(--ink, #1c1a17); }

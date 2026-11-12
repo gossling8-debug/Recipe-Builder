@@ -1,0 +1,57 @@
+name: Deploy server (Cloud Functions + Firestore rules)
+
+# Runs when the server code or database rules change on main, or by hand
+# (Actions → this workflow → Run workflow). Needs these repository secrets:
+#   FIREBASE_SERVICE_ACCOUNT  – the JSON key of a Google service account for project recipe-relief
+#   ANTHROPIC_API_KEY         – the app's own Anthropic key (pays for everyone's AI)
+#   STRIPE_SECRET_KEY         – Stripe secret key (sk_test_… or sk_live_…); may be left unset until payments are ready
+#   PLUS_EMAILS               – optional, comma-separated emails that always get Plus (e.g. the owner)
+on:
+  push:
+    branches: [main]
+    paths: ["functions/**", "firestore.rules", "firebase.json", ".github/workflows/deploy-backend.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_TOOLS: firebase-tools@15.35.0
+      PROJECT: recipe-relief
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - run: npm ci
+        working-directory: functions
+      - name: Sign in to Google Cloud
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then echo "::error::Add the FIREBASE_SERVICE_ACCOUNT secret first."; exit 1; fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+      - name: Store the server's secrets in Google Secret Manager
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          PLUS_EMAILS: ${{ secrets.PLUS_EMAILS }}
+        run: |
+          for NAME in ANTHROPIC_API_KEY STRIPE_SECRET_KEY PLUS_EMAILS; do
+            VALUE="${!NAME}"
+            [ -z "$VALUE" ] && VALUE="none"
+            printf '%s' "$VALUE" | npx --yes $FIREBASE_TOOLS functions:secrets:set "$NAME" --data-file=- --project "$PROJECT" --non-interactive --force
+          done
+      - name: Deploy
+        run: npx --yes $FIREBASE_TOOLS deploy --only functions,firestore:rules --project "$PROJECT" --non-interactive --force
+      - name: Remove old secret versions (keeps Secret Manager free)
+        run: npx --yes $FIREBASE_TOOLS functions:secrets:prune --project "$PROJECT" --non-interactive --force
+      - if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"

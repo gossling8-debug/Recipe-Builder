@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { feature, FEATURES, hasPlus, locked, setPreviewPlus, setSwitchedOn, switchedOn } from "./features";
+import { feature, FEATURES, hasPlus, locked, setSwitchedOn, switchedOn } from "./features";
+import { remember } from "./subscription";
 
 describe("feature switches and plans", () => {
   beforeEach(() => {
     FEATURES.forEach((f) => setSwitchedOn(f.id, true));
-    setPreviewPlus(true);
+    remember({ plan: "plus" });
   });
 
-  it("everything is on by default while Plus is previewed", () => {
+  it("with Plus, everything is on by default", () => {
     expect(hasPlus()).toBe(true);
     expect(FEATURES.every((f) => feature(f.id))).toBe(true);
   });
@@ -21,7 +22,7 @@ describe("feature switches and plans", () => {
   });
 
   it("on the free plan, Plus features are locked but free ones stay", () => {
-    setPreviewPlus(false);
+    remember({ plan: "free" });
     expect(locked("budget")).toBe(true);
     expect(feature("budget")).toBe(false);
     expect(feature("cookMode")).toBe(true);

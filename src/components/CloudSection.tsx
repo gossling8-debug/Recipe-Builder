@@ -88,7 +88,7 @@ export default function CloudSection() {
         >
           <p className="small">
             This deletes your account and everything backed up with it: recipes, photos, lists and settings, cookbooks you
-            made, and recipes you shared with others — and clears this phone. <strong>Export a backup first</strong> (below)
+            made, and recipes you shared with others — and clears this phone. A Plus subscription is cancelled too. <strong>Export a backup first</strong> (below)
             if you want a copy.
           </p>
           <input

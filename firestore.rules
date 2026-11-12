@@ -10,6 +10,15 @@ service cloud.firestore {
       allow read, write: if signedIn() && uid() == owner;
     }
 
+    // Written only by the server (Cloud Functions). People may read their own
+    // plan and AI allowance; Stripe customer ids aren't readable at all.
+    match /plans/{owner} {
+      allow read: if signedIn() && uid() == owner;
+    }
+    match /aiUsage/{owner} {
+      allow read: if signedIn() && uid() == owner;
+    }
+
     // Family cookbooks. The cookbook's id is the invite code: it's random and
     // only shared by its members, so knowing it is what lets someone join.
     function book(b) { return get(/databases/$(database)/documents/cookbooks/$(b)).data; }

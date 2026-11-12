@@ -3,7 +3,7 @@ import { getPeople, setPeople } from "../lib/autoPlan";
 import { ALLERGEN_GROUPS, loadAvoid, saveAvoid } from "../lib/avoid";
 import { FEATURES, setSwitchedOn, switchedOn, type Feature } from "../lib/features";
 import { href } from "../lib/route";
-import { getApiKey } from "../lib/settings";
+import { aiReady } from "../lib/settings";
 import { finishWelcome } from "../lib/welcome";
 import Icon from "./Icon";
 
@@ -130,7 +130,7 @@ export default function Welcome({ onDone }: { onDone: () => void }) {
       {current === "start" && (
         <>
           <h1 className="page-title">Add your first recipe</h1>
-          {getApiKey() ? (
+          {aiReady() ? (
             <p>Take a photo of a recipe card, or pick a screenshot or video from your photos.</p>
           ) : (
             <p>
@@ -139,7 +139,7 @@ export default function Welcome({ onDone }: { onDone: () => void }) {
             </p>
           )}
           <div className="button-row">
-            {getApiKey() ? (
+            {aiReady() ? (
               <a className="btn primary" href={href({ name: "scan" })} onClick={() => finishWelcome()}>
                 <Icon name="plus" size={20} /> Add a recipe
               </a>
