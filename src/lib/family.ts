@@ -12,7 +12,8 @@ import type { SavedRecipe, ScannedRecipe } from "./schema";
  *   cookbooks/{id}                { name, owner, members[], names{uid: name}, createdAt }
  *   cookbooks/{id}/recipes/{doc}  { recipe, sharedBy, sharedByName, sharedAt, sourceId }
  *   cookbooks/{id}/meta/cover     { subtitle, dedication, photo, photoOnly, updatedAt }   (owner edits)
- *   cookbooks/{id}/memories/{doc} { text, photo, by, byName, at, recipeId, recipeTitle }
+ *   cookbooks/{id}/memories/{doc} { text, photo, photoCount, by, byName, at, recipeId, recipeTitle }
+ *   cookbooks/{id}/memoryPhotos/{mem}_{n} { memoryId, index, data, by }
  */
 export interface Cookbook {
   id: string;
@@ -96,7 +97,7 @@ export async function leaveCookbook(book: Cookbook): Promise<void> {
 export async function deleteCookbook(book: Cookbook): Promise<void> {
   await me();
   const { db, f } = await fb();
-  for (const sub of ["recipes", "memories", "meta"]) {
+  for (const sub of ["recipes", "memories", "memoryPhotos", "meta"]) {
     const snap = await f.getDocs(f.collection(db, "cookbooks", book.id, sub));
     for (const d of snap.docs) await f.deleteDoc(d.ref);
   }
@@ -132,10 +133,15 @@ export async function saveCover(bookIdValue: string, cover: Cover): Promise<void
 }
 
 // ---------- memories ----------
+// Each memory's photos are separate documents (the database caps a document at ~1 MB):
+//   cookbooks/{id}/memories/{mem}          { text, photo (older single photo), photoCount, by, byName, at, recipeId, recipeTitle }
+//   cookbooks/{id}/memoryPhotos/{mem}_{n}   { memoryId, index, data, by }
+export const MAX_MEMORY_PHOTOS = 10;
 export interface Memory {
   id: string;
   text: string;
-  photo: string | null;
+  photo: string | null; // memories saved before several photos were possible
+  photoCount?: number;
   by: string;
   byName: string;
   at: number;
@@ -148,24 +154,40 @@ export async function bookMemories(bookIdValue: string): Promise<Memory[]> {
   const snap = await f.getDocs(f.collection(db, "cookbooks", bookIdValue, "memories"));
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Memory, "id">) })).sort((a, b) => a.at - b.at);
 }
-export async function addMemory(book: Cookbook, m: { text: string; photo: string | null; recipe: SharedRecipe | null }): Promise<void> {
+/** A memory's photos, in order. */
+export async function memoryPhotos(bookIdValue: string, m: Memory): Promise<string[]> {
+  if (!m.photoCount) return m.photo ? [m.photo] : [];
+  const { db, f } = await fb();
+  const docs = await Promise.all(
+    Array.from({ length: m.photoCount }, (_, i) => f.getDoc(f.doc(db, "cookbooks", bookIdValue, "memoryPhotos", `${m.id}_${i}`))),
+  );
+  return docs.map((d) => (d.data() as { data?: string } | undefined)?.data).filter((x): x is string => !!x);
+}
+export async function addMemory(book: Cookbook, m: { text: string; photos: string[]; recipe: SharedRecipe | null }): Promise<void> {
   const u = await me();
   const { db, f } = await fb();
+  const id = `${u.uid}_${newId()}`;
+  const photos = m.photos.slice(0, MAX_MEMORY_PHOTOS);
+  // Photos first, so a memory never points at photos that aren't there yet.
+  for (let i = 0; i < photos.length; i++)
+    await f.setDoc(f.doc(db, "cookbooks", book.id, "memoryPhotos", `${id}_${i}`), { memoryId: id, index: i, data: photos[i], by: u.uid });
   const doc: Omit<Memory, "id"> = {
     text: m.text.trim().slice(0, 2000),
-    photo: m.photo,
+    photo: null,
+    photoCount: photos.length,
     by: u.uid,
     byName: book.names[u.uid] ?? defaultName(u.email),
     at: Date.now(),
     recipeId: m.recipe?.id ?? null,
     recipeTitle: m.recipe?.recipe.title ?? null,
   };
-  await f.setDoc(f.doc(db, "cookbooks", book.id, "memories", `${u.uid}_${newId()}`), doc);
+  await f.setDoc(f.doc(db, "cookbooks", book.id, "memories", id), doc);
 }
-export async function deleteMemory(bookIdValue: string, id: string): Promise<void> {
+export async function deleteMemory(bookIdValue: string, m: Memory): Promise<void> {
   await me();
   const { db, f } = await fb();
-  await f.deleteDoc(f.doc(db, "cookbooks", bookIdValue, "memories", id));
+  await f.deleteDoc(f.doc(db, "cookbooks", bookIdValue, "memories", m.id));
+  for (let i = 0; i < (m.photoCount ?? 0); i++) await f.deleteDoc(f.doc(db, "cookbooks", bookIdValue, "memoryPhotos", `${m.id}_${i}`));
 }
 
 export async function bookRecipes(bookIdValue: string): Promise<SharedRecipe[]> {
