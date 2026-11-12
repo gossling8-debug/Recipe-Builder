@@ -1,6 +1,6 @@
 import { add, compare, formatQty, isEmpty, parseQty, subtract, type Qty } from "./qty";
 import { scaleAmount } from "./quantity";
-import { ingredientName, nameKey } from "./shopping";
+import { ingredientName, isTapWater, nameKey } from "./shopping";
 import { estimateUseBy, freshness } from "./shelfLife";
 import type { ScannedRecipe } from "./schema";
 
@@ -29,10 +29,18 @@ export type Pantry = Record<string, PantryItem>;
 const KEY = "recipe-builder.pantry";
 let memory: Pantry = {};
 
+/** Water picked up before it was left off the list doesn't belong in the pantry. */
+function withoutTapWater(p: Pantry): Pantry {
+  if (!Object.values(p).some((it) => isTapWater(it.name))) return p;
+  const out = Object.fromEntries(Object.entries(p).filter(([, it]) => !isTapWater(it.name)));
+  savePantry(out);
+  return out;
+}
+
 export function loadPantry(): Pantry {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) memory = JSON.parse(raw) as Pantry;
+    if (raw) memory = withoutTapWater(JSON.parse(raw) as Pantry);
   } catch {
     /* blocked */
   }
@@ -116,6 +124,7 @@ export function setItem(key: string, item: PantryItem | null): PantryItem | null
 /** Adds a purchase. Returns what the item was before, so unticking can undo it. */
 export function recordPurchase(name: string, amountText: string): PantryItem | null {
   const key = nameKey(name);
+  if (isTapWater(name)) return loadPantry()[key] ?? null; // never stocked
   const bought = parseQty(amountText, name);
   const prev = loadPantry()[key];
   // Add to what's there if the units can be combined; otherwise the purchase replaces it.

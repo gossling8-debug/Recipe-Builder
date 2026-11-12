@@ -38,6 +38,17 @@ export function saveShopping(s: ShoppingState): void {
 }
 
 /** Puts a recipe on the list; `skip` = ingredient numbers crossed off on the recipe (not needed). */
+/**
+ * Water from the tap (and ice) is never bought, so it stays off the shopping
+ * list and out of the pantry. Bottled kinds people do buy — coconut, sparkling,
+ * tonic, rose water… — still count as groceries.
+ */
+export function isTapWater(name: string): boolean {
+  const s = name.toLowerCase().split(",")[0].replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+  if (/\b(coconut|rose|orange[- ]blossom|tonic|sparkling|soda|mineral|bottled|seltzer|carbonated|club|distilled|maple)\b/.test(s)) return false;
+  return /^(?:(?:very|ice|iced|tap|cold|warm|hot|boiling|lukewarm|tepid|filtered|room[- ]temperature|icy)[- ]?)*water$/.test(s) || /^(?:crushed )?ice(?: cubes?)?$/.test(s);
+}
+
 export function addToShopping(id: string, scale: number, skip: number[] = []): void {
   const s = loadShopping();
   const entry = skip.length ? { id, scale, skip: [...skip].sort((a, b) => a - b) } : { id, scale };
@@ -177,7 +188,7 @@ export function combine(entries: { recipe: SavedRecipe; scale: number; skip?: nu
   for (const { recipe, scale, skip } of entries) {
     const crossedOff = new Set(skip ?? []);
     for (const [index, ing] of recipe.ingredients.entries()) {
-      if (!ing.name.trim() || crossedOff.has(index)) continue;
+      if (!ing.name.trim() || crossedOff.has(index) || isTapWater(ing.name)) continue;
       const fullName = ingredientName(ing);
       const key = nameKey(fullName);
       let g = groups.get(key);
