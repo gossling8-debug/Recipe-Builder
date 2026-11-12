@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { feature } from "../lib/features";
 import { recipeLink } from "../lib/link";
 import { loadProgress } from "../lib/progress";
-import { href, navigate } from "../lib/route";
+import { href } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
 import { recipeToText, shareText } from "../lib/share";
 import { addToShopping, loadShopping, removeFromShopping } from "../lib/shopping";
@@ -40,9 +40,6 @@ export default function RecipeActions(props: {
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet" role="dialog" aria-modal="true" aria-label={`Options for ${r.title}`} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-title">{r.title}</div>
-        <button className="sheet-item" onClick={act(() => navigate({ name: "recipe", id: r.id }))}>
-          <Icon name="book" size={20} /> Open
-        </button>
         <button className="sheet-item" onClick={act(() => props.onFavorite(r))}>
           <Icon name="star" size={20} filled={!!r.favorite} /> {r.favorite ? "Remove from Favorites" : "Add to Favorites"}
         </button>
