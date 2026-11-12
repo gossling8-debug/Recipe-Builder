@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { combine, nameKey } from "./shopping";
+import { combine, isTapWater, nameKey } from "./shopping";
 import type { Ingredient, SavedRecipe } from "./schema";
 
 const ing = (quantity: string, unit: string, name: string, preparation: string | null = null): Ingredient => ({
@@ -59,5 +59,26 @@ describe("crossed-off ingredients", () => {
     };
     expect(combine([{ recipe: r, scale: 1, skip: [1, 2] }]).map((i) => i.name)).toEqual(["ground beef"]);
     expect(combine([{ recipe: r, scale: 1 }]).length).toBe(3);
+  });
+});
+
+describe("water from the tap", () => {
+  it("is never a grocery", () => {
+    for (const n of ["water", "warm water", "Cold Water", "boiling water", "ice water", "ice", "ice cubes", "lukewarm water, divided", "water (110°F)", "room temperature water", "filtered water"])
+      expect(isTapWater(n), n).toBe(true);
+  });
+  it("but bottled kinds you buy still are", () => {
+    for (const n of ["coconut water", "sparkling water", "tonic water", "rose water", "club soda", "watermelon", "water chestnuts", "ice cream"])
+      expect(isTapWater(n), n).toBe(false);
+  });
+  it("stays off the shopping list", () => {
+    const r = {
+      id: "b", title: "Bread", createdAt: 0, photos: [], servings: null, time: null, notes: null, tags: [], warnings: [], steps: [],
+      ingredients: [
+        { quantity: "3", unit: "cups", name: "flour", preparation: null, section: null },
+        { quantity: "1", unit: "cup", name: "warm water", preparation: null, section: null },
+      ],
+    };
+    expect(combine([{ recipe: r, scale: 1 }]).map((i) => i.name)).toEqual(["flour"]);
   });
 });
