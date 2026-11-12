@@ -49,15 +49,26 @@ export default function Scanner() {
     return () => clearInterval(t);
   }, [busy]);
 
-  async function addFiles(files: FileList | null) {
+  /**
+   * scan: "Scan a card" — always shows the crop screen.
+   * Otherwise ("Choose from photos"): crop only photos where a card was found;
+   * screenshots and other pictures are added as they are.
+   */
+  async function addFiles(files: FileList | null, scan = false) {
     if (!files?.length) return;
     setError("");
     setPreparing(true);
     try {
-      // Find the card in each photo, then show the crop screen for each in turn.
       const room = MAX_PHOTOS - photos.length;
       const sources = await Promise.all(Array.from(files).slice(0, Math.max(0, room)).map((f) => prepareCrop(f)));
-      setCropQueue((q) => [...q, ...sources.map((source) => ({ source }))]);
+      const toCrop = sources.filter((src) => scan || src.found);
+      const asIs = sources.filter((src) => !(scan || src.found));
+      if (asIs.length) {
+        const plain = await Promise.all(asIs.map(async (src) => compressPhoto(await (await fetch(src.url)).blob())));
+        setPhotos((p) => [...p, ...plain].slice(0, MAX_PHOTOS));
+        setOriginals((o) => [...o, ...asIs.map((source) => ({ source, quad: null }))].slice(0, MAX_PHOTOS));
+      }
+      setCropQueue((q) => [...q, ...toCrop.map((source) => ({ source }))]);
     } catch (e) {
       // Fall back to the plain photo if this browser can't crop.
       try {
@@ -221,7 +232,7 @@ export default function Scanner() {
                 {photos.length < MAX_PHOTOS && (
                   <div className="button-row">
                     <button className="btn" onClick={() => cameraInput.current?.click()}>
-                      <Icon name="camera" /> {photos.length ? "Add another photo" : "Take photo"}
+                      <Icon name="camera" /> {photos.length ? "Scan another card" : "Scan a card"}
                     </button>
                     <button className="btn" onClick={() => libraryInput.current?.click()}>
                       <Icon name="image" /> Choose from photos
@@ -272,8 +283,9 @@ export default function Scanner() {
               accept="image/*"
               capture="environment"
               hidden
+              data-testid="scan-card-input"
               onChange={(e) => {
-                addFiles(e.target.files);
+                addFiles(e.target.files, true);
                 e.target.value = "";
               }}
             />
