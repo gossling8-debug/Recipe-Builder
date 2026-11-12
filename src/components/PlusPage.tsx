@@ -26,7 +26,8 @@ export default function PlusPage({ done }: { done?: boolean }) {
         setPlan(p);
         if (p.plan !== "plus" && --tries > 0) return void setTimeout(check, 2500);
       } catch {
-        /* keep what we have */
+        // Keep what we have, but say so — don't quietly look like the Free plan.
+        if (!stop) setError("Couldn't check your plan right now, so this may be out of date. Try again in a minute.");
       }
       if (!stop) setChecking(false);
     };
