@@ -868,3 +868,23 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .ai-meter { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin: 6px 0; }
 .ai-meter > span { display: block; height: 100%; background: var(--ink, #1c1a17); }
 
+
+/* Press-and-hold menu on recipes */
+.recipe-card { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.recipe-card img { -webkit-touch-callout: none; pointer-events: none; }
+.sheet-backdrop { position: fixed; inset: 0; z-index: 900; background: rgba(0, 0, 0, 0.35); display: flex; align-items: flex-end; justify-content: center; }
+.sheet {
+  width: 100%; max-width: 520px; background: var(--bg); border-radius: 16px 16px 0 0;
+  padding: 8px 16px calc(12px + env(safe-area-inset-bottom)); display: flex; flex-direction: column;
+}
+.sheet-title { font-weight: 600; padding: 12px 4px; border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sheet-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px 4px; border: 0; border-bottom: 1px solid var(--line);
+  background: none; color: var(--text); font: inherit; font-size: 17px; text-align: left; text-decoration: none; cursor: pointer;
+}
+.sheet-item:disabled { opacity: 0.5; }
+.sheet-item.danger { color: var(--error); }
+.sheet-cancel { justify-content: center; border-bottom: 0; font-weight: 600; }
+.undo-toast { display: flex; align-items: center; gap: 14px; }
+.undo-toast .link-btn { color: inherit; font-weight: 600; padding: 0; }
+.hold-tip { margin-top: 10px; }

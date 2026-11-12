@@ -18,6 +18,10 @@ import { cloudState, subscribeCloud } from "../lib/cloud";
 import { eatByLabel, leftoverPast, useLeftovers } from "../lib/leftovers";
 import { aYearAgo } from "../lib/history";
 import Header from "./Header";
+import RecipeActions, { HoldLink } from "./RecipeActions";
+import { useToast } from "./Toast";
+import { deleteRecipe } from "../lib/db";
+import { addToShopping, removeFromShopping } from "../lib/shopping";
 import Welcome from "./Welcome";
 import { welcomeDone } from "../lib/welcome";
 import Icon from "./Icon";
@@ -58,6 +62,46 @@ export default function Library() {
     remember(kind, value);
     (kind === "filter" ? setFilter : setSort)(value);
   };
+
+  // Press-and-hold menu, and "Deleted · Undo".
+  const [menuFor, setMenuFor] = useState<SavedRecipe | null>(null);
+  const [toast, showToast] = useToast();
+  const [deleted, setDeleted] = useState<{ recipe: SavedRecipe; listed?: { id: string; scale: number; skip?: number[] } } | null>(null);
+  const [holdTip, setHoldTip] = useState(() => {
+    try {
+      return !localStorage.getItem("recipe-builder.holdTip");
+    } catch {
+      return false;
+    }
+  });
+  const dismissHoldTip = () => {
+    setHoldTip(false);
+    try {
+      localStorage.setItem("recipe-builder.holdTip", "1");
+    } catch {
+      /* ignore */
+    }
+  };
+  useEffect(() => {
+    if (!deleted) return;
+    const t = window.setTimeout(() => setDeleted(null), 6000);
+    return () => window.clearTimeout(t);
+  }, [deleted]);
+  async function removeRecipe(r: SavedRecipe) {
+    const listed = loadShopping().recipes.find((x) => x.id === r.id);
+    setRecipes((rs) => rs && rs.filter((x) => x.id !== r.id));
+    await deleteRecipe(r.id);
+    removeFromShopping(r.id);
+    setDeleted({ recipe: r, listed });
+  }
+  async function undoDelete() {
+    if (!deleted) return;
+    const { recipe: r, listed } = deleted;
+    setDeleted(null);
+    await saveRecipe(r);
+    if (listed) addToShopping(listed.id, listed.scale, listed.skip);
+    setRecipes((rs) => rs && [r, ...rs.filter((x) => x.id !== r.id)]);
+  }
 
   async function toggleFavorite(r: SavedRecipe) {
     const updated = { ...r, favorite: !r.favorite };
@@ -118,7 +162,7 @@ export default function Library() {
 
   const row = (r: SavedRecipe) => (
     <li key={r.id} className="recipe-row">
-      <a href={href({ name: "recipe", id: r.id })} className="recipe-card">
+      <HoldLink href={href({ name: "recipe", id: r.id })} className="recipe-card" onHold={() => (setMenuFor(r), dismissHoldTip())}>
         {r.dishPhoto || r.photos[0] ? <img src={r.dishPhoto ?? r.photos[0]} alt="" /> : <div className="thumb-placeholder" />}
         <div>
           <div className="recipe-card-title">{r.title}</div>
@@ -136,7 +180,7 @@ export default function Library() {
             <div className="small avoid-meta">Contains {avoidReasons(r).join(", ").toLowerCase()}</div>
           )}
         </div>
-      </a>
+      </HoldLink>
       <button
         className={r.favorite ? "icon-btn star-btn starred" : "icon-btn star-btn"}
         aria-label={r.favorite ? `Remove ${r.title} from favorites` : `Add ${r.title} to favorites`}
@@ -344,6 +388,14 @@ export default function Library() {
         )}
         {rest.length > 0 && <ul className="recipe-list">{rest.map(row)}</ul>}
         {all.length > 0 && shown.length === 0 && <p className="muted">No matches.</p>}
+        {holdTip && all.length > 0 && (
+          <p className="muted small hold-tip">
+            Tip: press and hold a recipe for more options, like delete or share.{" "}
+            <button className="link-btn small" onClick={dismissHoldTip}>
+              Got it
+            </button>
+          </p>
+        )}
         {familyOn && feature("family") && (
           <a className="plan-strip family-link" href={href({ name: "family" })}>
             <Icon name="book" size={18} />
@@ -354,6 +406,25 @@ export default function Library() {
           </a>
         )}
       </main>
+      {menuFor && (
+        <RecipeActions
+          recipe={menuFor}
+          onClose={() => setMenuFor(null)}
+          onFavorite={toggleFavorite}
+          onDelete={removeRecipe}
+          onMessage={showToast}
+        />
+      )}
+      {deleted ? (
+        <div className="toast undo-toast" role="status">
+          Deleted “{deleted.recipe.title}”
+          <button className="link-btn" onClick={undoDelete}>
+            Undo
+          </button>
+        </div>
+      ) : (
+        toast
+      )}
     </>
   );
 }
