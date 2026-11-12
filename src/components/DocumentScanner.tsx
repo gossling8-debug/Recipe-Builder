@@ -206,8 +206,7 @@ export default function DocumentScanner(props: {
     else props.onDone(all);
   }
 
-  if (adjusting && review) {
-    return (
+  const editor = adjusting && review && (
       <CropEditor
         source={review.frame}
         quad={review.quad ?? undefined}
@@ -218,13 +217,37 @@ export default function DocumentScanner(props: {
           setReview({ ...review, quad });
         }}
       />
-    );
-  }
+  );
 
   return (
     <div className="doc-scanner" role="dialog" aria-modal="true" aria-label="Scanner">
-      {review ? (
-        <>
+      {editor}
+      {/* The camera stays mounted (just hidden) while reviewing, so its picture keeps flowing for the next page. */}
+      <div className="scan-live" hidden={!!review}>
+        <p className="scan-status" role="status">
+          {props.multiPage && pages.length ? `${status} · page ${pages.length + 1}` : status}
+        </p>
+        <div className="scan-camera">
+          <video ref={video} playsInline muted />
+          <canvas ref={overlay} className="scan-overlay" />
+        </div>
+        <div className="scan-controls">
+          <button className="link-btn small scan-cancel" onClick={props.onCancel}>
+            Cancel
+          </button>
+          <button className="shutter" aria-label="Take the picture" onClick={() => !capturing.current && capture()} />
+          <button className={auto ? "chip active scan-auto" : "chip scan-auto"} aria-pressed={auto} onClick={() => setAuto(!auto)}>
+            Auto
+          </button>
+        </div>
+        {props.multiPage && pages.length > 0 && (
+          <button className="btn primary scan-done" onClick={() => props.onDone(pages)}>
+            Done · {pages.length} {pages.length === 1 ? "page" : "pages"}
+          </button>
+        )}
+      </div>
+      {review && (
+        <div className="scan-review-wrap">
           <p className="scan-status">{props.multiPage && pages.length ? `Page ${pages.length + 1}` : "Check the scan"}</p>
           <div className="scan-review">{preview ? <img src={preview} alt="The scanned page" /> : <p className="scan-status">Straightening…</p>}</div>
           <div className="segmented scan-look" role="radiogroup" aria-label="Look">
@@ -252,31 +275,7 @@ export default function DocumentScanner(props: {
               {props.multiPage ? "Keep scan" : "Use scan"}
             </button>
           </div>
-        </>
-      ) : (
-        <>
-          <p className="scan-status" role="status">
-            {status}
-          </p>
-          <div className="scan-camera">
-            <video ref={video} playsInline muted />
-            <canvas ref={overlay} className="scan-overlay" />
-          </div>
-          <div className="scan-controls">
-            <button className="link-btn small scan-cancel" onClick={props.onCancel}>
-              Cancel
-            </button>
-            <button className="shutter" aria-label="Take the picture" onClick={() => !capturing.current && capture()} />
-            <button className={auto ? "chip active scan-auto" : "chip scan-auto"} aria-pressed={auto} onClick={() => setAuto(!auto)}>
-              Auto
-            </button>
-          </div>
-          {props.multiPage && pages.length > 0 && (
-            <button className="btn primary scan-done" onClick={() => props.onDone(pages)}>
-              Done · {pages.length} {pages.length === 1 ? "page" : "pages"}
-            </button>
-          )}
-        </>
+        </div>
       )}
     </div>
   );

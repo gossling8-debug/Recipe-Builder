@@ -91,12 +91,13 @@ export async function deleteAccount(password: string): Promise<void> {
       const recipes = f.collection(db, "cookbooks", book.id, "recipes");
       const memories = f.collection(db, "cookbooks", book.id, "memories");
       if (book.owner === u.uid) {
-        for (const sub of [recipes, memories, f.collection(db, "cookbooks", book.id, "meta")])
+        for (const sub of [recipes, memories, f.collection(db, "cookbooks", book.id, "memoryPhotos"), f.collection(db, "cookbooks", book.id, "meta")])
           for (const d of (await f.getDocs(sub)).docs) await f.deleteDoc(d.ref);
         await f.deleteDoc(f.doc(db, "cookbooks", book.id));
       } else {
         for (const d of (await f.getDocs(f.query(recipes, f.where("sharedBy", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
         for (const d of (await f.getDocs(f.query(memories, f.where("by", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
+        for (const d of (await f.getDocs(f.query(f.collection(db, "cookbooks", book.id, "memoryPhotos"), f.where("by", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
         await f.updateDoc(f.doc(db, "cookbooks", book.id), {
           members: book.members.filter((m) => m !== u.uid),
           [`names.${u.uid}`]: f.deleteField(),

@@ -967,3 +967,5 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .scan-look .chip.active { background: #fff; color: #000; }
 .scan-actions { display: flex; gap: 8px; width: 100%; max-width: 480px; margin-top: 12px; }
 .scan-actions .btn { flex: 1; padding-left: 6px; padding-right: 6px; }
+.scan-live, .scan-review-wrap { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
+.scan-live[hidden] { display: none; }

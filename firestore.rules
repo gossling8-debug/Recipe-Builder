@@ -63,9 +63,20 @@ service cloud.firestore {
       match /memories/{mem} {
         allow read: if isMember(b);
         allow create: if isMember(b) && request.resource.data.by == uid()
-          && request.resource.data.keys().hasOnly(['text', 'photo', 'by', 'byName', 'at', 'recipeId', 'recipeTitle'])
+          && request.resource.data.keys().hasOnly(['text', 'photo', 'photoCount', 'by', 'byName', 'at', 'recipeId', 'recipeTitle'])
+          && (!('photoCount' in request.resource.data) || (request.resource.data.photoCount is int && request.resource.data.photoCount <= 10))
           && request.resource.data.text is string && request.resource.data.text.size() <= 2000
           && (request.resource.data.photo == null || (request.resource.data.photo is string && request.resource.data.photo.size() < 700000));
+        allow delete: if isMember(b) && (resource.data.by == uid() || book(b).owner == uid());
+      }
+
+      // A memory's photos, one per document: members read them; each person adds their own; the author or the owner removes.
+      match /memoryPhotos/{photo} {
+        allow read: if isMember(b);
+        allow create: if isMember(b) && request.resource.data.by == uid()
+          && request.resource.data.keys().hasOnly(['memoryId', 'index', 'data', 'by'])
+          && request.resource.data.memoryId is string && request.resource.data.memoryId.matches(uid() + '_.*')
+          && request.resource.data.data is string && request.resource.data.data.size() < 700000;
         allow delete: if isMember(b) && (resource.data.by == uid() || book(b).owner == uid());
       }
 

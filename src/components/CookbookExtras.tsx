@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { addMemory, bookMemories, deleteMemory, getCover, saveCover, type Cookbook, type Cover, type Memory, type SharedRecipe } from "../lib/family";
+import { addMemory, bookMemories, deleteMemory, getCover, MAX_MEMORY_PHOTOS, memoryPhotos, saveCover, type Cookbook, type Cover, type Memory, type SharedRecipe } from "../lib/family";
 import { compressPhoto, prepareCrop, type CropSource } from "../lib/image";
 import CropEditor from "./CropEditor";
 import DocumentScanner from "./DocumentScanner";
@@ -219,24 +219,137 @@ export function CookbookCover({ book, isOwner }: { book: Cookbook; isOwner: bool
 // ---------- memories ----------
 const monthYear = (ms: number) => new Date(ms).toLocaleDateString([], { month: "long", year: "numeric" });
 
+/** Several photos for one memory: scan written pages (one after another) or pick photos. */
+function MultiPhotoPicker({ photos, onChange }: { photos: string[]; onChange: (p: string[]) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [scanning, setScanning] = useState(false);
+  const [noCamera, setNoCamera] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const room = MAX_MEMORY_PHOTOS - photos.length;
+  const add = (more: string[]) => onChange([...photos, ...more].slice(0, MAX_MEMORY_PHOTOS));
+  return (
+    <div className="multi-photos">
+      {photos.length > 0 && (
+        <ul className="photo-grid">
+          {photos.map((p, i) => (
+            <li key={i}>
+              <img src={p} alt={`Photo ${i + 1}`} />
+              <button type="button" className="remove" aria-label={`Remove photo ${i + 1}`} onClick={() => onChange(photos.filter((_, j) => j !== i))}>
+                <Icon name="close" size={18} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {room > 0 ? (
+        <div className="button-row">
+          <button type="button" className="btn" disabled={busy} onClick={() => (setNoCamera(""), setScanning(true))}>
+            <Icon name="camera" size={18} /> {photos.length ? "Scan more pages" : "Scan written pages"}
+          </button>
+          <button type="button" className="btn" disabled={busy} onClick={() => input.current?.click()}>
+            <Icon name="image" size={18} /> {photos.length ? "Add more photos" : "Add photos"}
+          </button>
+        </div>
+      ) : (
+        <p className="muted small">That's the most photos for one memory ({MAX_MEMORY_PHOTOS}).</p>
+      )}
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        data-testid="memory-photos-input"
+        onChange={async (e) => {
+          const files = Array.from(e.target.files ?? []).slice(0, room);
+          e.target.value = "";
+          if (!files.length) return;
+          setBusy(true);
+          setError("");
+          try {
+            add(await Promise.all(files.map(async (f) => fitForBook(await compressPhoto(f, 1100, 0.72)))));
+          } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+          }
+          setBusy(false);
+        }}
+      />
+      {busy && <p className="muted small">Adding photos…</p>}
+      {noCamera && (
+        <p className="small">
+          {noCamera}{" "}
+          <button type="button" className="link-btn small" onClick={() => input.current?.click()}>
+            Choose photos instead
+          </button>
+        </p>
+      )}
+      {scanning && (
+        <DocumentScanner
+          multiPage
+          cleanByDefault
+          maxEdge={1100}
+          quality={0.72}
+          onCancel={() => setScanning(false)}
+          onNoCamera={(why) => {
+            setScanning(false);
+            setNoCamera(why);
+          }}
+          onDone={async (pages) => {
+            setScanning(false);
+            try {
+              add(await Promise.all(pages.map((pg) => fitForBook(pg.photo))));
+            } catch (err) {
+              setError(err instanceof Error ? err.message : String(err));
+            }
+          }}
+        />
+      )}
+      {error && <p className="small error-text">{error}</p>}
+    </div>
+  );
+}
+
+/** One memory: its photos load on their own (each is a separate document). */
+function MemoryPhotos({ bookId, memory }: { bookId: string; memory: Memory }) {
+  const [photos, setPhotos] = useState<string[] | null>(memory.photoCount ? null : memory.photo ? [memory.photo] : []);
+  useEffect(() => {
+    if (memory.photoCount) memoryPhotos(bookId, memory).then(setPhotos, () => setPhotos([]));
+  }, [bookId, memory]);
+  if (photos === null) return <p className="muted small">Loading {memory.photoCount === 1 ? "photo" : "photos"}…</p>;
+  return (
+    <>
+      {photos.map((p, i) => (
+        <img key={i} src={p} alt={memory.text ? "" : `A memory from ${memory.byName}${photos.length > 1 ? `, page ${i + 1}` : ""}`} />
+      ))}
+    </>
+  );
+}
+
 export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cookbook; recipes: SharedRecipe[]; myUid: string; isOwner: boolean }) {
   const [memories, setMemories] = useState<Memory[] | null>(null);
   const [adding, setAdding] = useState(false);
   const [text, setText] = useState("");
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [recipeId, setRecipeId] = useState("");
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState("");
   async function typeItOut() {
-    if (!photo) return;
+    if (!photos.length) return;
     setReading(true);
     setError("");
     try {
       const { transcribePage } = await import("../lib/transcribe");
-      const written = await transcribePage(getApiKey(), photo);
-      if (written) setText((t) => (t.trim() ? `${t.trim()}\n\n${written}` : written));
-      else setError("No writing was found in that photo.");
+      // Page by page, in order.
+      const pages: string[] = [];
+      for (const p of photos) {
+        const written = await transcribePage(getApiKey(), p);
+        if (written) pages.push(written);
+      }
+      const written = pages.join("\n\n").slice(0, 2000);
+      if (written) setText((t) => (t.trim() ? `${t.trim()}\n\n${written}` : written).slice(0, 2000));
+      else setError("No writing was found in those photos.");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -252,9 +365,9 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
     setBusy(true);
     setError("");
     try {
-      await addMemory(book, { text, photo, recipe: recipes.find((r) => r.id === recipeId) ?? null });
+      await addMemory(book, { text, photos, recipe: recipes.find((r) => r.id === recipeId) ?? null });
       setText("");
-      setPhoto(null);
+      setPhotos([]);
       setRecipeId("");
       setAdding(false);
       await load();
@@ -271,7 +384,7 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
       <ul className="memory-list">
         {(memories ?? []).map((m) => (
           <li key={m.id} className="memory">
-            {m.photo && <img src={m.photo} alt={m.text ? "" : `A memory from ${m.byName}`} />}
+            <MemoryPhotos bookId={book.id} memory={m} />
             {m.text && <p className="memory-text">{m.text}</p>}
             <p className="muted small">
               — {m.by === myUid ? "You" : m.byName}, {monthYear(m.at)}
@@ -288,7 +401,7 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
                     onClick={async () => {
                       if (!confirm("Delete this memory?")) return;
                       try {
-                        await deleteMemory(book.id, m.id);
+                        await deleteMemory(book.id, m);
                         setMemories((xs) => xs && xs.filter((x) => x.id !== m.id));
                       } catch (e) {
                         setError(e instanceof Error ? e.message : String(e));
@@ -305,17 +418,17 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
       </ul>
       {adding ? (
         <div className="memory-form">
-          <PhotoPicker photo={photo} onChange={setPhoto} scanLabel={photo ? "Scan a new page" : "Scan a written page"} photoLabel={photo ? "Use a different photo" : "Add a photo"} />
-          {photo && aiReady() && (
+          <MultiPhotoPicker photos={photos} onChange={setPhotos} />
+          {photos.length > 0 && aiReady() && (
             <button type="button" className="link-btn small" disabled={reading} onClick={typeItOut}>
-              {reading ? "Reading the page…" : "Type out the writing in this photo"}
+              {reading ? "Reading…" : photos.length > 1 ? "Type out the writing in these photos" : "Type out the writing in this photo"}
             </button>
           )}
           <textarea
             className="text-input"
             rows={4}
             maxLength={2000}
-            placeholder={photo ? "Add words, or leave empty to share just the photo" : "Grandma made this every Christmas Eve…"}
+            placeholder={photos.length ? "Add words, or leave empty to share just the photos" : "Grandma made this every Christmas Eve…"}
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
@@ -333,7 +446,7 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
             </label>
           )}
           <div className="button-row">
-            <button className="btn primary" disabled={busy || reading || (!text.trim() && !photo)} onClick={save}>
+            <button className="btn primary" disabled={busy || reading || (!text.trim() && photos.length === 0)} onClick={save}>
               {busy ? "Saving…" : "Add memory"}
             </button>
             <button className="btn" disabled={busy} onClick={() => setAdding(false)}>
