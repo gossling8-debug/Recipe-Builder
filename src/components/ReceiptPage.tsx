@@ -19,6 +19,7 @@ interface Row {
   size: string;
   price: string;
   isFood: boolean;
+  isCandy: boolean;
   /** The shopping-list item it ticks off, if any. */
   listItem: ShoppingItem | null;
   /** Already in the pantry (by this name). */
@@ -70,23 +71,24 @@ export default function ReceiptPage() {
     setBusy(true);
     setError("");
     try {
-      // Only what's on the shopping list is matched (and saved); everything else is ignored unless ticked.
+      // Shopping-list items are ticked off; other food goes into the pantry. Candy and household items are left off unless ticked.
       const list = shoppingItems(recipes, loadShopping());
       const pantry = loadPantry();
       const byName = new Map<string, ShoppingItem>(list.map((i) => [i.name, i]));
-      const { readReceipt } = await import("../lib/receipt");
+      const { readReceipt, keepByDefault } = await import("../lib/receipt");
       const r = await readReceipt(getApiKey(), images, [...new Set(list.map((i) => i.name))]);
       setReceipt(r);
       setRows(
         r.items.map((it) => {
           const listItem = it.matches ? (byName.get(it.matches) ?? null) : null;
           return {
-            include: !!listItem,
+            include: keepByDefault(it, !!listItem),
             name: listItem?.name ?? it.name,
             receiptText: it.receipt_text,
             size: it.size ?? "",
             price: it.price.toFixed(2),
             isFood: it.is_food,
+            isCandy: !!it.is_candy,
             listItem,
             inPantry: !!pantry[nameKey(it.name)],
           };
@@ -169,7 +171,9 @@ export default function ReceiptPage() {
           {r.listItem
             ? "✓ Ticks off your shopping list"
             : !r.include
-              ? "Ignored"
+              ? r.isFood && r.isCandy
+                ? "Candy — not saved"
+                : "Not saved"
               : !r.isFood
                 ? "Price only"
                 : r.inPantry
@@ -277,7 +281,9 @@ export default function ReceiptPage() {
             {offList.length > 0 && (
               <>
                 <h3>Not on your shopping list · {offList.length}</h3>
-                <p className="muted small">Ignored — nothing is saved for these. Tick one to save its price{offList.some(([r]) => r.isFood) ? " and add it to your pantry" : ""} anyway.</p>
+                <p className="muted small">
+                  Food goes into your pantry with its price. Candy and household items aren't saved unless you tick them.
+                </p>
                 <ul className="receipt-rows">{offList.map(([r, i]) => row(r, i))}</ul>
               </>
             )}

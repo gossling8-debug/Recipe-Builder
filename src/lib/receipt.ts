@@ -22,6 +22,11 @@ export const ReceiptSchema = z.object({
         .describe('Total amount bought, starting with a number, e.g. "1 gallon", "2 lb", "12 eggs", "3 cans". For 2 × 16 oz say "32 oz". null if unknown.'),
       price: z.number().describe("What was paid for this line in dollars, after any line discount (the line total, not the unit price)."),
       is_food: z.boolean().describe("true for food and drink ingredients; false for household, paper goods, toiletries, bags, fees."),
+      is_candy: z
+        .boolean()
+        .describe(
+          "true for candy and sweets bought as a treat: candy bars, chocolate bars, gummies, lollipops, hard candy, gum, mints, seasonal candy. false for baking ingredients (chocolate chips, baking chocolate, cocoa, sprinkles, marshmallows for baking), desserts like ice cream or cookies, and everything else.",
+        ),
       matches: z
         .string()
         .nullable()
@@ -38,11 +43,18 @@ const SYSTEM = `You read grocery receipts and online order screenshots (Walmart,
 
 The images may be several overlapping pieces of one long screenshot, or several screenshots of one order: list each purchased line ONCE (skip lines repeated in an overlap). Skip subtotals, savings summaries, payment lines, and "substituted"/"out of stock" items that were not received; for a substitution, list what was actually received.
 
-For each line give a plain generic name a recipe would use (expand abbreviations: "GV" = Great Value, "MLK" = milk, "BNLS SKNLS CHKN BRST" = boneless skinless chicken breast), the total amount bought, and the line price after discounts. Mark household items as not food.
+For each line give a plain generic name a recipe would use (expand abbreviations: "GV" = Great Value, "MLK" = milk, "BNLS SKNLS CHKN BRST" = boneless skinless chicken breast), the total amount bought, and the line price after discounts. Mark household items as not food, and mark candy (treats like candy bars, gummies, gum) as candy — baking chocolate and chocolate chips are not candy.
 
 You are given the names on the cook's shopping list. Set "matches" to one of those names, exactly as written, only when it is clearly the same ingredient (e.g. "2% milk" matches "milk"; "shredded cheddar" matches "cheddar cheese"); otherwise null.
 
 If something is unreadable, give your best reading and add a short warning.`;
+
+/**
+ * Saved without asking: whatever is on the shopping list, plus any other food
+ * — but not candy (unless the list asked for it) or household items. The cook
+ * can still tick or untick each line before saving.
+ */
+export const keepByDefault = (item: { is_food: boolean; is_candy?: boolean }, onList: boolean) => onList || (item.is_food && !item.is_candy);
 
 export async function readReceipt(apiKey: string, images: string[], knownNames: string[]): Promise<Receipt> {
   const client = await makeClient(apiKey);
