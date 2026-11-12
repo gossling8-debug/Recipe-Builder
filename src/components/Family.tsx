@@ -7,6 +7,7 @@ import { cloudState, subscribeCloud, type CloudState } from "../lib/cloud";
 import { listRecipes, newId, saveRecipe } from "../lib/db";
 import { duplicatesOf } from "../lib/duplicates";
 import { CookbookCover, CookbookMemories } from "./CookbookExtras";
+import AddToCookbook from "./AddToCookbook";
 import {
   bookRecipes,
   createCookbook,
@@ -159,6 +160,9 @@ export function BookPage({ id }: { id: string }) {
 
   const myUid = book && s.uid;
   const owner = !!book && book.owner === s.uid;
+  const [tab, setTab] = useState<"recipes" | "memories">("recipes");
+  const [adding, setAdding] = useState(false);
+  const [memoryCount, setMemoryCount] = useState<number | null>(null);
   // Duplicates inside the cookbook, and ones already in your own recipes.
   const [mine, setMine] = useState<SavedRecipe[]>([]);
   useEffect(() => {
@@ -202,48 +206,83 @@ export function BookPage({ id }: { id: string }) {
         {book && (
           <>
             <CookbookCover book={book} isOwner={owner} />
-            <p className="muted small">
-              Members: {book.members.map((m) => book.names[m] ?? "someone").join(", ")} ·{" "}
+            <p className="muted small book-members">
+              {book.members.length} {book.members.length === 1 ? "member" : "members"}: {book.members.map((m) => book.names[m] ?? "someone").join(", ")} ·{" "}
               <button className="link-btn small" onClick={() => invite(book, showToast)}>
-                Invite someone
+                Invite
               </button>
             </p>
-            {recipes === null && !error && <p className="muted">Loading…</p>}
-            {recipes?.length === 0 && (
-              <p className="muted">
-                No recipes yet. Open one of your recipes and tap <strong>Share to {book.name}</strong> near the bottom.
-              </p>
-            )}
-            {recipes && recipes.length > 0 && <h2 className="list-heading">Recipes</h2>}
-            {recipes && recipes.length > 0 && (
-              <ul className="recipe-list">
-                {recipes.map((r) => (
-                  <li key={r.id} className="recipe-row">
-                    <a className="recipe-card" href={href({ name: "family", book: id, recipe: r.id })}>
-                      <div className="thumb-placeholder" />
-                      <div>
-                        <div className="recipe-card-title">{r.recipe.title}</div>
-                        <div className="muted small">Shared by {r.sharedBy === myUid ? "you" : r.sharedByName}</div>
-                        {twinsInBook(r).length > 0 && (
-                          <div className="small dup-flag">Possible duplicate of “{twinsInBook(r)[0].recipe.title}”</div>
-                        )}
-                        {r.sharedBy !== myUid && inMine(r) && <div className="muted small">✓ Already in your recipes</div>}
-                      </div>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {recipes && <CookbookMemories book={book} recipes={recipes} myUid={s.uid ?? ""} isOwner={owner} />}
-            <div className="button-row book-leave">
-              <button className="btn" onClick={leave}>
-                {owner ? "Delete this cookbook" : "Leave this cookbook"}
+            <div className="segmented book-tabs" role="tablist">
+              <button role="tab" aria-selected={tab === "recipes"} className={tab === "recipes" ? "chip active" : "chip"} onClick={() => setTab("recipes")}>
+                Recipes{recipes ? ` · ${recipes.length}` : ""}
+              </button>
+              <button role="tab" aria-selected={tab === "memories"} className={tab === "memories" ? "chip active" : "chip"} onClick={() => setTab("memories")}>
+                Memories{memoryCount !== null ? ` · ${memoryCount}` : ""}
               </button>
             </div>
+            {tab === "recipes" && (
+              <section className="book-recipes">
+                <div className="button-row">
+                  <button className="btn primary" onClick={() => setAdding(true)} disabled={!recipes}>
+                    <Icon name="plus" size={18} /> Add recipes
+                  </button>
+                </div>
+                {recipes === null && !error && <p className="muted">Loading…</p>}
+                {recipes?.length === 0 && <p className="muted">No recipes yet. Tap Add recipes to share some of yours.</p>}
+                {recipes && recipes.length > 0 && (
+                  <ul className="recipe-list">
+                    {recipes.map((r) => (
+                      <li key={r.id} className="recipe-row">
+                        <a className="recipe-card" href={href({ name: "family", book: id, recipe: r.id })}>
+                          <div className="thumb-placeholder" />
+                          <div>
+                            <div className="recipe-card-title">{r.recipe.title}</div>
+                            <div className="muted small">Shared by {r.sharedBy === myUid ? "you" : r.sharedByName}</div>
+                            {twinsInBook(r).length > 0 && (
+                              <div className="small dup-flag">Possible duplicate of “{twinsInBook(r)[0].recipe.title}”</div>
+                            )}
+                            {r.sharedBy !== myUid && inMine(r) && <div className="muted small">✓ Already in your recipes</div>}
+                          </div>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
+            {/* Memories stay mounted (hidden) so their count is known on the Recipes tab too. */}
+            <div hidden={tab !== "memories"}>
+              {recipes && <CookbookMemories book={book} recipes={recipes} myUid={s.uid ?? ""} isOwner={owner} onCount={setMemoryCount} />}
+            </div>
+            <details className="book-settings">
+              <summary>Cookbook settings</summary>
+              <p className="muted small">
+                {owner
+                  ? "Deleting removes the cookbook, its recipes, cover and memories for everyone. Recipes people saved to their own recipes stay."
+                  : "Leaving removes you from this cookbook. Recipes you saved to your own recipes stay."}
+              </p>
+              <button className="btn danger" onClick={leave}>
+                {owner ? "Delete this cookbook" : "Leave this cookbook"}
+              </button>
+            </details>
           </>
         )}
         {error && <div className="callout error">{error}</div>}
       </main>
+      {adding && book && recipes && (
+        <AddToCookbook
+          book={book}
+          inBook={recipes}
+          myUid={s.uid ?? ""}
+          onClose={(added) => {
+            setAdding(false);
+            if (added) {
+              showToast(`Shared ${added} ${added === 1 ? "recipe" : "recipes"}`);
+              bookRecipes(id).then(setRecipes, () => {});
+            }
+          }}
+        />
+      )}
       {toast}
     </>
   );

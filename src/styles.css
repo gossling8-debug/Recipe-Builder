@@ -969,3 +969,47 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .scan-actions .btn { flex: 1; padding-left: 6px; padding-right: 6px; }
 .scan-live, .scan-review-wrap { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
 .scan-live[hidden] { display: none; }
+
+/* Add recipes to a cookbook */
+.add-to-book { max-height: 88vh; }
+.add-to-book .search { margin: 10px 0 6px; }
+.pick-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; min-height: 120px; }
+.pick-row { display: flex; gap: 12px; align-items: flex-start; padding: 12px 2px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.pick-row input { width: 20px; height: 20px; margin-top: 2px; flex: none; }
+.pick-row.done { opacity: 0.6; }
+.pick-title { font-weight: 600; }
+.add-to-book-actions { margin-top: 10px; }
+
+/* Family cookbook layout: tabs, memory cards, viewer, settings */
+.book-members { margin: 0 0 12px; }
+.book-tabs { display: flex; width: 100%; margin: 4px 0 14px; }
+.book-tabs .chip { flex: 1; min-height: 38px; font-size: 15px; }
+.book-recipes .button-row { margin-bottom: 6px; }
+.memory-grid { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.memory-card {
+  width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 8px; text-align: left;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer;
+}
+.memory-cover { position: relative; display: block; width: 100%; aspect-ratio: 3 / 4; border-radius: 8px; overflow: hidden; background: var(--line); }
+.memory-cover img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.memory-cover-loading { display: block; width: 100%; height: 100%; }
+.memory-pages { position: absolute; right: 6px; bottom: 6px; background: rgba(0, 0, 0, 0.65); color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 10px; }
+.memory-snippet { font-family: var(--serif); font-size: 15px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.memory-by { display: block; }
+.memory-viewer { position: fixed; inset: 0; z-index: 940; background: var(--bg); display: flex; flex-direction: column; }
+.memory-viewer-bar { display: flex; align-items: center; justify-content: space-between; padding: calc(env(safe-area-inset-top) + 6px) 8px 6px; border-bottom: 1px solid var(--line); font-weight: 600; }
+.memory-viewer-body { overflow-y: auto; padding: 16px 16px calc(env(safe-area-inset-bottom) + 24px); display: flex; flex-direction: column; gap: 12px; }
+.memory-viewer-body img { display: block; width: 100%; height: auto; border-radius: 10px; }
+.book-settings { margin: 32px 0 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.book-settings > summary { cursor: pointer; color: var(--muted); font-size: 14px; padding: 6px 0; }
+.book-settings .btn { margin-top: 6px; }
+/* Compact cover: small photo beside the title so the tabs stay on the first screen */
+.cover-photo-btn { display: block; padding: 0; border: 0; background: none; cursor: zoom-in; flex: none; }
+.book-cover.with-photo { display: flex; align-items: center; gap: 14px; padding: 12px; text-align: left; }
+.book-cover.with-photo .cover-photo { width: 92px; height: 122px; max-height: none; object-fit: cover; object-position: top; border-radius: 8px; margin: 0; }
+.book-cover.with-photo .cover-text { padding: 0; min-width: 0; }
+.book-cover.with-photo .cover-title { font-size: 24px; }
+.book-cover.with-photo .cover-dedication { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.book-cover.photo-only { padding: 0 0 8px; }
+.book-cover.photo-only .cover-photo-btn { width: 100%; background: var(--line); }
+.book-cover.photo-only .cover-page-photo { max-height: 220px; width: 100%; object-fit: contain; }

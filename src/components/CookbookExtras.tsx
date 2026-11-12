@@ -124,6 +124,7 @@ export function CookbookCover({ book, isOwner }: { book: Cookbook; isOwner: bool
   const [cover, setCover] = useState<Cover | null | undefined>(undefined);
   const [editing, setEditing] = useState<Cover | null>(null);
   const [busy, setBusy] = useState(false);
+  const [viewing, setViewing] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
     getCover(book.id).then(setCover, () => setCover(null));
@@ -190,29 +191,54 @@ export function CookbookCover({ book, isOwner }: { book: Cookbook; isOwner: bool
     // A photo of the family's own cover page is the cover.
     return (
       <section className="book-cover photo-only">
-        <img className="cover-page-photo" src={cover.photo} alt={`Cover of ${book.name}`} />
+        <button className="cover-photo-btn" onClick={() => setViewing(true)} aria-label="View the cover full size">
+          <img className="cover-page-photo" src={cover.photo} alt={`Cover of ${book.name}`} />
+        </button>
         {isOwner && (
           <button className="link-btn small cover-edit" onClick={startEdit}>
             Edit cover
           </button>
         )}
+        {viewing && <CoverViewer photo={cover.photo} name={book.name} onClose={() => setViewing(false)} />}
       </section>
     );
   }
   return (
     <section className={cover?.photo ? "book-cover with-photo" : "book-cover"}>
-      {cover?.photo && <img className="cover-photo" src={cover.photo} alt="" />}
+      {cover?.photo && (
+        <button className="cover-photo-btn" onClick={() => setViewing(true)} aria-label="View the cover photo full size">
+          <img className="cover-photo" src={cover.photo} alt="" />
+        </button>
+      )}
       <div className="cover-text">
         <h2 className="cover-title">{book.name}</h2>
         {cover?.subtitle && <p className="cover-subtitle">{cover.subtitle}</p>}
         {cover?.dedication && <p className="cover-dedication">{cover.dedication}</p>}
+        {isOwner && (
+          <button className="link-btn small cover-edit" onClick={startEdit}>
+            {empty ? "Add a cover page — photo, subtitle and dedication" : "Edit cover"}
+          </button>
+        )}
       </div>
-      {isOwner && (
-        <button className="link-btn small cover-edit" onClick={startEdit}>
-          {empty ? "Add a cover page — photo, subtitle and dedication" : "Edit cover"}
-        </button>
-      )}
+      {viewing && cover?.photo && <CoverViewer photo={cover.photo} name={book.name} onClose={() => setViewing(false)} />}
     </section>
+  );
+}
+
+function CoverViewer({ photo, name, onClose }: { photo: string; name: string; onClose: () => void }) {
+  return (
+    <div className="memory-viewer" role="dialog" aria-modal="true" aria-label="Cover">
+      <div className="memory-viewer-bar">
+        <button className="icon-btn" aria-label="Close" onClick={onClose}>
+          <Icon name="close" />
+        </button>
+        <span>{name}</span>
+        <span className="icon-btn placeholder" aria-hidden />
+      </div>
+      <div className="memory-viewer-body">
+        <img src={photo} alt={`Cover of ${name}`} />
+      </div>
+    </div>
   );
 }
 
@@ -310,6 +336,22 @@ function MultiPhotoPicker({ photos, onChange }: { photos: string[]; onChange: (p
   );
 }
 
+/** A memory card's preview: its first photo (with a page count), or nothing for text-only memories. */
+function MemoryCover({ bookId, memory }: { bookId: string; memory: Memory }) {
+  const count = memory.photoCount ?? (memory.photo ? 1 : 0);
+  const [first, setFirst] = useState<string | null>(memory.photoCount ? null : memory.photo);
+  useEffect(() => {
+    if (memory.photoCount) memoryPhotos(bookId, { ...memory, photoCount: 1 }).then((ps) => setFirst(ps[0] ?? null), () => {});
+  }, [bookId, memory]);
+  if (!count) return null;
+  return (
+    <span className="memory-cover">
+      {first ? <img src={first} alt="" /> : <span className="memory-cover-loading" />}
+      {count > 1 && <span className="memory-pages">{count} pages</span>}
+    </span>
+  );
+}
+
 /** One memory: its photos load on their own (each is a separate document). */
 function MemoryPhotos({ bookId, memory }: { bookId: string; memory: Memory }) {
   const [photos, setPhotos] = useState<string[] | null>(memory.photoCount ? null : memory.photo ? [memory.photo] : []);
@@ -326,8 +368,24 @@ function MemoryPhotos({ bookId, memory }: { bookId: string; memory: Memory }) {
   );
 }
 
-export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cookbook; recipes: SharedRecipe[]; myUid: string; isOwner: boolean }) {
+export function CookbookMemories({
+  book,
+  recipes,
+  myUid,
+  isOwner,
+  onCount,
+}: {
+  book: Cookbook;
+  recipes: SharedRecipe[];
+  myUid: string;
+  isOwner: boolean;
+  onCount?: (n: number) => void;
+}) {
   const [memories, setMemories] = useState<Memory[] | null>(null);
+  const [open, setOpen] = useState<Memory | null>(null);
+  useEffect(() => {
+    if (memories) onCount?.(memories.length);
+  }, [memories, onCount]);
   const [adding, setAdding] = useState(false);
   const [text, setText] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
@@ -379,43 +437,6 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
 
   return (
     <section className="book-memories">
-      <h2 className="list-heading">Memories</h2>
-      {memories?.length === 0 && !adding && <p className="muted small">Stories, photos and moments around the table — the things that make these recipes family.</p>}
-      <ul className="memory-list">
-        {(memories ?? []).map((m) => (
-          <li key={m.id} className="memory">
-            <MemoryPhotos bookId={book.id} memory={m} />
-            {m.text && <p className="memory-text">{m.text}</p>}
-            <p className="muted small">
-              — {m.by === myUid ? "You" : m.byName}, {monthYear(m.at)}
-              {m.recipeId && m.recipeTitle && (
-                <>
-                  {" "}· about <a href={href({ name: "family", book: book.id, recipe: m.recipeId })}>{m.recipeTitle}</a>
-                </>
-              )}
-              {(m.by === myUid || isOwner) && (
-                <>
-                  {" "}·{" "}
-                  <button
-                    className="link-btn small"
-                    onClick={async () => {
-                      if (!confirm("Delete this memory?")) return;
-                      try {
-                        await deleteMemory(book.id, m);
-                        setMemories((xs) => xs && xs.filter((x) => x.id !== m.id));
-                      } catch (e) {
-                        setError(e instanceof Error ? e.message : String(e));
-                      }
-                    }}
-                  >
-                    Delete
-                  </button>
-                </>
-              )}
-            </p>
-          </li>
-        ))}
-      </ul>
       {adding ? (
         <div className="memory-form">
           <MultiPhotoPicker photos={photos} onChange={setPhotos} />
@@ -459,6 +480,60 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
           <button className="btn" onClick={() => setAdding(true)}>
             <Icon name="plus" size={18} /> Add a memory
           </button>
+        </div>
+      )}
+      {memories?.length === 0 && !adding && <p className="muted small">Stories, photos and moments around the table — the things that make these recipes family.</p>}
+      <ul className="memory-grid">
+        {(memories ?? []).map((m) => (
+          <li key={m.id}>
+            <button className="memory-card" onClick={() => setOpen(m)}>
+              <MemoryCover bookId={book.id} memory={m} />
+              {m.text && <span className="memory-snippet">{m.text}</span>}
+              <span className="muted small memory-by">
+                {m.by === myUid ? "You" : m.byName}, {monthYear(m.at)}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {open && (
+        <div className="memory-viewer" role="dialog" aria-modal="true" aria-label="Memory">
+          <div className="memory-viewer-bar">
+            <button className="icon-btn" aria-label="Close" onClick={() => setOpen(null)}>
+              <Icon name="close" />
+            </button>
+            <span>{open.by === myUid ? "Your memory" : `${open.byName}'s memory`}</span>
+            <span className="icon-btn placeholder" aria-hidden />
+          </div>
+          <div className="memory-viewer-body">
+            <MemoryPhotos bookId={book.id} memory={open} />
+            {open.text && <p className="memory-text">{open.text}</p>}
+            <p className="muted small">
+              — {open.by === myUid ? "You" : open.byName}, {monthYear(open.at)}
+              {open.recipeId && open.recipeTitle && (
+                <>
+                  {" "}· about <a href={href({ name: "family", book: book.id, recipe: open.recipeId })}>{open.recipeTitle}</a>
+                </>
+              )}
+            </p>
+            {(open.by === myUid || isOwner) && (
+              <button
+                className="btn danger"
+                onClick={async () => {
+                  if (!confirm("Delete this memory?")) return;
+                  try {
+                    await deleteMemory(book.id, open);
+                    setMemories((xs) => xs && xs.filter((x) => x.id !== open.id));
+                    setOpen(null);
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : String(e));
+                  }
+                }}
+              >
+                Delete memory
+              </button>
+            )}
+          </div>
         </div>
       )}
       {error && <div className="callout error small">{error}</div>}
