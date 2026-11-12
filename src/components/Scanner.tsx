@@ -12,6 +12,9 @@ import { href, navigate } from "../lib/route";
 import { getApiKey, aiReady } from "../lib/settings";
 import { getModel } from "../lib/models";
 import type { RecipeSource } from "../lib/claude";
+import type { SavedRecipe } from "../lib/schema";
+import { getCookbook, shareToCookbook, type Cookbook } from "../lib/family";
+import { AddToBooksPrompt, SaveToMinePrompt } from "./AfterAdd";
 
 const MAX_PHOTOS = 4;
 type Mode = "photo" | "url" | "text";
@@ -23,7 +26,14 @@ const MODES: { value: Mode; label: string }[] = [
 ];
 
 /** Add a recipe from card photos, a web page, or pasted/typed text. */
-export default function Scanner() {
+export default function Scanner({ book: bookId }: { book?: string } = {}) {
+  // Opened from a family cookbook's "Add recipes": the new recipe goes into that cookbook.
+  const [book, setBook] = useState<Cookbook | null>(null);
+  useEffect(() => {
+    if (bookId) getCookbook(bookId).then(setBook, () => {});
+  }, [bookId]);
+  // The recipe just read: ask whether it also goes to your recipes / your cookbooks.
+  const [added, setAdded] = useState<{ recipe: SavedRecipe; into: Cookbook | null } | null>(null);
   const [mode, setMode] = useState<Mode>("photo");
   const [photos, setPhotos] = useState<string[]>([]);
   // Each photo's original and chosen corners, so it can be re-cropped; and photos waiting to be cropped.
@@ -139,7 +149,7 @@ export default function Scanner() {
         mode === "photo"
           ? await Promise.all(photos.map((p) => fetch(p).then((r) => r.blob()).then((b) => compressPhoto(b, 1200, 0.7))))
           : [];
-      await saveRecipe({
+      const saved: SavedRecipe = {
         ...recipe,
         tags: tags.length ? cleanTags(tags) : recipe.tags,
         id,
@@ -147,18 +157,48 @@ export default function Scanner() {
         photos: thumbs,
         source: mode === "url" ? cleanUrl : undefined,
         importCost: usage.cost,
-      });
-      navigate({ name: "recipe", id }, true);
+      };
+      const into = book ?? (bookId ? await getCookbook(bookId) : null);
+      if (bookId && !into) throw new Error("Couldn't open that cookbook. Check your connection and try again.");
+      if (into) {
+        await shareToCookbook(into, saved, saved);
+      } else {
+        await saveRecipe(saved);
+      }
+      setAdded({ recipe: saved, into });
     } catch (e) {
       setError(e instanceof DOMException ? storageErrorMessage(e) : e instanceof Error ? e.message : String(e));
       setBusy(false);
     }
   }
 
+  const back = bookId ? href({ name: "family", book: bookId }) : href({ name: "library" });
+  if (added) {
+    const { recipe, into } = added;
+    return (
+      <>
+        <Header title="Add a recipe" />
+        <main className="page" />
+        {into ? (
+          <SaveToMinePrompt
+            title={recipe.title}
+            bookName={into.name}
+            onAnswer={async (save) => {
+              if (save) await saveRecipe(recipe);
+              navigate({ name: "family", book: into.id }, true);
+            }}
+          />
+        ) : (
+          <AddToBooksPrompt recipe={recipe} onDone={() => navigate({ name: "recipe", id: recipe.id }, true)} />
+        )}
+      </>
+    );
+  }
+
   if (!aiReady()) {
     return (
       <>
-        <Header title="Add a recipe" back={href({ name: "library" })} />
+        <Header title="Add a recipe" back={back} />
         <main className="page">
           <div className="callout">
             Reading recipes uses Claude, which needs your Anthropic API key.{" "}
@@ -171,7 +211,7 @@ export default function Scanner() {
 
   return (
     <>
-      <Header title="Add a recipe" back={busy ? undefined : href({ name: "library" })} />
+      <Header title={book ? `Add to ${book.name}` : "Add a recipe"} back={busy ? undefined : back} />
       <main className="page">
         {busy ? (
           <div className="working" role="status">

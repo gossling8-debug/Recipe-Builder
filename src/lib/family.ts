@@ -86,14 +86,23 @@ export async function joinCookbook(book: Cookbook, myName: string): Promise<void
   });
 }
 
-/** Leaves a cookbook (others keep it). The owner deletes it instead. */
+/**
+ * Removes the cookbook from my list only; everyone else keeps it. If I own it,
+ * the longest-standing remaining member becomes the owner. If nobody else is
+ * in it, it is deleted.
+ */
 export async function leaveCookbook(book: Cookbook): Promise<void> {
   const u = await me();
+  const rest = book.members.filter((m) => m !== u.uid);
+  if (rest.length === 0) return deleteCookbook(book);
   const { db, f } = await fb();
-  await f.updateDoc(f.doc(db, "cookbooks", book.id), { members: book.members.filter((m) => m !== u.uid) });
+  await f.updateDoc(f.doc(db, "cookbooks", book.id), {
+    members: rest,
+    ...(book.owner === u.uid ? { owner: rest[0] } : {}),
+  });
 }
 
-/** Owner only: removes the cookbook with its recipes, cover and memories. Members' own copies stay. */
+/** Removes the cookbook with its recipes, cover and memories (used when the last member leaves). */
 export async function deleteCookbook(book: Cookbook): Promise<void> {
   await me();
   const { db, f } = await fb();

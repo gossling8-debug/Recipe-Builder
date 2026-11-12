@@ -11,7 +11,6 @@ import AddToCookbook from "./AddToCookbook";
 import {
   bookRecipes,
   createCookbook,
-  deleteCookbook,
   getCookbook,
   inviteLink,
   joinCookbook,
@@ -172,14 +171,19 @@ export function BookPage({ id }: { id: string }) {
   const twinsInBook = (r: SharedRecipe) => duplicatesOf(asComparable(r), (recipes ?? []).filter((x) => x.id !== r.id).map(asComparable));
   const inMine = (r: SharedRecipe) => r.sharedBy === s.uid || duplicatesOf({ ...r.recipe }, mine).length > 0;
 
+  // Removing a cookbook only takes it off your list; the others keep it.
+  const others = book ? book.members.filter((m) => m !== s.uid) : [];
+  const heir = others[0] ? book?.names[others[0]] ?? "another member" : "";
   async function leave() {
     if (!book) return;
-    const msg = owner
-      ? `Delete “${book.name}” for everyone? Recipes people already saved to their own recipes stay.`
-      : `Leave “${book.name}”? Recipes you saved to your own recipes stay.`;
+    const msg = others.length
+      ? `Delete “${book.name}” from your cookbooks? It stays for the ${others.length === 1 ? "other member" : `other ${others.length} members`}, with all its recipes and memories.` +
+        (owner ? ` ${heir} will look after it (cover and invites).` : "") +
+        " Recipes you saved to your own recipes stay."
+      : `Delete “${book.name}”? You're the only member, so it's deleted completely. Recipes you saved to your own recipes stay.`;
     if (!confirm(msg)) return;
     try {
-      await (owner ? deleteCookbook(book) : leaveCookbook(book));
+      await leaveCookbook(book);
       navigate({ name: "family" }, true);
     } catch (e) {
       setError(errText(e));
@@ -228,7 +232,7 @@ export function BookPage({ id }: { id: string }) {
                   </button>
                 </div>
                 {recipes === null && !error && <p className="muted">Loading…</p>}
-                {recipes?.length === 0 && <p className="muted">No recipes yet. Tap Add recipes to share some of yours.</p>}
+                {recipes?.length === 0 && <p className="muted">No recipes yet. Tap Add recipes to scan a new one or share some of yours.</p>}
                 {recipes && recipes.length > 0 && (
                   <ul className="recipe-list">
                     {recipes.map((r) => (
@@ -257,12 +261,12 @@ export function BookPage({ id }: { id: string }) {
             <details className="book-settings">
               <summary>Cookbook settings</summary>
               <p className="muted small">
-                {owner
-                  ? "Deleting removes the cookbook, its recipes, cover and memories for everyone. Recipes people saved to their own recipes stay."
-                  : "Leaving removes you from this cookbook. Recipes you saved to your own recipes stay."}
+                {others.length
+                  ? "Deleting removes this cookbook from your list only. Everyone else keeps it, with all its recipes and memories."
+                  : "You're the only member, so deleting removes the cookbook completely."}
               </p>
               <button className="btn danger" onClick={leave}>
-                {owner ? "Delete this cookbook" : "Leave this cookbook"}
+                Delete this cookbook
               </button>
             </details>
           </>

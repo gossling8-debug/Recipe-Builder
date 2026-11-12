@@ -5,7 +5,8 @@ import { decodeRecipe } from "../lib/link";
 import { newId, saveRecipe, storageErrorMessage } from "../lib/db";
 import { href, navigate } from "../lib/route";
 import { clearProgress } from "../lib/progress";
-import type { ScannedRecipe } from "../lib/schema";
+import type { SavedRecipe, ScannedRecipe } from "../lib/schema";
+import { AddToBooksPrompt } from "./AfterAdd";
 
 /** Opened from a shared link: preview the recipe and save it to this phone. */
 export default function ImportPage({ data }: { data: string }) {
@@ -19,13 +20,15 @@ export default function ImportPage({ data }: { data: string }) {
     decodeRecipe(data).then(setRecipe, (e) => setError(e instanceof Error ? e.message : String(e)));
   }, [data]);
 
+  const [saved, setSaved] = useState<SavedRecipe | null>(null);
   async function save() {
     if (!recipe) return;
     setSaving(true);
     try {
       const id = newId();
-      await saveRecipe({ ...recipe, id, createdAt: Date.now(), photos: [] });
-      navigate({ name: "recipe", id }, true);
+      const saved = { ...recipe, id, createdAt: Date.now(), photos: [] };
+      await saveRecipe(saved);
+      setSaved(saved);
     } catch (e) {
       setError(storageErrorMessage(e));
       setSaving(false);
@@ -35,6 +38,7 @@ export default function ImportPage({ data }: { data: string }) {
   return (
     <>
       <Header title="Shared recipe" back={href({ name: "library" })} />
+      {saved && <AddToBooksPrompt recipe={saved} onDone={() => navigate({ name: "recipe", id: saved.id }, true)} />}
       <main className="page">
         {error && <div className="callout error">{error}</div>}
         {!recipe && !error && <p className="muted">Opening recipe…</p>}
