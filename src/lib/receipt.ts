@@ -38,11 +38,18 @@ const SYSTEM = `You read grocery receipts and online order screenshots (Walmart,
 
 The images may be several overlapping pieces of one long screenshot, or several screenshots of one order: list each purchased line ONCE (skip lines repeated in an overlap). Skip subtotals, savings summaries, payment lines, and "substituted"/"out of stock" items that were not received; for a substitution, list what was actually received.
 
-For each line give a plain generic name a recipe would use (expand abbreviations: "GV" = Great Value, "MLK" = milk, "BNLS SKNLS CHKN BRST" = boneless skinless chicken breast), the total amount bought, and the line price after discounts. Mark household items as not food.
+For each line give a plain generic name a recipe would use (expand abbreviations: "GV" = Great Value, "MLK" = milk, "BNLS SKNLS CHKN BRST" = boneless skinless chicken breast), the total amount bought, and the line price after discounts. Mark household items as not food (snacks, candy and drinks are food).
 
 You are given the names on the cook's shopping list. Set "matches" to one of those names, exactly as written, only when it is clearly the same ingredient (e.g. "2% milk" matches "milk"; "shredded cheddar" matches "cheddar cheese"); otherwise null.
 
 If something is unreadable, give your best reading and add a short warning.`;
+
+/**
+ * Saved without asking: everything on the shopping list and all other food, so
+ * every ingredient's price is known for meal costs. Household items are left
+ * off. The cook can still tick or untick each line before saving.
+ */
+export const keepByDefault = (item: { is_food: boolean }, onList: boolean) => onList || item.is_food;
 
 export async function readReceipt(apiKey: string, images: string[], knownNames: string[]): Promise<Receipt> {
   const client = await makeClient(apiKey);
