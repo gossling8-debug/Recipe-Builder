@@ -904,3 +904,23 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .search-scope .chip { min-height: 30px; padding: 2px 12px; font-size: 13px; border: 1px solid var(--line); }
 .search-scope .chip.active { border-color: transparent; }
 .search-hit { color: var(--muted); margin-top: 2px; }
+
+/* Family cookbook: cover page and memories */
+.book-cover { margin: 4px 0 18px; padding: 22px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); text-align: center; }
+.book-cover.with-photo { padding: 0 0 18px; overflow: hidden; }
+.cover-photo { display: block; width: 100%; max-height: 300px; object-fit: cover; margin-bottom: 16px; }
+.cover-text { padding: 0 18px; }
+.cover-title { font-family: var(--serif); font-size: 30px; line-height: 1.15; margin: 0 0 6px; }
+.cover-subtitle { margin: 0 0 10px; color: var(--muted); }
+.cover-dedication { font-style: italic; margin: 10px 0 0; white-space: pre-wrap; }
+.cover-edit { margin-top: 10px; }
+.book-cover.editing { text-align: left; padding: 16px; }
+.photo-picker img { display: block; width: 100%; max-height: 260px; object-fit: cover; border-radius: 10px; margin-bottom: 8px; }
+.book-memories { margin-top: 26px; }
+.memory-list { list-style: none; padding: 0; margin: 0; }
+.memory { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.memory img { display: block; width: 100%; max-height: 320px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; }
+.memory-text { margin: 0 0 6px; white-space: pre-wrap; font-family: var(--serif); font-size: 17px; line-height: 1.45; }
+.memory-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.book-leave { margin-top: 28px; }
+.error-text { color: var(--error); }
