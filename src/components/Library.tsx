@@ -20,6 +20,7 @@ import { aYearAgo } from "../lib/history";
 import Header from "./Header";
 import RecipeActions, { HoldLink } from "./RecipeActions";
 import { duplicatePairs, notDuplicates } from "../lib/duplicates";
+import { searchRecipe, type SearchScope } from "../lib/search";
 import { useToast } from "./Toast";
 import { deleteRecipe } from "../lib/db";
 import { addToShopping, removeFromShopping } from "../lib/shopping";
@@ -35,6 +36,7 @@ export default function Library() {
   const [recipes, setRecipes] = useState<SavedRecipe[] | null>(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<SearchScope>("all");
   const [mode, setMode] = useState<StorageMode | null>(null);
   const [filter, setFilter] = useState(() => remembered("filter", "all"));
   const [sort, setSort] = useState(() => remembered("sort", "newest"));
@@ -151,8 +153,10 @@ export default function Library() {
     : filter !== "all" && !tags.includes(filter) ? "all" : filter;
 
   const q = query.trim().toLowerCase();
+  // Search: every word must match, in any order; the matching ingredient lines are shown under each result.
+  const found = new Map(q ? all.map((r) => [r.id, searchRecipe(r, q, scope)] as const) : []);
   const shown = all
-    .filter((r) => !q || r.title.toLowerCase().includes(q) || r.ingredients.some((i) => i.name.toLowerCase().includes(q)) || (r.tags ?? []).some((t) => t.toLowerCase().includes(q)))
+    .filter((r) => !q || found.get(r.id)?.match)
     .filter((r) =>
       activeFilter === "all" ? true
       : activeFilter === "favorites" ? r.favorite
@@ -189,6 +193,9 @@ export default function Library() {
               {r.rating && lastMade(r) !== undefined ? " · " : ""}
               {lastMade(r) !== undefined && `Last made ${agoText(lastMade(r)!)}`}
             </div>
+          )}
+          {q && (found.get(r.id)?.ingredientHits.length ?? 0) > 0 && (
+            <div className="small search-hit">Has: {found.get(r.id)!.ingredientHits.slice(0, 3).join(" · ")}</div>
           )}
           {avoiding && avoidReasons(r).length > 0 && (
             <div className="small avoid-meta">Contains {avoidReasons(r).join(", ").toLowerCase()}</div>
@@ -343,14 +350,30 @@ export default function Library() {
         {error && <div className="callout error">{error}</div>}
         {mode === "memory" && <div className="callout error">{STORAGE_MODE_TEXT.memory}</div>}
         {mode === "local" && <div className="callout warn small">{STORAGE_MODE_TEXT.local}</div>}
-        {recipes && recipes.length > 3 && (
-          <input
-            className="search"
-            type="search"
-            placeholder="Search recipes or ingredients"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+        {recipes && recipes.length > 0 && (
+          <div className="search-box">
+            <input
+              className="search"
+              type="search"
+              placeholder={scope === "ingredient" ? "Search by ingredient, e.g. garlic" : scope === "name" ? "Search recipe names" : "Search recipes or ingredients"}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search"
+            />
+            <div className="search-scope" role="radiogroup" aria-label="Search in">
+              {(
+                [
+                  ["all", "Everything"],
+                  ["name", "Name"],
+                  ["ingredient", "Ingredient"],
+                ] as const
+              ).map(([v, label]) => (
+                <button key={v} role="radio" aria-checked={scope === v} className={scope === v ? "chip active" : "chip"} onClick={() => setScope(v)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
         {recipes === null && !error && <p className="muted">Loading…</p>}
         {recipes?.length === 0 && (
@@ -362,7 +385,7 @@ export default function Library() {
         {all.length > 0 && (hasFavorites || tags.length > 0 || avoiding || hasPantry) && (
           <div className="filters" role="group" aria-label="Show">
             {[
-              ["all", "All"],
+              ["all", "Everything"],
               ...(hasFavorites ? [["favorites", "Favorites"]] : []),
               ...(hasPantry ? [["canmake", "Can make now"]] : []),
               ...(avoiding ? [["safe", "Fits my avoid list"]] : []),

@@ -896,3 +896,11 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .dup-card { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; margin: 6px 0; border: 1px solid var(--line); border-radius: 10px; color: var(--text); text-decoration: none; background: var(--surface); }
 .dup-flag { color: var(--warn-text, #9a5b13); }
 .topbar.with-home .topbar-actions { min-width: 92px; }
+
+/* Search */
+.search-box { margin-bottom: 8px; }
+.search-box .search { margin-bottom: 6px; }
+.search-scope { display: flex; gap: 6px; }
+.search-scope .chip { min-height: 30px; padding: 2px 12px; font-size: 13px; border: 1px solid var(--line); }
+.search-scope .chip.active { border-color: transparent; }
+.search-hit { color: var(--muted); margin-top: 2px; }
