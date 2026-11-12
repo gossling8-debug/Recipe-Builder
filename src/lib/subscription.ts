@@ -7,7 +7,7 @@ import { fb, user } from "./cloud";
 
 export interface MyPlan {
   plan: "free" | "plus";
-  source?: "stripe" | "comp" | "none";
+  source?: "stripe" | "comp" | "beta" | "none";
   status?: string;
   renews?: number | null;
   cancelsAt?: number | null;
