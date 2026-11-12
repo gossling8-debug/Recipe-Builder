@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { addMemory, bookMemories, deleteMemory, getCover, saveCover, type Cookbook, type Cover, type Memory, type SharedRecipe } from "../lib/family";
 import { compressPhoto, prepareCrop, type CropSource } from "../lib/image";
 import CropEditor from "./CropEditor";
+import DocumentScanner from "./DocumentScanner";
 import { href } from "../lib/route";
 import { aiReady, getApiKey } from "../lib/settings";
 import Icon from "./Icon";
@@ -15,12 +16,26 @@ async function fitForBook(url: string): Promise<string> {
 }
 
 /** Two ways in: "Scan a page" (find edges, crop, straighten) or "Add a photo" (as it is). */
-function PhotoPicker({ photo, onChange, scanLabel, photoLabel }: { photo: string | null; onChange: (p: string | null) => void; scanLabel: string; photoLabel: string }) {
+function PhotoPicker({
+  photo,
+  onChange,
+  scanLabel,
+  photoLabel,
+  cleanByDefault = true,
+}: {
+  photo: string | null;
+  onChange: (p: string | null) => void;
+  scanLabel: string;
+  photoLabel: string;
+  cleanByDefault?: boolean;
+}) {
   const scanInput = useRef<HTMLInputElement>(null);
   const photoInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [cropping, setCropping] = useState<CropSource | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [noCamera, setNoCamera] = useState("");
   const take = (scan: boolean) => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -39,7 +54,7 @@ function PhotoPicker({ photo, onChange, scanLabel, photoLabel }: { photo: string
     <div className="photo-picker">
       {photo && <img src={photo} alt="" />}
       <div className="button-row">
-        <button type="button" className="btn" disabled={busy} onClick={() => scanInput.current?.click()}>
+        <button type="button" className="btn" disabled={busy} onClick={() => (setNoCamera(""), setScanning(true))}>
           <Icon name="camera" size={18} /> {scanLabel}
         </button>
         <button type="button" className="btn" disabled={busy} onClick={() => photoInput.current?.click()}>
@@ -54,6 +69,34 @@ function PhotoPicker({ photo, onChange, scanLabel, photoLabel }: { photo: string
       <input ref={scanInput} type="file" accept="image/*" hidden data-testid="scan-page-input" onChange={take(true)} />
       <input ref={photoInput} type="file" accept="image/*" hidden data-testid="add-photo-input" onChange={take(false)} />
       {busy && !cropping && <p className="muted small">Working on the photo…</p>}
+      {noCamera && (
+        <p className="small">
+          {noCamera}{" "}
+          <button type="button" className="link-btn small" onClick={() => scanInput.current?.click()}>
+            Choose a photo of the page instead
+          </button>
+        </p>
+      )}
+      {scanning && (
+        <DocumentScanner
+          cleanByDefault={cleanByDefault}
+          maxEdge={1100}
+          quality={0.72}
+          onCancel={() => setScanning(false)}
+          onNoCamera={(why) => {
+            setScanning(false);
+            setNoCamera(why);
+          }}
+          onDone={async ([page]) => {
+            setScanning(false);
+            try {
+              if (page) onChange(await fitForBook(page.photo));
+            } catch (err) {
+              setError(err instanceof Error ? err.message : String(err));
+            }
+          }}
+        />
+      )}
       {cropping && (
         <CropEditor
           source={cropping}
@@ -94,6 +137,7 @@ export function CookbookCover({ book, isOwner }: { book: Cookbook; isOwner: bool
           photo={editing.photo}
           onChange={(photo) => setEditing({ ...editing, photo })}
           scanLabel={editing.photo ? "Scan a new page" : "Scan our cover page"}
+          cleanByDefault={false}
           photoLabel={editing.photo ? "Use a different photo" : "Add a cover photo"}
         />
         {editing.photo && (

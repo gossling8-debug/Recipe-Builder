@@ -95,6 +95,21 @@ export async function prepareCrop(file: Blob): Promise<CropSource> {
   const px = ctx.getImageData(0, 0, sw, sh).data;
   const gray = new Uint8Array(sw * sh);
   for (let i = 0; i < sw * sh; i++) gray[i] = (px[i * 4] * 0.299 + px[i * 4 + 1] * 0.587 + px[i * 4 + 2] * 0.114) | 0;
+  // OpenCV finds real-world cards far better; the simple method is the fallback.
+  try {
+    const { loadOpenCv, findPage } = await import("./opencv");
+    const cv = await loadOpenCv();
+    const c2 = document.createElement("canvas");
+    const s2 = Math.min(1, 480 / Math.max(w, h));
+    c2.width = Math.round(w * s2);
+    c2.height = Math.round(h * s2);
+    const ctx2 = c2.getContext("2d", { willReadFrequently: true })!;
+    ctx2.drawImage(img, 0, 0, c2.width, c2.height);
+    const q2 = findPage(cv, ctx2.getImageData(0, 0, c2.width, c2.height));
+    if (q2) return { url, w, h, found: scaleQuad(q2, 1 / s2) };
+  } catch {
+    /* fall through to the simple method */
+  }
   const q = detectCard(gray, sw, sh);
   return { url, w, h, found: q ? scaleQuad(q, 1 / s) : null };
 }
