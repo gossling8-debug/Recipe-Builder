@@ -33,18 +33,25 @@ service cloud.firestore {
         && request.resource.data.members == [uid()]
         && request.resource.data.names.keys().hasOnly([uid()])
         && request.resource.data.name is string && request.resource.data.name.size() <= 60;
-      // Only the member list and each person's own display name ever change:
-      // join (add yourself), leave (remove yourself; not the owner), or rename yourself.
+      // Only the member list, each person's own display name and (when the owner
+      // leaves) the owner ever change: join (add yourself), leave (remove yourself),
+      // or rename yourself. An owner who leaves hands the cookbook to a remaining member.
       allow update: if signedIn()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'names'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'names', 'owner'])
         && request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([uid()])
         && (
-          (!(uid() in resource.data.members)
-            && request.resource.data.members == resource.data.members.concat([uid()])
-            && resource.data.members.size() < 50)
-          || (uid() in resource.data.members && uid() != resource.data.owner
-            && request.resource.data.members == resource.data.members.removeAll([uid()]))
-          || (uid() in resource.data.members && request.resource.data.members == resource.data.members)
+          (request.resource.data.owner == resource.data.owner && (
+            (!(uid() in resource.data.members)
+              && request.resource.data.members == resource.data.members.concat([uid()])
+              && resource.data.members.size() < 50)
+            || (uid() in resource.data.members && uid() != resource.data.owner
+              && request.resource.data.members == resource.data.members.removeAll([uid()]))
+            || (uid() in resource.data.members && request.resource.data.members == resource.data.members)
+          ))
+          || (uid() == resource.data.owner
+            && request.resource.data.members == resource.data.members.removeAll([uid()])
+            && request.resource.data.members.size() > 0
+            && request.resource.data.owner in request.resource.data.members)
         );
       allow delete: if signedIn() && resource.data.owner == uid();
 

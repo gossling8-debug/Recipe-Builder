@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 export type Route =
   | { name: "library" }
-  | { name: "scan" }
+  | { name: "scan"; book?: string }
   | { name: "settings" }
   | { name: "shopping" }
   | { name: "pantry" }
@@ -24,7 +24,8 @@ export type Route =
 
 export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#\/?/, "");
-  if (path === "scan") return { name: "scan" };
+  const scan = path.match(/^scan(?:\/([^/]+))?$/);
+  if (scan) return scan[1] ? { name: "scan", book: decodeURIComponent(scan[1]) } : { name: "scan" };
   if (path === "settings") return { name: "settings" };
   if (path === "shopping") return { name: "shopping" };
   if (path === "pantry") return { name: "pantry" };
@@ -54,6 +55,7 @@ export function parseRoute(hash: string): Route {
 
 export function href(route: Route): string {
   if (route.name === "plus") return route.done ? "#/plus/done" : "#/plus";
+  if (route.name === "scan" && route.book) return `#/scan/${encodeURIComponent(route.book)}`;
   if (route.name === "import") return `#/import/${route.data}`;
   if (route.name === "print") return `#/print/${encodeURIComponent(route.id)}`;
   if (route.name === "meal")

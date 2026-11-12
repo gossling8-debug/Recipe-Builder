@@ -33,7 +33,7 @@ function Screen() {
   const route = useRoute();
   switch (route.name) {
     case "scan":
-      return <Scanner />;
+      return <Scanner key={route.book ?? ""} book={route.book} />;
     case "settings":
       return <Settings />;
     case "import":

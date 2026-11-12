@@ -43,8 +43,9 @@ export async function signOutHere(): Promise<void> {
 
 /**
  * "Delete my account": removes the account and everything stored with it —
- * backed-up recipes, photos, lists and settings, cookbooks this person owns,
- * and recipes and memories they shared into other people's cookbooks — then clears this
+ * backed-up recipes, photos, lists and settings, and recipes and memories they
+ * shared into family cookbooks (cookbooks with other members stay for them; one
+ * nobody else is in is deleted) — then clears this
  * phone too. (Settings → Export backup first keeps a copy.)
  *
  * Firebase asks for the password again before deleting an account.
@@ -90,7 +91,8 @@ export async function deleteAccount(password: string): Promise<void> {
     for (const book of books) {
       const recipes = f.collection(db, "cookbooks", book.id, "recipes");
       const memories = f.collection(db, "cookbooks", book.id, "memories");
-      if (book.owner === u.uid) {
+      const rest = book.members.filter((m) => m !== u.uid);
+      if (rest.length === 0) {
         for (const sub of [recipes, memories, f.collection(db, "cookbooks", book.id, "memoryPhotos"), f.collection(db, "cookbooks", book.id, "meta")])
           for (const d of (await f.getDocs(sub)).docs) await f.deleteDoc(d.ref);
         await f.deleteDoc(f.doc(db, "cookbooks", book.id));
@@ -98,9 +100,11 @@ export async function deleteAccount(password: string): Promise<void> {
         for (const d of (await f.getDocs(f.query(recipes, f.where("sharedBy", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
         for (const d of (await f.getDocs(f.query(memories, f.where("by", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
         for (const d of (await f.getDocs(f.query(f.collection(db, "cookbooks", book.id, "memoryPhotos"), f.where("by", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
+        // Others keep the cookbook; if this person owned it, the next member takes over.
         await f.updateDoc(f.doc(db, "cookbooks", book.id), {
-          members: book.members.filter((m) => m !== u.uid),
+          members: rest,
           [`names.${u.uid}`]: f.deleteField(),
+          ...(book.owner === u.uid ? { owner: rest[0] } : {}),
         });
       }
     }

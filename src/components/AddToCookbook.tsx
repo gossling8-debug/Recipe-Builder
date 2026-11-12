@@ -6,6 +6,7 @@ import type { SavedRecipe } from "../lib/schema";
 import { searchRecipe } from "../lib/search";
 import { applySwaps } from "../lib/swaps";
 import Icon from "./Icon";
+import { navigate } from "../lib/route";
 
 /** Pick several of your recipes and share them into a cookbook at once. */
 export default function AddToCookbook(props: { book: Cookbook; inBook: SharedRecipe[]; myUid: string; onClose: (added: number) => void }) {
@@ -43,6 +44,10 @@ export default function AddToCookbook(props: { book: Cookbook; inBook: SharedRec
     <div className="sheet-backdrop" onClick={() => !busy && props.onClose(0)}>
       <div className="sheet add-to-book" role="dialog" aria-modal="true" aria-label={`Add recipes to ${book.name}`} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-title">Add recipes to {book.name}</div>
+        <button className="btn add-new-to-book" disabled={busy} onClick={() => navigate({ name: "scan", book: book.id })}>
+          <Icon name="camera" size={18} /> Scan or add a new recipe
+        </button>
+        <div className="muted small pick-or">or choose from your recipes</div>
         <input className="search" type="search" placeholder="Search your recipes" value={query} onChange={(e) => setQuery(e.target.value)} />
         <ul className="pick-list">
           {mine === null && <li className="muted small">Loading…</li>}
