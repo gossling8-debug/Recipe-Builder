@@ -868,4 +868,3 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .ai-meter { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin: 6px 0; }
 .ai-meter > span { display: block; height: 100%; background: var(--ink, #1c1a17); }
 
-.btn-note { font-weight: 400; opacity: 0.75; }
