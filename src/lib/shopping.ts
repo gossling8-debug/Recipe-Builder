@@ -5,7 +5,8 @@ import type { SavedRecipe } from "./schema";
 
 /** Recipes on the shopping list (each at the size chosen when added) and items ticked off. */
 export interface ShoppingState {
-  recipes: { id: string; scale: number }[];
+  /** skip: ingredients crossed off on the recipe when it was added (already have them). */
+  recipes: { id: string; scale: number; skip?: number[] }[];
   checked: string[];
   /** Items already opened at the store (so the cook can see what's been looked up). */
   opened?: string[];
@@ -36,9 +37,11 @@ export function saveShopping(s: ShoppingState): void {
   }
 }
 
-export function addToShopping(id: string, scale: number): void {
+/** Puts a recipe on the list; `skip` = ingredient numbers crossed off on the recipe (not needed). */
+export function addToShopping(id: string, scale: number, skip: number[] = []): void {
   const s = loadShopping();
-  saveShopping({ ...s, recipes: [...s.recipes.filter((r) => r.id !== id), { id, scale }] });
+  const entry = skip.length ? { id, scale, skip: [...skip].sort((a, b) => a - b) } : { id, scale };
+  saveShopping({ ...s, recipes: [...s.recipes.filter((r) => r.id !== id), entry] });
 }
 
 export function removeFromShopping(id: string): void {
@@ -166,14 +169,15 @@ export function nameKey(name: string): string {
  * sugar → 3 cups); anything that can't be added is listed side by side
  * ("2 cups + 1 tbsp").
  */
-export function combine(entries: { recipe: SavedRecipe; scale: number }[]): ShoppingItem[] {
+export function combine(entries: { recipe: SavedRecipe; scale: number; skip?: number[] }[]): ShoppingItem[] {
   const groups = new Map<
     string,
     { name: string; recipes: string[]; sums: Map<string, { total: number; display: string }>; other: string[]; need?: Qty | null }
   >();
-  for (const { recipe, scale } of entries) {
-    for (const ing of recipe.ingredients) {
-      if (!ing.name.trim()) continue;
+  for (const { recipe, scale, skip } of entries) {
+    const crossedOff = new Set(skip ?? []);
+    for (const [index, ing] of recipe.ingredients.entries()) {
+      if (!ing.name.trim() || crossedOff.has(index)) continue;
       const fullName = ingredientName(ing);
       const key = nameKey(fullName);
       let g = groups.get(key);

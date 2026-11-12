@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { fieldsToIngredient, ingredientToFields, stepToText, textToStep } from "../lib/edit";
+import { useRef, useState } from "react";
+import { fieldsToIngredient, ingredientToFields, stepToText, textToStep, updateStepsForAmount } from "../lib/edit";
 import { cleanTags, sanitizeRecipe, type SavedRecipe } from "../lib/schema";
 import Icon from "./Icon";
 import TagPicker from "./TagPicker";
@@ -33,6 +33,25 @@ export default function RecipeEditor(props: {
   const [steps, setSteps] = useState<string[]>(() => recipe.steps.map(stepToText));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // When an amount is changed, the steps' amounts for that ingredient follow it.
+  const amountBefore = useRef<{ key: number; amount: string } | null>(null);
+  const [stepsUpdated, setStepsUpdated] = useState("");
+  function amountDone(key: number) {
+    const before = amountBefore.current;
+    amountBefore.current = null;
+    const row = rows.find((r) => r.key === key);
+    if (!before || before.key !== key || !row || before.amount.trim() === row.amount.trim()) return;
+    const kept = rows.filter((r) => r.name.trim() || r.amount.trim());
+    const index = kept.findIndex((r) => r.key === key);
+    if (index < 0) return;
+    const ingredients = kept.map((r) => fieldsToIngredient(r.amount, r.name, r.section));
+    const next = updateStepsForAmount(steps, ingredients, index, before.amount, row.amount);
+    if (next.some((t, i) => t !== steps[i])) {
+      setSteps(next);
+      setStepsUpdated(`Updated the steps for ${row.name.split(",")[0].trim() || "that ingredient"} to match. Check them below.`);
+    }
+  }
 
   const setRow = (key: number, patch: Partial<Row>) => setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   const setStep = (i: number, text: string) => setSteps((ss) => ss.map((s, j) => (j === i ? text : s)));
@@ -100,7 +119,9 @@ export default function RecipeEditor(props: {
               aria-label="Amount"
               placeholder="1 cup"
               value={r.amount}
+              onFocus={() => (amountBefore.current = { key: r.key, amount: r.amount })}
               onChange={(e) => setRow(r.key, { amount: e.target.value })}
+              onBlur={() => amountDone(r.key)}
             />
             <input
               className="text-input"
@@ -121,6 +142,8 @@ export default function RecipeEditor(props: {
       >
         <Icon name="plus" size={18} /> Add ingredient
       </button>
+
+      {stepsUpdated && <div className="callout small">{stepsUpdated}</div>}
 
       <h3>Instructions</h3>
       <p className="muted small">
