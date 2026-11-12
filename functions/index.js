@@ -33,7 +33,10 @@ const PRICES = {
   yearly: { lookup: "cardamix_plus_yearly", amount: 2999, interval: "year" },
 };
 const DAY = 86_400_000;
-const opts = { region: "us-central1", maxInstances: 10 };
+// invoker "public": anyone may *call* these (each one checks the sign-in itself).
+// Set explicitly so every deploy applies it — a function whose first creation
+// failed and was then updated otherwise keeps Cloud Run's private default.
+const opts = { region: "us-central1", maxInstances: 10, invoker: "public" };
 
 const stripe = () => new Stripe(STRIPE_SECRET_KEY.value());
 const hasStripe = () => !!STRIPE_SECRET_KEY.value()?.startsWith("sk_");
