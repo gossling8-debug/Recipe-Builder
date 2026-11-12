@@ -186,6 +186,7 @@ export function BookPage({ id }: { id: string }) {
       <Header
         title={book?.name ?? "Family cookbook"}
         back={href({ name: "family" })}
+        returnToPrevious
         actions={
           book ? (
             <button className="icon-btn" onClick={() => invite(book, showToast)} aria-label="Invite someone">
@@ -291,7 +292,7 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
   const canRemove = item && (item.sharedBy === s.uid || book?.owner === s.uid);
   return (
     <>
-      <Header title={book?.name ?? ""} back={href({ name: "family", book: bookId })} />
+      <Header title={book?.name ?? ""} back={href({ name: "family", book: bookId })} returnToPrevious />
       <main className="page">
         {!on && <NeedsSignIn s={s} />}
         {item === null && <div className="callout error">This recipe was removed from the cookbook.</div>}
