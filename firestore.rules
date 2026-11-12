@@ -52,7 +52,7 @@ service cloud.firestore {
       match /meta/{m} {
         allow read: if isMember(b);
         allow write: if m == "cover" && signedIn() && book(b).owner == uid()
-          && request.resource.data.keys().hasOnly(['subtitle', 'dedication', 'photo', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['subtitle', 'dedication', 'photo', 'photoOnly', 'updatedAt'])
           && request.resource.data.subtitle is string && request.resource.data.subtitle.size() <= 120
           && request.resource.data.dedication is string && request.resource.data.dedication.size() <= 1000
           && (request.resource.data.photo == null || (request.resource.data.photo is string && request.resource.data.photo.size() < 700000));

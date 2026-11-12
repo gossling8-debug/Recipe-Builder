@@ -11,7 +11,7 @@ import type { SavedRecipe, ScannedRecipe } from "./schema";
  * Firestore (see firestore.rules):
  *   cookbooks/{id}                { name, owner, members[], names{uid: name}, createdAt }
  *   cookbooks/{id}/recipes/{doc}  { recipe, sharedBy, sharedByName, sharedAt, sourceId }
- *   cookbooks/{id}/meta/cover     { subtitle, dedication, photo, updatedAt }   (owner edits)
+ *   cookbooks/{id}/meta/cover     { subtitle, dedication, photo, photoOnly, updatedAt }   (owner edits)
  *   cookbooks/{id}/memories/{doc} { text, photo, by, byName, at, recipeId, recipeTitle }
  */
 export interface Cookbook {
@@ -108,6 +108,8 @@ export interface Cover {
   subtitle: string;
   dedication: string;
   photo: string | null; // data: URL, compressed
+  /** The photo is a picture of the family's own cover page: show just the photo. */
+  photoOnly?: boolean;
   updatedAt?: number;
 }
 export async function getCover(bookIdValue: string): Promise<Cover | null> {
@@ -124,6 +126,7 @@ export async function saveCover(bookIdValue: string, cover: Cover): Promise<void
     subtitle: cover.subtitle.trim().slice(0, 120),
     dedication: cover.dedication.trim().slice(0, 1000),
     photo: cover.photo,
+    photoOnly: !!cover.photo && !!cover.photoOnly,
     updatedAt: Date.now(),
   });
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { addMemory, bookMemories, deleteMemory, getCover, saveCover, type Cookbook, type Cover, type Memory, type SharedRecipe } from "../lib/family";
 import { compressPhoto } from "../lib/image";
 import { href } from "../lib/route";
+import { aiReady, getApiKey } from "../lib/settings";
 import Icon from "./Icon";
 
 /** A photo small enough to share in a cookbook (Firestore documents are capped at 1 MB). */
@@ -65,6 +66,12 @@ export function CookbookCover({ book, isOwner }: { book: Cookbook; isOwner: bool
       <section className="book-cover editing">
         <h3>Cover page</h3>
         <PhotoPicker photo={editing.photo} onChange={(photo) => setEditing({ ...editing, photo })} label="Add a cover photo" />
+        {editing.photo && (
+          <label className="check-line cover-photo-only">
+            <input type="checkbox" checked={!!editing.photoOnly} onChange={(e) => setEditing({ ...editing, photoOnly: e.target.checked })} />
+            <span>This photo is our cover page — show just the photo</span>
+          </label>
+        )}
         <label className="field">
           <span>Subtitle</span>
           <input className="text-input" maxLength={120} placeholder="Recipes from the Smith kitchen" value={editing.subtitle} onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })} />
@@ -103,6 +110,21 @@ export function CookbookCover({ book, isOwner }: { book: Cookbook; isOwner: bool
 
   const empty = !cover || (!cover.photo && !cover.subtitle && !cover.dedication);
   if (cover === undefined || (empty && !isOwner)) return null;
+  const startEdit = () =>
+    setEditing({ subtitle: cover?.subtitle ?? "", dedication: cover?.dedication ?? "", photo: cover?.photo ?? null, photoOnly: cover?.photoOnly ?? false });
+  if (cover?.photo && cover.photoOnly) {
+    // A photo of the family's own cover page is the cover.
+    return (
+      <section className="book-cover photo-only">
+        <img className="cover-page-photo" src={cover.photo} alt={`Cover of ${book.name}`} />
+        {isOwner && (
+          <button className="link-btn small cover-edit" onClick={startEdit}>
+            Edit cover
+          </button>
+        )}
+      </section>
+    );
+  }
   return (
     <section className={cover?.photo ? "book-cover with-photo" : "book-cover"}>
       {cover?.photo && <img className="cover-photo" src={cover.photo} alt="" />}
@@ -112,7 +134,7 @@ export function CookbookCover({ book, isOwner }: { book: Cookbook; isOwner: bool
         {cover?.dedication && <p className="cover-dedication">{cover.dedication}</p>}
       </div>
       {isOwner && (
-        <button className="link-btn small cover-edit" onClick={() => setEditing({ subtitle: cover?.subtitle ?? "", dedication: cover?.dedication ?? "", photo: cover?.photo ?? null })}>
+        <button className="link-btn small cover-edit" onClick={startEdit}>
           {empty ? "Add a cover page — photo, subtitle and dedication" : "Edit cover"}
         </button>
       )}
@@ -130,7 +152,22 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
   const [photo, setPhoto] = useState<string | null>(null);
   const [recipeId, setRecipeId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
   const [error, setError] = useState("");
+  async function typeItOut() {
+    if (!photo) return;
+    setReading(true);
+    setError("");
+    try {
+      const { transcribePage } = await import("../lib/transcribe");
+      const written = await transcribePage(getApiKey(), photo);
+      if (written) setText((t) => (t.trim() ? `${t.trim()}\n\n${written}` : written));
+      else setError("No writing was found in that photo.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+    setReading(false);
+  }
   const load = () => bookMemories(book.id).then(setMemories, (e) => setError(e instanceof Error ? e.message : String(e)));
   useEffect(() => {
     void load();
@@ -160,8 +197,8 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
       <ul className="memory-list">
         {(memories ?? []).map((m) => (
           <li key={m.id} className="memory">
-            {m.photo && <img src={m.photo} alt="" />}
-            <p className="memory-text">{m.text}</p>
+            {m.photo && <img src={m.photo} alt={m.text ? "" : `A memory from ${m.byName}`} />}
+            {m.text && <p className="memory-text">{m.text}</p>}
             <p className="muted small">
               — {m.by === myUid ? "You" : m.byName}, {monthYear(m.at)}
               {m.recipeId && m.recipeTitle && (
@@ -194,8 +231,20 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
       </ul>
       {adding ? (
         <div className="memory-form">
-          <textarea className="text-input" rows={4} maxLength={2000} placeholder="Grandma made this every Christmas Eve…" value={text} onChange={(e) => setText(e.target.value)} autoFocus />
-          <PhotoPicker photo={photo} onChange={setPhoto} label="Add a photo" />
+          <PhotoPicker photo={photo} onChange={setPhoto} label="Add a photo — of a moment, or of a written page" />
+          {photo && aiReady() && (
+            <button type="button" className="link-btn small" disabled={reading} onClick={typeItOut}>
+              {reading ? "Reading the page…" : "Type out the writing in this photo"}
+            </button>
+          )}
+          <textarea
+            className="text-input"
+            rows={4}
+            maxLength={2000}
+            placeholder={photo ? "Add words, or leave empty to share just the photo" : "Grandma made this every Christmas Eve…"}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
           {recipes.length > 0 && (
             <label className="field">
               <span>About a recipe (optional)</span>
@@ -210,7 +259,7 @@ export function CookbookMemories({ book, recipes, myUid, isOwner }: { book: Cook
             </label>
           )}
           <div className="button-row">
-            <button className="btn primary" disabled={busy || !text.trim()} onClick={save}>
+            <button className="btn primary" disabled={busy || reading || (!text.trim() && !photo)} onClick={save}>
               {busy ? "Saving…" : "Add memory"}
             </button>
             <button className="btn" disabled={busy} onClick={() => setAdding(false)}>
