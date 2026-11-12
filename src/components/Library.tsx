@@ -385,7 +385,7 @@ export default function Library() {
         {all.length > 0 && (hasFavorites || tags.length > 0 || avoiding || hasPantry) && (
           <div className="filters" role="group" aria-label="Show">
             {[
-              ["all", "Everything"],
+              ["all", "All"],
               ...(hasFavorites ? [["favorites", "Favorites"]] : []),
               ...(hasPantry ? [["canmake", "Can make now"]] : []),
               ...(avoiding ? [["safe", "Fits my avoid list"]] : []),
