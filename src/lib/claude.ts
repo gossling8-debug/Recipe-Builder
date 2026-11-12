@@ -117,6 +117,11 @@ export function describeApiError(err: unknown): string {
   const relay = !getApiKey() && err instanceof Anthropic.APIError ? (err.error as { error?: { message?: string } } | undefined)?.error?.message : undefined;
   if (relay && err instanceof Anthropic.APIError && [401, 413, 429, 503].includes(err.status ?? 0)) return relay;
   if (!getApiKey() && err instanceof Anthropic.APIError && (err.status ?? 0) >= 500) return "AI is having trouble right now. Try again in a minute.";
+  // Can't reach the app's AI server: if the phone is online, it's the server, not their connection.
+  if (!getApiKey() && err instanceof Anthropic.APIConnectionError)
+    return typeof navigator !== "undefined" && navigator.onLine === false
+      ? "You're offline. Connect to the internet and try again."
+      : "AI is temporarily unavailable. Please try again in a little while.";
   if (err instanceof Anthropic.AuthenticationError) return "Your API key was rejected. Check it in Settings.";
   if (err instanceof Anthropic.PermissionDeniedError) return "This API key isn't allowed to use this model. Check your Anthropic Console.";
   if (err instanceof Anthropic.RateLimitError) return "Too many requests at once (or your API credit ran out). Wait a minute, and check your balance in the Anthropic Console.";

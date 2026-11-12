@@ -91,9 +91,11 @@ export function planFromSubscriptions(subs) {
     : { plan: "free", source: "stripe", status: subs?.[0]?.status ?? "none", renews: null, cancelsAt: null };
 }
 
+const compList = (list) => (list ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 /** Comma-separated email list (e.g. the owner's) that always gets Plus. */
-export const isComp = (email, list) =>
-  !!email && (list ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean).includes(email.toLowerCase());
+export const isComp = (email, list) => !!email && compList(list).includes(email.toLowerCase());
+/** "*" in the list: a testing period where every account gets Plus. */
+export const isBeta = (list) => compList(list).includes("*");
 
 /** Where Stripe may send people back to. */
 export function allowedOrigin(origin) {

@@ -8,7 +8,7 @@
  *  - closeMyAccount / accountDeleted: cancel a deleted account's subscription and clear its records.
  *
  * Firestore (written only here; people can read their own):
- *   plans/{uid}     { plan, source, status, renews, cancelsAt, checkedAt }
+ *   plans/{uid}     { plan, source ("stripe" | "comp" | "beta" | "none"), status, renews, cancelsAt, checkedAt }
  *   aiUsage/{uid}   { month, spent, uses, limit, minute, minuteCount }
  *   customers/{uid} { stripeId }   (not readable by the app)
  */
@@ -19,7 +19,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import Stripe from "stripe";
 import * as functionsV1 from "firebase-functions/v1";
-import { ALLOWANCE, MAX_BODY_BYTES, addUsage, allowanceCheck, allowedOrigin, checkRequest, costOf, isComp, planFromSubscriptions } from "./lib/guard.js";
+import { ALLOWANCE, MAX_BODY_BYTES, addUsage, allowanceCheck, allowedOrigin, checkRequest, costOf, isBeta, isComp, planFromSubscriptions } from "./lib/guard.js";
 
 initializeApp();
 const db = getFirestore();
@@ -41,10 +41,14 @@ const hasStripe = () => !!STRIPE_SECRET_KEY.value()?.startsWith("sk_");
 // ---------- plan ----------
 async function computePlan(uid, email) {
   if (isComp(email, PLUS_EMAILS.value())) return { plan: "plus", source: "comp", status: "comp", renews: null, cancelsAt: null };
+  // Testing period ("*"): everyone gets Plus — unless they're already paying, which Stripe shows below.
+  const beta = isBeta(PLUS_EMAILS.value());
   const cust = (await db.doc(`customers/${uid}`).get()).data();
-  if (!cust?.stripeId || !hasStripe()) return { plan: "free", source: "none", status: "none", renews: null, cancelsAt: null };
+  const free = beta ? { plan: "plus", source: "beta", status: "beta", renews: null, cancelsAt: null } : { plan: "free", source: "none", status: "none", renews: null, cancelsAt: null };
+  if (!cust?.stripeId || !hasStripe()) return free;
   const subs = await stripe().subscriptions.list({ customer: cust.stripeId, status: "all", limit: 10 });
-  return planFromSubscriptions(subs.data);
+  const fromStripe = planFromSubscriptions(subs.data);
+  return fromStripe.plan === "plus" ? fromStripe : free;
 }
 async function savePlan(uid, email) {
   const p = { ...(await computePlan(uid, email)), checkedAt: Date.now() };
@@ -158,7 +162,7 @@ export const checkout = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY, PLUS_EMAI
   if (!hasStripe()) throw new HttpsError("failed-precondition", "Payments aren't set up yet.");
   const interval = req.data?.interval === "yearly" ? "yearly" : "monthly";
   const current = await savePlan(req.auth.uid, req.auth.token.email);
-  if (current.plan === "plus") throw new HttpsError("already-exists", "You already have Plus.");
+  if (current.plan === "plus" && current.source !== "beta") throw new HttpsError("already-exists", "You already have Plus.");
   const s = stripe();
   const prices = await ensurePrices(s);
   const customer = await ensureCustomer(s, req.auth.uid, req.auth.token.email);

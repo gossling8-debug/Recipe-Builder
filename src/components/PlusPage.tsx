@@ -49,6 +49,7 @@ export default function PlusPage({ done }: { done?: boolean }) {
 
   const plusFeatures = FEATURES.filter((f) => f.plan === "plus");
   const isPlus = plan.plan === "plus";
+  const beta = plan.source === "beta"; // testing period: Plus is free, subscribing is optional
 
   return (
     <>
@@ -67,7 +68,9 @@ export default function PlusPage({ done }: { done?: boolean }) {
         {isPlus ? (
           <section>
             <h1 className="page-title">You have Plus</h1>
-            {plan.source === "comp" ? (
+            {plan.source === "beta" ? (
+              <p>Cardamix is in testing, so every account has Plus for free for now. Thanks for trying it!</p>
+            ) : plan.source === "comp" ? (
               <p>Your account has Plus for free.</p>
             ) : plan.cancelsAt ? (
               <p>Your subscription is cancelled and ends on {dateText(plan.cancelsAt)}. You keep Plus until then.</p>
@@ -84,9 +87,10 @@ export default function PlusPage({ done }: { done?: boolean }) {
             )}
             {plan.source === "stripe" && <p className="muted small">Change your card, see receipts or cancel — on Stripe's secure page.</p>}
           </section>
-        ) : (
+        ) : null}
+        {(!isPlus || beta) && (
           <section>
-            <h1 className="page-title">Cardamix Plus</h1>
+            {beta ? <h3>Subscribe early (optional)</h3> : <h1 className="page-title">Cardamix Plus</h1>}
             <p>Every feature, and far more AI each month.</p>
             <div className="segmented plus-interval" role="radiogroup" aria-label="Billing">
               <button role="radio" aria-checked={interval === "yearly"} className={interval === "yearly" ? "chip active" : "chip"} onClick={() => setInterval("yearly")}>

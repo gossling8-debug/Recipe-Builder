@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addUsage, allowanceCheck, allowedOrigin, checkRequest, costOf, isComp, monthKey, planFromSubscriptions } from "./guard.js";
+import { addUsage, allowanceCheck, allowedOrigin, checkRequest, costOf, isBeta, isComp, monthKey, planFromSubscriptions } from "./guard.js";
 
 const ok = { model: "claude-sonnet-5-5", max_tokens: 6000, messages: [{ role: "user", content: "hi" }] };
 const NOV = Date.UTC(2026, 10, 12, 10, 0);
@@ -58,6 +58,12 @@ describe("plans", () => {
   it("comp emails always get Plus", () => {
     expect(isComp("Owner@Example.com", "a@b.com, owner@example.com")).toBe(true);
     expect(isComp("x@y.com", "")).toBe(false);
+  });
+  it("'*' means a testing period: everyone gets Plus", () => {
+    expect(isBeta("*")).toBe(true);
+    expect(isBeta("owner@example.com, *")).toBe(true);
+    expect(isBeta("owner@example.com")).toBe(false);
+    expect(isBeta("none")).toBe(false);
   });
   it("only sends people back to Cardamix", () => {
     expect(allowedOrigin("https://cardamix.com")).toBe("https://cardamix.com");
