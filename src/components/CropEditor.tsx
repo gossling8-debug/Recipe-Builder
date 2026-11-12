@@ -1,14 +1,25 @@
 import { useEffect, useRef, useState } from "react";
-import type { Point, Quad } from "../lib/docscan";
+import { defaultQuad, type Point, type Quad } from "../lib/docscan";
 import { cropToCard, startingQuad, type CropSource } from "../lib/image";
 
 /**
  * Like a scanning app: shows the photo with the card's corners found, lets the
  * cook drag them, then straightens the card. "Use whole photo" skips cropping.
  */
-export default function CropEditor(props: { source: CropSource; quad?: Quad; onDone: (photo: string, quad: Quad | null) => void; onCancel: () => void }) {
+export default function CropEditor(props: {
+  source: CropSource;
+  quad?: Quad;
+  onDone: (photo: string, quad: Quad | null) => void;
+  onCancel: () => void;
+  /** Output size and quality (smaller for photos shared in cookbooks). */
+  maxEdge?: number;
+  quality?: number;
+  /** When no card or page is found: start from the whole photo (for photos that may not be of a page). */
+  wholeIfNotFound?: boolean;
+  cancelLabel?: string;
+}) {
   const { source } = props;
-  const [quad, setQuad] = useState<Quad>(() => props.quad ?? startingQuad(source));
+  const [quad, setQuad] = useState<Quad>(() => props.quad ?? (props.wholeIfNotFound && !source.found ? defaultQuad(source.w, source.h, 0) : startingQuad(source)));
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const dragging = useRef<number | null>(null);
@@ -34,9 +45,10 @@ export default function CropEditor(props: { source: CropSource; quad?: Quad; onD
     try {
       if (useWhole) {
         const { compressPhoto } = await import("../lib/image");
-        props.onDone(await compressPhoto(await (await fetch(source.url)).blob()), null);
-      } else props.onDone(await cropToCard(source, quad), quad);
-    } catch {
+        props.onDone(await compressPhoto(await (await fetch(source.url)).blob(), props.maxEdge, props.quality), null);
+      } else props.onDone(await cropToCard(source, quad, props.maxEdge, props.quality), quad);
+    } catch (e) {
+      console.warn("Crop failed; using the whole photo.", e);
       props.onDone(source.url, null);
     }
   }
@@ -45,7 +57,13 @@ export default function CropEditor(props: { source: CropSource; quad?: Quad; onD
   return (
     <div className="crop-screen" role="dialog" aria-modal="true" aria-label="Crop the photo">
       <p className="crop-help">
-        {props.quad ? "Drag the corners to the card's edges." : source.found ? "Found the card. Drag a corner to adjust." : "Couldn't find the card's edges — drag the corners to them."}
+        {props.quad
+          ? "Drag the corners to the edges."
+          : source.found
+            ? "Found the edges. Drag a corner to adjust."
+            : props.wholeIfNotFound
+              ? "No page found — drag the corners to crop, or keep the whole photo."
+              : "Couldn't find the card's edges — drag the corners to them."}
       </p>
       <div className="crop-stage">
         <div className="crop-box" ref={box} style={{ aspectRatio: `${source.w} / ${source.h}` }}>
@@ -96,7 +114,7 @@ export default function CropEditor(props: { source: CropSource; quad?: Quad; onD
         </button>
       </div>
       <button className="link-btn small crop-cancel" disabled={busy} onClick={props.onCancel}>
-        Don't add this photo
+        {props.cancelLabel ?? "Don't add this photo"}
       </button>
     </div>
   );

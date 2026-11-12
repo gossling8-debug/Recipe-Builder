@@ -41,6 +41,28 @@ export function otsu(gray: ArrayLike<number>): number {
   return threshold;
 }
 
+/** Average jump in shade across the region's border, looking 3 pixels outward. */
+function edgeContrast(gray: ArrayLike<number>, mask: Uint8Array, region: number[], w: number, h: number): number {
+  let sum = 0;
+  let n = 0;
+  const step = 3;
+  for (const i of region) {
+    const x = i % w;
+    const y = (i / w) | 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h || mask[ny * w + nx]) continue; // not a border in this direction
+      const ox = Math.min(Math.max(x + dx * step, 0), w - 1);
+      const oy = Math.min(Math.max(y + dy * step, 0), h - 1);
+      const ix = Math.min(Math.max(x - dx * (step - 1), 0), w - 1);
+      const iy = Math.min(Math.max(y - dy * (step - 1), 0), h - 1);
+      sum += Math.abs(gray[iy * w + ix] - gray[oy * w + ox]);
+      n++;
+    }
+  }
+  return n ? sum / n : 0;
+}
+
 /** Largest 4-connected region of `mask`; returns its pixel indices. */
 function largestRegion(mask: Uint8Array, w: number, h: number): number[] {
   const seen = new Uint8Array(w * h);
@@ -103,6 +125,9 @@ export function detectCard(gray: ArrayLike<number>, w: number, h: number): Quad 
     }
     edges = +top + +bottom + +left + +right;
     if (edges >= 4) continue;
+    // A card has a sharp border: across the region's edge the shade jumps.
+    // Soft shading (a sunset, a gradient, a face) doesn't, so it isn't a page.
+    if (edgeContrast(gray, mask, region, w, h) < 25) continue;
     let tl = { x: 0, y: 0, s: Infinity }, br = { x: 0, y: 0, s: -Infinity }, tr = { x: 0, y: 0, s: -Infinity }, bl = { x: 0, y: 0, s: Infinity };
     for (const i of region) {
       const x = i % w;

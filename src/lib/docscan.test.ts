@@ -36,6 +36,12 @@ describe("finding the card", () => {
     const q = detectCard(photo(300, 220, card, 60, 225), 300, 220)!;
     q.forEach((p, i) => expect(near(p, card[i]), `corner ${i}`).toBe(true));
   });
+  it("doesn't mistake soft shading (a gradient, a sunset) for a page", () => {
+    const w = 240, h = 180;
+    const g: number[] = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) g.push(Math.round(40 + (180 * (x + y)) / (w + h)));
+    expect(detectCard(g, w, h)).toBeNull();
+  });
   it("gives up (null) on a photo with no card", () => {
     const flat = Array.from({ length: 200 * 150 }, (_, i) => 120 + (i % 7));
     expect(detectCard(flat, 200, 150)).toBeNull();

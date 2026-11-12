@@ -1,21 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { addMemory, bookMemories, deleteMemory, getCover, saveCover, type Cookbook, type Cover, type Memory, type SharedRecipe } from "../lib/family";
-import { compressPhoto } from "../lib/image";
+import { compressPhoto, prepareCrop, type CropSource } from "../lib/image";
+import CropEditor from "./CropEditor";
 import { href } from "../lib/route";
 import { aiReady, getApiKey } from "../lib/settings";
 import Icon from "./Icon";
 
-/** A photo small enough to share in a cookbook (Firestore documents are capped at 1 MB). */
-async function bookPhoto(file: File): Promise<string> {
-  let url = await compressPhoto(file, 1100, 0.72);
-  if (url.length > 650_000) url = await compressPhoto(file, 800, 0.6);
-  if (url.length > 650_000) throw new Error("That photo is too large. Try another one.");
-  return url;
+/** Keeps a photo small enough to share in a cookbook (Firestore documents are capped at 1 MB). */
+async function fitForBook(url: string): Promise<string> {
+  if (url.length <= 650_000) return url;
+  const smaller = await compressPhoto(await (await fetch(url)).blob(), 800, 0.6);
+  if (smaller.length > 650_000) throw new Error("That photo is too large. Try another one.");
+  return smaller;
 }
 
 function PhotoPicker({ photo, onChange, label }: { photo: string | null; onChange: (p: string | null) => void; label: string }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
+  const [cropping, setCropping] = useState<CropSource | null>(null);
   return (
     <div className="photo-picker">
       {photo && <img src={photo} alt="" />}
@@ -40,12 +42,31 @@ function PhotoPicker({ photo, onChange, label }: { photo: string | null; onChang
           if (!file) return;
           setError("");
           try {
-            onChange(await bookPhoto(file));
+            // Like scanning a recipe card: find the page's edges, adjust, straighten.
+            setCropping(await prepareCrop(file));
           } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
           }
         }}
       />
+      {cropping && (
+        <CropEditor
+          source={cropping}
+          maxEdge={1100}
+          quality={0.72}
+          wholeIfNotFound
+          cancelLabel="Don't use this photo"
+          onCancel={() => setCropping(null)}
+          onDone={async (photo) => {
+            setCropping(null);
+            try {
+              onChange(await fitForBook(photo));
+            } catch (err) {
+              setError(err instanceof Error ? err.message : String(err));
+            }
+          }}
+        />
+      )}
       {error && <p className="small error-text">{error}</p>}
     </div>
   );
