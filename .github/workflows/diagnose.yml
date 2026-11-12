@@ -1,0 +1,43 @@
+name: Diagnose server (read-only)
+on:
+  push:
+    branches: [claude/wizardly-carson-sc85h1]
+    paths: [".github/workflows/diagnose.yml"]
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env:
+      P: recipe-relief
+      R: us-central1
+    steps:
+      - name: Sign in (read-only checks)
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json" --quiet
+          gcloud config set project $P --quiet
+      - name: Who may call each function
+        run: |
+          for s in refreshplan checkout ai closemyaccount billingportal; do
+            echo "== $s"; gcloud run services get-iam-policy $s --region $R --format='value(bindings)' || true
+          done
+      - name: Does refreshPlan answer? (no sign-in → expect 401 'Sign in first')
+        run: |
+          curl -s -X POST -H 'content-type: application/json' -d '{"data":{}}' -w '\nHTTP %{http_code}\n' https://$R-$P.cloudfunctions.net/refreshPlan || true
+          echo "== preflight from cardamix.com"
+          curl -s -o /dev/null -D - -X OPTIONS -H 'Origin: https://cardamix.com' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: authorization,content-type' https://$R-$P.cloudfunctions.net/refreshPlan | grep -iE '^HTTP|access-control' || true
+          echo "== ai (no sign-in → expect 401)"
+          curl -s -X POST -H 'content-type: application/json' -d '{}' -w '\nHTTP %{http_code}\n' https://$R-$P.cloudfunctions.net/ai/v1/messages || true
+      - name: Testing-period setting (shape only, no emails printed)
+        run: |
+          gcloud secrets versions access latest --secret PLUS_EMAILS | python3 -c "import sys; s=sys.stdin.read(); parts=[p.strip() for p in s.split(',') if p.strip()]; print('entries:', len(parts), '| has *:', '*' in parts, '| has @:', sum('@' in p for p in parts), '| raw length:', len(s))"
+      - name: Saved plans (plan/source only)
+        run: |
+          TOKEN=$(gcloud auth print-access-token)
+          curl -s -H "Authorization: Bearer $TOKEN" "https://firestore.googleapis.com/v1/projects/$P/databases/(default)/documents/plans?pageSize=20" | python3 -c "import sys,json; d=json.load(sys.stdin); docs=d.get('documents',[]); print('plans docs:', len(docs)); [print(x['name'].split('/')[-1][:6]+'…', x['fields'].get('plan',{}).get('stringValue'), x['fields'].get('source',{}).get('stringValue')) for x in docs]; print(d.get('error',''))"
+      - name: Recent errors (refreshPlan)
+        run: |
+          gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="refreshplan" AND severity>=WARNING' --limit 15 --freshness 6h --format='value(timestamp,severity,textPayload,jsonPayload.message)' || true
+      - if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
