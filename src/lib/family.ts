@@ -11,6 +11,8 @@ import type { SavedRecipe, ScannedRecipe } from "./schema";
  * Firestore (see firestore.rules):
  *   cookbooks/{id}                { name, owner, members[], names{uid: name}, createdAt }
  *   cookbooks/{id}/recipes/{doc}  { recipe, sharedBy, sharedByName, sharedAt, sourceId }
+ *   cookbooks/{id}/meta/cover     { subtitle, dedication, photo, photoOnly, updatedAt }   (owner edits)
+ *   cookbooks/{id}/memories/{doc} { text, photo, by, byName, at, recipeId, recipeTitle }
  */
 export interface Cookbook {
   id: string;
@@ -90,13 +92,80 @@ export async function leaveCookbook(book: Cookbook): Promise<void> {
   await f.updateDoc(f.doc(db, "cookbooks", book.id), { members: book.members.filter((m) => m !== u.uid) });
 }
 
-/** Owner only: removes the cookbook and every recipe shared in it. Members' own copies stay. */
+/** Owner only: removes the cookbook with its recipes, cover and memories. Members' own copies stay. */
 export async function deleteCookbook(book: Cookbook): Promise<void> {
   await me();
   const { db, f } = await fb();
-  const snap = await f.getDocs(f.collection(db, "cookbooks", book.id, "recipes"));
-  for (const d of snap.docs) await f.deleteDoc(d.ref);
+  for (const sub of ["recipes", "memories", "meta"]) {
+    const snap = await f.getDocs(f.collection(db, "cookbooks", book.id, sub));
+    for (const d of snap.docs) await f.deleteDoc(d.ref);
+  }
   await f.deleteDoc(f.doc(db, "cookbooks", book.id));
+}
+
+// ---------- cover page ----------
+export interface Cover {
+  subtitle: string;
+  dedication: string;
+  photo: string | null; // data: URL, compressed
+  /** The photo is a picture of the family's own cover page: show just the photo. */
+  photoOnly?: boolean;
+  updatedAt?: number;
+}
+export async function getCover(bookIdValue: string): Promise<Cover | null> {
+  await me();
+  const { db, f } = await fb();
+  const snap = await f.getDoc(f.doc(db, "cookbooks", bookIdValue, "meta", "cover"));
+  return snap.exists() ? (snap.data() as Cover) : null;
+}
+/** Owner only. */
+export async function saveCover(bookIdValue: string, cover: Cover): Promise<void> {
+  await me();
+  const { db, f } = await fb();
+  await f.setDoc(f.doc(db, "cookbooks", bookIdValue, "meta", "cover"), {
+    subtitle: cover.subtitle.trim().slice(0, 120),
+    dedication: cover.dedication.trim().slice(0, 1000),
+    photo: cover.photo,
+    photoOnly: !!cover.photo && !!cover.photoOnly,
+    updatedAt: Date.now(),
+  });
+}
+
+// ---------- memories ----------
+export interface Memory {
+  id: string;
+  text: string;
+  photo: string | null;
+  by: string;
+  byName: string;
+  at: number;
+  recipeId: string | null; // a recipe in this cookbook it's about, if any
+  recipeTitle: string | null;
+}
+export async function bookMemories(bookIdValue: string): Promise<Memory[]> {
+  await me();
+  const { db, f } = await fb();
+  const snap = await f.getDocs(f.collection(db, "cookbooks", bookIdValue, "memories"));
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Memory, "id">) })).sort((a, b) => a.at - b.at);
+}
+export async function addMemory(book: Cookbook, m: { text: string; photo: string | null; recipe: SharedRecipe | null }): Promise<void> {
+  const u = await me();
+  const { db, f } = await fb();
+  const doc: Omit<Memory, "id"> = {
+    text: m.text.trim().slice(0, 2000),
+    photo: m.photo,
+    by: u.uid,
+    byName: book.names[u.uid] ?? defaultName(u.email),
+    at: Date.now(),
+    recipeId: m.recipe?.id ?? null,
+    recipeTitle: m.recipe?.recipe.title ?? null,
+  };
+  await f.setDoc(f.doc(db, "cookbooks", book.id, "memories", `${u.uid}_${newId()}`), doc);
+}
+export async function deleteMemory(bookIdValue: string, id: string): Promise<void> {
+  await me();
+  const { db, f } = await fb();
+  await f.deleteDoc(f.doc(db, "cookbooks", bookIdValue, "memories", id));
 }
 
 export async function bookRecipes(bookIdValue: string): Promise<SharedRecipe[]> {

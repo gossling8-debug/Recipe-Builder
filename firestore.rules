@@ -48,6 +48,27 @@ service cloud.firestore {
         );
       allow delete: if signedIn() && resource.data.owner == uid();
 
+      // The cover page: members read it; the owner edits it.
+      match /meta/{m} {
+        allow read: if isMember(b);
+        allow write: if m == "cover" && signedIn() && book(b).owner == uid()
+          && request.resource.data.keys().hasOnly(['subtitle', 'dedication', 'photo', 'photoOnly', 'updatedAt'])
+          && request.resource.data.subtitle is string && request.resource.data.subtitle.size() <= 120
+          && request.resource.data.dedication is string && request.resource.data.dedication.size() <= 1000
+          && (request.resource.data.photo == null || (request.resource.data.photo is string && request.resource.data.photo.size() < 700000));
+        allow delete: if signedIn() && book(b).owner == uid();
+      }
+
+      // Memories: members read them and add their own; the author or the owner removes one.
+      match /memories/{mem} {
+        allow read: if isMember(b);
+        allow create: if isMember(b) && request.resource.data.by == uid()
+          && request.resource.data.keys().hasOnly(['text', 'photo', 'by', 'byName', 'at', 'recipeId', 'recipeTitle'])
+          && request.resource.data.text is string && request.resource.data.text.size() <= 2000
+          && (request.resource.data.photo == null || (request.resource.data.photo is string && request.resource.data.photo.size() < 700000));
+        allow delete: if isMember(b) && (resource.data.by == uid() || book(b).owner == uid());
+      }
+
       // Recipes shared into the cookbook: members read them; each person
       // adds and updates their own; the sharer or the cookbook's owner removes.
       match /recipes/{r} {

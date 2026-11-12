@@ -6,6 +6,7 @@ import { useToast } from "./Toast";
 import { cloudState, subscribeCloud, type CloudState } from "../lib/cloud";
 import { listRecipes, newId, saveRecipe } from "../lib/db";
 import { duplicatesOf } from "../lib/duplicates";
+import { CookbookCover, CookbookMemories } from "./CookbookExtras";
 import {
   bookRecipes,
   createCookbook,
@@ -200,6 +201,7 @@ export function BookPage({ id }: { id: string }) {
         {on && book === null && <div className="callout error">This cookbook doesn't exist any more, or you're not a member.</div>}
         {book && (
           <>
+            <CookbookCover book={book} isOwner={owner} />
             <p className="muted small">
               Members: {book.members.map((m) => book.names[m] ?? "someone").join(", ")} ·{" "}
               <button className="link-btn small" onClick={() => invite(book, showToast)}>
@@ -212,6 +214,7 @@ export function BookPage({ id }: { id: string }) {
                 No recipes yet. Open one of your recipes and tap <strong>Share to {book.name}</strong> near the bottom.
               </p>
             )}
+            {recipes && recipes.length > 0 && <h2 className="list-heading">Recipes</h2>}
             {recipes && recipes.length > 0 && (
               <ul className="recipe-list">
                 {recipes.map((r) => (
@@ -231,7 +234,8 @@ export function BookPage({ id }: { id: string }) {
                 ))}
               </ul>
             )}
-            <div className="button-row">
+            {recipes && <CookbookMemories book={book} recipes={recipes} myUid={s.uid ?? ""} isOwner={owner} />}
+            <div className="button-row book-leave">
               <button className="btn" onClick={leave}>
                 {owner ? "Delete this cookbook" : "Leave this cookbook"}
               </button>

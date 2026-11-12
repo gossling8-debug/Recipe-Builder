@@ -67,8 +67,8 @@ export default function PrivacyPage() {
 
         <h3>Family cookbooks</h3>
         <p>
-          Recipes you share to a family cookbook, and the display name you choose, are visible to everyone in that cookbook. Your own
-          recipe box, photos and notes are not shared. Anyone with a cookbook's invite link can join it, so share links only with people
+          Recipes, memories and photos you add to a family cookbook (including its cover page), and the display name you choose, are
+          visible to everyone in that cookbook. Your own recipe box, photos and notes are not shared. Anyone with a cookbook's invite link can join it, so share links only with people
           you trust.
         </p>
 
