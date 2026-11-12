@@ -4,6 +4,7 @@ import Icon from "./Icon";
 import { compressPhoto, prepareCrop, stripDataUrl, type CropSource } from "../lib/image";
 import type { Quad } from "../lib/docscan";
 import CropEditor from "./CropEditor";
+import DocumentScanner, { type ScannedPage } from "./DocumentScanner";
 import { newId, saveRecipe, storageErrorMessage } from "../lib/db";
 import TagPicker from "./TagPicker";
 import { cleanTags } from "../lib/schema";
@@ -29,6 +30,13 @@ export default function Scanner() {
   const [originals, setOriginals] = useState<({ source: CropSource; quad: Quad | null } | null)[]>([]);
   const [cropQueue, setCropQueue] = useState<{ source: CropSource; quad?: Quad; index?: number }[]>([]);
   const [preparing, setPreparing] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [noCamera, setNoCamera] = useState("");
+  function addScans(pages: ScannedPage[]) {
+    setScanning(false);
+    setPhotos((p) => [...p, ...pages.map((x) => x.photo)].slice(0, MAX_PHOTOS));
+    setOriginals((o) => [...o, ...pages.map((x) => ({ source: x.source, quad: x.quad }))].slice(0, MAX_PHOTOS));
+  }
   // Labels picked before reading; if none, Claude's suggestions are used.
   const [tags, setTags] = useState<string[]>([]);
   const [showTags, setShowTags] = useState(false);
@@ -229,9 +237,17 @@ export default function Scanner() {
                 )}
                 {photos.length > 0 && originals.some(Boolean) && <p className="muted small">Tap a photo to adjust its crop.</p>}
                 {preparing && <p className="muted small">Finding the card…</p>}
+                {noCamera && (
+                  <div className="callout small">
+                    {noCamera}{" "}
+                    <button className="link-btn small" onClick={() => cameraInput.current?.click()}>
+                      Take a photo instead
+                    </button>
+                  </div>
+                )}
                 {photos.length < MAX_PHOTOS && (
                   <div className="button-row">
-                    <button className="btn" onClick={() => cameraInput.current?.click()}>
+                    <button className="btn" onClick={() => (setNoCamera(""), setScanning(true))}>
                       <Icon name="camera" /> {photos.length ? "Scan another card" : "Scan a card"}
                     </button>
                     <button className="btn" onClick={() => libraryInput.current?.click()}>
@@ -328,6 +344,18 @@ export default function Scanner() {
             Read recipe
           </button>
         </div>
+      )}
+      {scanning && (
+        <DocumentScanner
+          multiPage
+          cleanByDefault
+          onDone={addScans}
+          onCancel={() => setScanning(false)}
+          onNoCamera={(why) => {
+            setScanning(false);
+            setNoCamera(why);
+          }}
+        />
       )}
       {cropQueue[0] && (
         <CropEditor
