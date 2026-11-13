@@ -82,7 +82,7 @@ export function AddToBooksPrompt({ recipe, onDone }: { recipe: SavedRecipe; onDo
 }
 
 /** After a new recipe is added straight into a cookbook: offers to keep a copy in your recipes. */
-export function SaveToMinePrompt(props: { title: string; bookName: string; onAnswer: (save: boolean) => Promise<void> }) {
+export function SaveToMinePrompt(props: { title: string; bookName: string; alreadyMine?: string; onAnswer: (save: boolean) => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function answer(save: boolean) {
@@ -100,6 +100,7 @@ export function SaveToMinePrompt(props: { title: string; bookName: string; onAns
       <div className="sheet" role="dialog" aria-modal="true" aria-label="Save to your recipes">
         <div className="sheet-title">Added to {props.bookName}</div>
         <p>Save “{props.title}” to your own recipes too?</p>
+        {props.alreadyMine && <p className="small dup-flag">You already have “{props.alreadyMine}” in your recipes.</p>}
         <p className="muted small">Your copy is yours to change, plan with and cook from. The cookbook's copy stays as it is.</p>
         {error && <div className="callout error small">{error}</div>}
         <div className="button-row add-to-book-actions">
@@ -108,6 +109,55 @@ export function SaveToMinePrompt(props: { title: string; bookName: string; onAns
           </button>
           <button className="btn" disabled={busy} onClick={() => answer(false)}>
             No, just the cookbook
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export interface DuplicateMatch {
+  title: string;
+  /** e.g. "in your recipes", "in Grandma Carlson, shared by you" */
+  where: string;
+}
+
+/** Right after a recipe is read, before it's saved: it looks like one that's already there. */
+export function DuplicatePrompt(props: { title: string; matches: DuplicateMatch[]; onAddAnyway: () => Promise<void>; onSkip: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  return (
+    <div className="sheet-backdrop">
+      <div className="sheet" role="dialog" aria-modal="true" aria-label="Possible duplicate">
+        <div className="sheet-title">Already have this one?</div>
+        <p>“{props.title}” looks like:</p>
+        <ul className="dup-matches">
+          {props.matches.slice(0, 3).map((m, i) => (
+            <li key={i}>
+              <strong>{m.title}</strong> <span className="muted small">{m.where}</span>
+            </li>
+          ))}
+        </ul>
+        {error && <div className="callout error small">{error}</div>}
+        <div className="button-row add-to-book-actions">
+          <button className="btn primary" disabled={busy} onClick={props.onSkip}>
+            Don't add it
+          </button>
+          <button
+            className="btn"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              try {
+                await props.onAddAnyway();
+              } catch (e) {
+                setError(errText(e));
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? "Adding…" : "Add anyway"}
           </button>
         </div>
       </div>

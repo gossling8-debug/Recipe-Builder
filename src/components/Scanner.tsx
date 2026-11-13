@@ -5,7 +5,7 @@ import { compressPhoto, prepareCrop, stripDataUrl, type CropSource } from "../li
 import type { Quad } from "../lib/docscan";
 import CropEditor from "./CropEditor";
 import DocumentScanner, { type ScannedPage } from "./DocumentScanner";
-import { newId, saveRecipe, storageErrorMessage } from "../lib/db";
+import { listRecipes, newId, saveRecipe, storageErrorMessage } from "../lib/db";
 import TagPicker from "./TagPicker";
 import { cleanTags } from "../lib/schema";
 import { href, navigate } from "../lib/route";
@@ -13,8 +13,10 @@ import { getApiKey, aiReady } from "../lib/settings";
 import { getModel } from "../lib/models";
 import type { RecipeSource } from "../lib/claude";
 import type { SavedRecipe } from "../lib/schema";
-import { getCookbook, shareToCookbook, type Cookbook } from "../lib/family";
-import { AddToBooksPrompt, SaveToMinePrompt } from "./AfterAdd";
+import { bookRecipes, getCookbook, shareToCookbook, type Cookbook } from "../lib/family";
+import { duplicatesOf } from "../lib/duplicates";
+import { user } from "../lib/cloud";
+import { AddToBooksPrompt, DuplicatePrompt, SaveToMinePrompt, type DuplicateMatch } from "./AfterAdd";
 
 const MAX_PHOTOS = 4;
 type Mode = "photo" | "url" | "text";
@@ -33,7 +35,30 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
     if (bookId) getCookbook(bookId).then(setBook, () => {});
   }, [bookId]);
   // The recipe just read: ask whether it also goes to your recipes / your cookbooks.
-  const [added, setAdded] = useState<{ recipe: SavedRecipe; into: Cookbook | null } | null>(null);
+  const [added, setAdded] = useState<{ recipe: SavedRecipe; into: Cookbook | null; mineTwin?: string } | null>(null);
+  // Looks like one that's already there: ask before adding it.
+  const [twins, setTwins] = useState<{ recipe: SavedRecipe; into: Cookbook | null; matches: DuplicateMatch[]; mineTwin?: string } | null>(null);
+
+  /** Recipes this one looks like: in the cookbook it's going into, or else in your recipes. */
+  async function findTwins(r: SavedRecipe, into: Cookbook | null): Promise<{ matches: DuplicateMatch[]; mineTwin?: string }> {
+    const mine = await listRecipes().catch(() => [] as SavedRecipe[]);
+    const mineTwin = duplicatesOf(r, mine)[0]?.recipe.title;
+    if (!into) return { matches: duplicatesOf(r, mine).map((d) => ({ title: d.recipe.title, where: "in your recipes" })), mineTwin };
+    const uid = (await user().catch(() => null))?.uid;
+    const inBook = await bookRecipes(into.id).catch(() => []);
+    const matches = duplicatesOf(
+      r,
+      inBook.map((s) => ({ ...s.recipe, id: s.id, by: s.sharedBy === uid ? "you" : s.sharedByName })),
+    ).map((d) => ({ title: d.recipe.title, where: `in ${into.name}, shared by ${d.recipe.by}` }));
+    return { matches, mineTwin };
+  }
+
+  async function commit(r: SavedRecipe, into: Cookbook | null, mineTwin?: string) {
+    if (into) await shareToCookbook(into, r, r);
+    else await saveRecipe(r);
+    setTwins(null);
+    setAdded({ recipe: r, into, mineTwin });
+  }
   const [mode, setMode] = useState<Mode>("photo");
   const [photos, setPhotos] = useState<string[]>([]);
   // Each photo's original and chosen corners, so it can be re-cropped; and photos waiting to be cropped.
@@ -160,12 +185,13 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
       };
       const into = book ?? (bookId ? await getCookbook(bookId) : null);
       if (bookId && !into) throw new Error("Couldn't open that cookbook. Check your connection and try again.");
-      if (into) {
-        await shareToCookbook(into, saved, saved);
-      } else {
-        await saveRecipe(saved);
+      // Check for duplicates now that the recipe is read, before anything is saved.
+      const { matches, mineTwin } = await findTwins(saved, into);
+      if (matches.length) {
+        setTwins({ recipe: saved, into, matches, mineTwin });
+        return;
       }
-      setAdded({ recipe: saved, into });
+      await commit(saved, into, mineTwin);
     } catch (e) {
       setError(e instanceof DOMException ? storageErrorMessage(e) : e instanceof Error ? e.message : String(e));
       setBusy(false);
@@ -173,6 +199,20 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
   }
 
   const back = bookId ? href({ name: "family", book: bookId }) : href({ name: "library" });
+  if (twins) {
+    return (
+      <>
+        <Header title="Add a recipe" />
+        <main className="page" />
+        <DuplicatePrompt
+          title={twins.recipe.title}
+          matches={twins.matches}
+          onAddAnyway={() => commit(twins.recipe, twins.into, twins.mineTwin)}
+          onSkip={() => navigate(twins.into ? { name: "family", book: twins.into.id } : { name: "library" }, true)}
+        />
+      </>
+    );
+  }
   if (added) {
     const { recipe, into } = added;
     return (
@@ -183,6 +223,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
           <SaveToMinePrompt
             title={recipe.title}
             bookName={into.name}
+            alreadyMine={added.mineTwin}
             onAnswer={async (save) => {
               if (save) await saveRecipe(recipe);
               navigate({ name: "family", book: into.id }, true);

@@ -8,6 +8,7 @@ import { listRecipes, newId, saveRecipe } from "../lib/db";
 import { duplicatesOf } from "../lib/duplicates";
 import { CookbookCover, CookbookMemories } from "./CookbookExtras";
 import AddToCookbook from "./AddToCookbook";
+import { BookRecipeActions, HoldLink } from "./RecipeActions";
 import {
   bookRecipes,
   createCookbook,
@@ -170,6 +171,16 @@ export function BookPage({ id }: { id: string }) {
   const asComparable = (r: SharedRecipe) => ({ ...r.recipe, id: r.id });
   const twinsInBook = (r: SharedRecipe) => duplicatesOf(asComparable(r), (recipes ?? []).filter((x) => x.id !== r.id).map(asComparable));
   const inMine = (r: SharedRecipe) => r.sharedBy === s.uid || duplicatesOf({ ...r.recipe }, mine).length > 0;
+  // Your own copy of a cookbook recipe: the one you shared it from, else a matching recipe of yours.
+  const myCopyOf = (r: SharedRecipe) =>
+    (r.sharedBy === s.uid ? mine.find((m) => m.id === r.sourceId) : undefined) ?? duplicatesOf({ ...r.recipe }, mine)[0]?.recipe ?? null;
+  const [menuFor, setMenuFor] = useState<SharedRecipe | null>(null);
+  async function removeShared(r: SharedRecipe) {
+    if (!confirm(`Remove “${r.recipe.title}” from the cookbook? Copies people saved stay.`)) return;
+    await removeFromCookbook(id, r.id);
+    setRecipes((rs) => rs && rs.filter((x) => x.id !== r.id));
+    showToast("Removed from the cookbook");
+  }
 
   // Removing a cookbook only takes it off your list; the others keep it.
   const others = book ? book.members.filter((m) => m !== s.uid) : [];
@@ -237,7 +248,7 @@ export function BookPage({ id }: { id: string }) {
                   <ul className="recipe-list">
                     {recipes.map((r) => (
                       <li key={r.id} className="recipe-row">
-                        <a className="recipe-card" href={href({ name: "family", book: id, recipe: r.id })}>
+                        <HoldLink className="recipe-card" href={href({ name: "family", book: id, recipe: r.id })} onHold={() => setMenuFor(r)}>
                           <div className="thumb-placeholder" />
                           <div>
                             <div className="recipe-card-title">{r.recipe.title}</div>
@@ -247,7 +258,7 @@ export function BookPage({ id }: { id: string }) {
                             )}
                             {r.sharedBy !== myUid && inMine(r) && <div className="muted small">✓ Already in your recipes</div>}
                           </div>
-                        </a>
+                        </HoldLink>
                       </li>
                     ))}
                   </ul>
@@ -273,6 +284,18 @@ export function BookPage({ id }: { id: string }) {
         )}
         {error && <div className="callout error">{error}</div>}
       </main>
+      {menuFor && (
+        <BookRecipeActions
+          title={menuFor.recipe.title}
+          recipe={menuFor.recipe}
+          myCopy={myCopyOf(menuFor)}
+          canRemove={menuFor.sharedBy === s.uid || owner}
+          onClose={() => setMenuFor(null)}
+          onSaved={(r) => setMine((m) => [...m.filter((x) => x.id !== r.id), r])}
+          onRemove={() => removeShared(menuFor)}
+          onMessage={showToast}
+        />
+      )}
       {adding && book && recipes && (
         <AddToCookbook
           book={book}
