@@ -26,6 +26,7 @@ import HistoryPage from "./components/HistoryPage";
 import ReceiptPage from "./components/ReceiptPage";
 import TonightPage from "./components/TonightPage";
 import BudgetPage from "./components/BudgetPage";
+import PricesPage from "./components/PricesPage";
 import TabBar from "./components/TabBar";
 import { BookPage, FamilyPage, JoinPage, SharedRecipePage } from "./components/Family";
 import { MixPage, MixRecipePage } from "./components/Mix";
@@ -54,6 +55,8 @@ function Screen() {
       return <DuplicatesPage />;
     case "plus":
       return <PlusPage key={String(route.done)} done={route.done} />;
+    case "prices":
+      return <PricesPage />;
     case "tonight":
       return <TonightPage />;
     case "budget":

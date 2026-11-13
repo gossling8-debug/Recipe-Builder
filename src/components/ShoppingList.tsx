@@ -14,7 +14,8 @@ import { formatQty } from "../lib/qty";
 import { convertText, useUnits } from "../lib/units";
 import { useByLabel } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
-import { getStore, searchQuery, setStore, STORES, storeButton, storeSearchUrl, type Store } from "../lib/shopping";
+import { getStore, searchQuery, setStore, storeInfo, storeSearchUrl } from "../lib/stores";
+import StorePicker from "./StorePicker";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
 import { staplesToBuyOrTicked } from "../lib/shoppingItems";
 import { addPrice, deletePrice, dollars, parsePrice } from "../lib/prices";
@@ -115,7 +116,8 @@ export default function ShoppingList() {
     recordPurchase(it.name, text.trim());
     if (prev.priceId) deletePrice(prev.priceId);
     const price = parsePrice(priceText);
-    const priceId = price !== null ? addPrice(it.name, text.trim(), price) : undefined;
+    // Kept under the store chosen above the list, so prices compare by store.
+    const priceId = price !== null ? addPrice(it.name, text.trim(), price, Date.now(), { store: storeInfo(store).name }) : undefined;
     update({ ...state, bought: { ...state.bought, [key]: { text: text.trim(), before: prev.before, price: price ?? undefined, priceId } } });
     setEditing(null);
   };
@@ -127,7 +129,7 @@ export default function ShoppingList() {
   }
 
   const opened = new Set(state.opened ?? []);
-  const [store, pickStore] = useState<Store>(getStore);
+  const [store, pickStore] = useState<string>(getStore);
   const copyName = (q: string) => {
     try {
       void navigator.clipboard.writeText(q).then(
@@ -138,7 +140,7 @@ export default function ShoppingList() {
       showToast(`Search H-E-B for “${q}”`);
     }
   };
-  const shop = storeButton(store);
+  const shop = storeInfo(store).button;
   const row = (it: (typeof items)[number]) => (
     <li key={it.key} className="shop-row">
       <label className={checked.has(it.key) ? "checked" : ""}>
@@ -170,7 +172,7 @@ export default function ShoppingList() {
           onClick={() => {
             update({ ...state, opened: [...new Set([...(state.opened ?? []), it.key])] });
             // The H-E-B app can't be opened on a search, so the name goes on the clipboard to paste there.
-            if (store === "heb") copyName(searchQuery(it.name));
+            if (storeInfo(store).copyName) copyName(searchQuery(it.name));
           }}
         >
           {shop}
@@ -287,22 +289,13 @@ export default function ShoppingList() {
             <h3>To buy · {remaining.length}</h3>
             {remaining.length > 0 && feature("walmart") && (
               <>
-                <div className="segmented store-switch" role="radiogroup" aria-label="Store">
-                  {STORES.map((st) => (
-                    <button
-                      key={st.id}
-                      role="radio"
-                      aria-checked={store === st.id}
-                      className={store === st.id ? "chip active" : "chip"}
-                      onClick={() => {
-                        setStore(st.id);
-                        pickStore(st.id);
-                      }}
-                    >
-                      {st.name}
-                    </button>
-                  ))}
-                </div>
+                <StorePicker
+                  value={store}
+                  onChange={(id) => {
+                    setStore(id);
+                    pickStore(id);
+                  }}
+                />
                 <p className="muted small">
                   {store === "heb" ? (
                     <>
@@ -316,7 +309,7 @@ export default function ShoppingList() {
                     </>
                   ) : (
                     <>
-                      Tap <strong>Walmart</strong> to find an item in the Walmart app and add it to your cart, then tick it
+                      Tap <strong>{shop}</strong> to find an item at {storeInfo(store).name} and add it to your cart, then tick it
                       off here.
                     </>
                   )}{" "}

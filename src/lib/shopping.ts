@@ -240,52 +240,6 @@ export function walmartSearchUrl(name: string): string {
   return `https://www.walmart.com/search?q=${encodeURIComponent(walmartQuery(name))}`;
 }
 
-/** H-E-B's website search for one item. (The H-E-B app doesn't open search links, so this stays in the browser.) */
-export function hebSearchUrl(name: string): string {
-  return `https://www.heb.com/search?q=${encodeURIComponent(walmartQuery(name))}`;
-}
-
-/**
- * Opens the H-E-B app. Of heb.com's links, the app takes its home page (and
- * product, category, list and coupon pages) but not search, so the button
- * copies the item's name to paste into the app's search. Without the app
- * installed, this is heb.com's home page, where pasting into search works too.
- */
-export const HEB_APP_URL = "https://www.heb.com/";
-
-/** What the item's button opens: "heb" = the H-E-B app (name copied), "hebWeb" = heb.com search. */
-export type Store = "walmart" | "heb" | "hebWeb";
-export const STORES: { id: Store; name: string; button: string }[] = [
-  { id: "walmart", name: "Walmart", button: "Walmart" },
-  { id: "heb", name: "H-E-B app", button: "H-E-B" },
-  { id: "hebWeb", name: "H-E-B website", button: "H-E-B" },
-];
-export const storeName = (s: Store) => STORES.find((x) => x.id === s)!.name;
-export const storeButton = (s: Store) => STORES.find((x) => x.id === s)!.button;
-export const searchQuery = (name: string) => walmartQuery(name);
-export function storeSearchUrl(s: Store, name: string): string {
-  if (s === "heb") return HEB_APP_URL;
-  return s === "hebWeb" ? hebSearchUrl(name) : walmartSearchUrl(name);
-}
-
-const STORE_KEY = "recipe-builder.store";
-/** Which store the buttons search (synced with your account). Walmart unless you chose otherwise. */
-export function getStore(): Store {
-  try {
-    const v = localStorage.getItem(STORE_KEY);
-    return v === "heb" || v === "hebWeb" ? v : "walmart";
-  } catch {
-    return "walmart";
-  }
-}
-export function setStore(s: Store): void {
-  try {
-    localStorage.setItem(STORE_KEY, s);
-  } catch {
-    /* kept for this visit only */
-  }
-}
-
 function walmartQuery(name: string): string {
   return name
     .replace(/\(.*?\)/g, " ")

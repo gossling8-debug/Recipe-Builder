@@ -10,6 +10,7 @@ export type Route =
   | { name: "tips" }
   | { name: "tonight" }
   | { name: "budget" }
+  | { name: "prices" }
   | { name: "receipt" }
   | { name: "history" }
   | { name: "privacy" }
@@ -34,6 +35,7 @@ export function parseRoute(hash: string): Route {
   if (path === "tips") return { name: "tips" };
   if (path === "tonight") return { name: "tonight" };
   if (path === "budget") return { name: "budget" };
+  if (path === "prices") return { name: "prices" };
   if (path === "receipt") return { name: "receipt" };
   if (path === "history") return { name: "history" };
   if (path === "privacy") return { name: "privacy" };

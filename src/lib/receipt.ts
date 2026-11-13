@@ -15,6 +15,10 @@ export const ReceiptSchema = z.object({
   items: z.array(
     z.object({
       receipt_text: z.string().describe("The line as printed, e.g. \"GV 2% MLK GAL\"."),
+      item_code: z
+        .string()
+        .nullable()
+        .describe("The item number or UPC printed next to this line (digits only), if the receipt shows one; otherwise null."),
       name: z.string().describe('Plain, generic name a recipe would use, lowercase, no brand, e.g. "2% milk", "eggs", "ground beef".'),
       size: z
         .string()

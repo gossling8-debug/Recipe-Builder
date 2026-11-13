@@ -5,7 +5,8 @@ import { listRecipes } from "../lib/db";
 import { receiptPieces } from "../lib/image";
 import { loadPantry, recordPurchase, setItem } from "../lib/pantry";
 import { STORAGE_KINDS, estimateUseBy, guessStorage, keepsText, type StorageKind } from "../lib/shelfLife";
-import { addPrice, deletePrice, dollars, parsePrice } from "../lib/prices";
+import { addPrice, deletePrice, dollars, parsePrice, priceInsight, unitText, usedStores } from "../lib/prices";
+import { STORE_NAMES, normalizeStore } from "../lib/stores";
 import { alreadyImported, receiptId, receiptTime, rememberImported, type Receipt } from "../lib/receipt";
 import { href, navigate } from "../lib/route";
 import { getApiKey, aiReady } from "../lib/settings";
@@ -26,6 +27,8 @@ interface Row {
   inPantry: boolean;
   /** Fresh, frozen, canned or dry: sets how long the pantry expects it to last. */
   storage: StorageKind;
+  /** The item number printed next to it, if any. */
+  code: string | null;
 }
 
 /**
@@ -39,6 +42,10 @@ export default function ReceiptPage() {
   const [progress, setProgress] = useState<number | null>(null); // reading a screen recording
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  // Which store the receipt is from: read from it, and changeable. Prices are kept under it.
+  const [store, setStoreName] = useState("");
+  const [otherStore, setOtherStore] = useState(false);
+  const storeChoices = [...new Set([...usedStores(), ...STORE_NAMES])];
   const [rows, setRows] = useState<Row[]>([]);
   const [recipes, setRecipes] = useState<SavedRecipe[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -80,6 +87,9 @@ export default function ReceiptPage() {
       const { readReceipt, keepByDefault } = await import("../lib/receipt");
       const r = await readReceipt(getApiKey(), images, [...new Set(list.map((i) => i.name))]);
       setReceipt(r);
+      const named = normalizeStore(r.store) ?? "";
+      setStoreName(named);
+      setOtherStore(!!named && !STORE_NAMES.includes(named) && !usedStores().includes(named));
       setRows(
         r.items.map((it) => {
           const listItem = it.matches ? (byName.get(it.matches) ?? null) : null;
@@ -95,6 +105,7 @@ export default function ReceiptPage() {
             listItem,
             inPantry: !!pantry[nameKey(it.name)],
             storage: it.storage ?? guessStorage(it.name, it.receipt_text),
+            code: it.item_code,
           };
         }),
       );
@@ -137,19 +148,19 @@ export default function ReceiptPage() {
         const text = r.size || r.listItem.amount || "";
         const before = prev ? prev.before : recordPurchase(r.listItem.name, text, r.storage);
         if (prev) recordPurchase(r.listItem.name, text, r.storage);
-        const priceId = addPrice(r.listItem.name, text, price, at);
+        const priceId = addPrice(r.listItem.name, text, price, at, { store, code: r.code });
         bought[key] = { text: text || "some", before, price, priceId };
         if (!checked.has(key)) ticked++;
         checked.add(key);
       } else {
-        addPrice(r.name, r.size, price, at);
+        addPrice(r.name, r.size, price, at, { store, code: r.code });
         if (r.isFood) {
           recordPurchase(r.name, r.size, r.storage);
           pantryAdded++;
         }
       }
     }
-    if (taxShare >= 0.01) addPrice("Sales tax", "", Math.round(taxShare * 100) / 100, at);
+    if (taxShare >= 0.01) addPrice("Sales tax", "", Math.round(taxShare * 100) / 100, at, { store });
     saveShopping({ ...state, checked: [...checked], bought });
     if (id) rememberImported(id);
     try {
@@ -188,6 +199,7 @@ export default function ReceiptPage() {
         <span>$</span>
         <input className="text-input" inputMode="decimal" value={r.price} onChange={(e) => set(i, { price: e.target.value })} aria-label={`Price of ${r.name}`} />
       </label>
+        {r.include && <PriceNote name={r.listItem?.name ?? r.name} size={r.size || r.listItem?.amount || ""} price={r.price} store={store} />}
         {r.include && (r.isFood || r.listItem) && (
           <div className="storage-chips receipt-storage" role="radiogroup" aria-label={`How ${r.name} is kept`}>
             {STORAGE_KINDS.map((k) => (
@@ -272,8 +284,31 @@ export default function ReceiptPage() {
                 <strong>You may have imported this receipt already.</strong> Saving it again would count the spending twice.
               </div>
             )}
+            <div className="receipt-store">
+              <label className="field">
+                <span>Store</span>
+                {otherStore ? (
+                  <input className="text-input" value={store} maxLength={40} placeholder="Store name" onChange={(e) => setStoreName(e.target.value)} />
+                ) : (
+                  <select
+                    className="text-input"
+                    value={store}
+                    onChange={(e) => (e.target.value === "__other" ? (setOtherStore(true), setStoreName("")) : setStoreName(e.target.value))}
+                  >
+                    <option value="">Not sure</option>
+                    {storeChoices.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                    <option value="__other">Another store…</option>
+                  </select>
+                )}
+                <span className="muted small">Prices are kept by store, so you can compare where things are cheapest.</span>
+              </label>
+            </div>
             <p className="small">
-              {receipt.store ?? "Receipt"}
+              {store || "Receipt"}
               {receipt.date ? ` · ${new Date(receiptTime(receipt.date)).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""} ·{" "}
               {rows.length} items · {dollars(allTotal)}
               {receipt.tax ? ` + ${dollars(receipt.tax)} tax` : ""}
@@ -324,5 +359,23 @@ export default function ReceiptPage() {
         </div>
       )}
     </>
+  );
+}
+
+/** "↑ 12% since Oct 3" / "Cheaper at Kroger: $0.12/oz" — how this price compares with what you've paid. */
+function PriceNote({ name, size, price, store }: { name: string; size: string; price: string; store: string }) {
+  const p = parsePrice(price);
+  if (p === null) return null;
+  const i = priceInsight(name, size, p, store || null);
+  const parts: string[] = [];
+  if (i.change !== null && Math.abs(i.change) >= 0.03 && i.since)
+    parts.push(`${i.change > 0 ? "↑" : "↓"} ${Math.round(Math.abs(i.change) * 100)}% since ${new Date(i.since).toLocaleDateString([], { month: "short", day: "numeric" })}`);
+  if (i.cheaperAt) parts.push(`cheaper at ${i.cheaperAt.store}: ${unitText(i.cheaperAt.unit)}`);
+  if (!parts.length) return null;
+  return (
+    <div className={`small price-note${i.change !== null && i.change > 0.03 ? " up" : ""}`}>
+      {i.unit ? `${unitText(i.unit)} · ` : ""}
+      {parts.join(" · ")}
+    </div>
   );
 }

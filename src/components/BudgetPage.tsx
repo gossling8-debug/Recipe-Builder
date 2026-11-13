@@ -4,7 +4,7 @@ import Icon from "./Icon";
 import SpendingEditor from "./SpendingEditor";
 import { listRecipes } from "../lib/db";
 import { isDinner, realServings } from "../lib/autoPlan";
-import { dollars, getBudget, parsePrice, periodStarts, recipeCost, setBudget, spentSince } from "../lib/prices";
+import { dollars, getBudget, parsePrice, periodStarts, recipeCost, setBudget, spendingByStore, spentSince } from "../lib/prices";
 import { href } from "../lib/route";
 import { loadShopping, saveShopping, type ShoppingState } from "../lib/shopping";
 import { applySwaps } from "../lib/swaps";
@@ -26,6 +26,8 @@ export default function BudgetPage() {
   const starts = periodStarts();
   const week = spentSince(starts.week);
   const month = spentSince(starts.month);
+  // This month, by store (when receipts or the shopping list recorded where).
+  const byStore = spendingByStore(starts.month);
   const left = budget - week;
   const pct = budget ? Math.min(100, (week / budget) * 100) : 0;
 
@@ -107,6 +109,16 @@ export default function BudgetPage() {
             </button>
           )}
           <p className="muted small">This month: {dollars(month)}. Weeks start on Sunday.</p>
+          {byStore.length > 1 && (
+            <ul className="price-stores by-store">
+              {byStore.map((x) => (
+                <li key={x.store}>
+                  <span>{x.store}</span>
+                  <span>{dollars(x.total)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <SpendingEditor
@@ -119,6 +131,9 @@ export default function BudgetPage() {
           }}
         />
 
+        <a className="btn" href={href({ name: "prices" })}>
+          <Icon name="receipt" size={18} /> Price tracker
+        </a>
         <a className="btn" href={href({ name: "receipt" })}>
           <Icon name="camera" size={18} /> Import a receipt
         </a>
