@@ -93,13 +93,14 @@ export async function deleteAccount(password: string): Promise<void> {
       const memories = f.collection(db, "cookbooks", book.id, "memories");
       const rest = book.members.filter((m) => m !== u.uid);
       if (rest.length === 0) {
-        for (const sub of [recipes, memories, f.collection(db, "cookbooks", book.id, "memoryPhotos"), f.collection(db, "cookbooks", book.id, "meta")])
+        for (const sub of [recipes, memories, f.collection(db, "cookbooks", book.id, "memoryPhotos"), f.collection(db, "cookbooks", book.id, "meta"), f.collection(db, "cookbooks", book.id, "ratings")])
           for (const d of (await f.getDocs(sub)).docs) await f.deleteDoc(d.ref);
         await f.deleteDoc(f.doc(db, "cookbooks", book.id));
       } else {
         for (const d of (await f.getDocs(f.query(recipes, f.where("sharedBy", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
         for (const d of (await f.getDocs(f.query(memories, f.where("by", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
         for (const d of (await f.getDocs(f.query(f.collection(db, "cookbooks", book.id, "memoryPhotos"), f.where("by", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
+        for (const d of (await f.getDocs(f.query(f.collection(db, "cookbooks", book.id, "ratings"), f.where("by", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
         // Others keep the cookbook; if this person owned it, the next member takes over.
         await f.updateDoc(f.doc(db, "cookbooks", book.id), {
           members: rest,

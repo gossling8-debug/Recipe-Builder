@@ -67,7 +67,7 @@ export default function CloudSection() {
       </div>
       <p className="muted small">Backed up: recipes, photos, pantry, shopping list, week plan, prices and budget, and settings (except your Anthropic key). Signing out keeps everything in your account and on this phone.</p>
       <p>
-        <a href={href({ name: "family" })}>Family cookbooks</a>
+        <a href={href({ name: "family" })}>Cookbooks</a>
         <span className="muted small"> — share chosen recipes with family or friends</span>
       </p>
       {message && <div className="callout small">{message}</div>}

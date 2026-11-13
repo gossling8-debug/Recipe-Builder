@@ -41,9 +41,9 @@ export function AddToBooksPrompt({ recipe, onDone }: { recipe: SavedRecipe; onDo
 
   return (
     <div className="sheet-backdrop">
-      <div className="sheet add-to-book" role="dialog" aria-modal="true" aria-label="Add to a family cookbook">
+      <div className="sheet add-to-book" role="dialog" aria-modal="true" aria-label="Add to a cookbook">
         <div className="sheet-title">Saved to your recipes</div>
-        <p className="muted small">Add “{recipe.title}” to a family cookbook too?</p>
+        <p className="muted small">Add “{recipe.title}” to a cookbook too?</p>
         <ul className="pick-list">
           {books.map((b) => (
             <li key={b.id}>

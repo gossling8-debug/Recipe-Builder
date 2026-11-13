@@ -4,8 +4,10 @@ import Icon, { type IconName } from "./Icon";
 import { href, type Route } from "../lib/route";
 
 const TABS: { route: Route; label: string; icon: IconName; main?: boolean }[] = [
-  { route: { name: "budget" }, label: "Budget", icon: "receipt" },
+  { route: { name: "library" }, label: "Recipes", icon: "home" },
+  { route: { name: "family" }, label: "Cookbooks", icon: "book" },
   { route: { name: "scan" }, label: "Add", icon: "plus", main: true },
+  { route: { name: "budget" }, label: "Budget", icon: "receipt" },
   { route: { name: "tonight" }, label: "Tonight", icon: "plate" },
 ];
 
@@ -17,9 +19,14 @@ export default function TabBar({ current }: { current: Route["name"] }) {
     window.addEventListener("features-changed", on);
     return () => window.removeEventListener("features-changed", on);
   }, []);
-  const tabs = TABS.filter(
-    (t) => (t.route.name !== "budget" || feature("budget")) && (t.route.name !== "tonight" || feature("tonight")),
-  );
+  const others = TABS.filter(
+    (t) =>
+      (t.route.name !== "budget" || feature("budget")) &&
+      (t.route.name !== "tonight" || feature("tonight")) &&
+      (t.route.name !== "family" || feature("family")),
+  ).filter((t) => t.route.name !== "library");
+  // Recipes joins only when there are other tabs, so Add Recipe stays in the middle.
+  const tabs = others.length > 1 ? [TABS[0], ...others] : others;
   // Only Add Recipe left (e.g. the free plan): one wide button across the bar.
   if (tabs.length === 1 && tabs[0].main) {
     return (

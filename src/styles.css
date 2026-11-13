@@ -1019,3 +1019,8 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .fab-bar > .fab-stack { flex-direction: column; gap: 10px; }
 /* The page leaves room for a taller bottom bar. */
 body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 170px); }
+.cookbook-rating { margin: 6px 0 14px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.cookbook-rating p { margin: 4px 0; }
+.who-rated { list-style: none; padding: 0; margin: 4px 0 8px; }
+.who-rated li { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.book-sort { display: flex; gap: 8px; margin: 0 0 6px; }

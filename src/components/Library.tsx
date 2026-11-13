@@ -427,7 +427,7 @@ export default function Library() {
           <a className="plan-strip family-link" href={href({ name: "family" })}>
             <Icon name="book" size={18} />
             <span>
-              <strong>Family cookbooks</strong>
+              <strong>Cookbooks</strong>
               <span className="muted small"> · recipes shared with you</span>
             </span>
           </a>

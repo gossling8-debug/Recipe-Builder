@@ -58,7 +58,7 @@ export const FEATURES: Feature[] = [
   { id: "budget", name: "Budget", what: "Spending, prices, receipt import, cost per serving.", plan: "plus", group: "Shopping & pantry" },
   { id: "nutrition", name: "Nutrition", what: "Calories per serving and healthier swaps.", plan: "plus", group: "Health" },
   { id: "avoid", name: "Allergies & substitutes", what: "Flag ingredients you avoid and get swaps.", plan: "plus", group: "Health" },
-  { id: "family", name: "Family cookbook", what: "Share recipes with family (needs cloud backup).", plan: "plus", group: "Extras" },
+  { id: "family", name: "Cookbooks", what: "Share recipes with family and friends (needs cloud backup).", plan: "plus", group: "Extras" },
 ];
 
 const OFF_KEY = "recipe-builder.featuresOff";

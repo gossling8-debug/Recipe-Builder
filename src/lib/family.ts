@@ -14,6 +14,7 @@ import type { SavedRecipe, ScannedRecipe } from "./schema";
  *   cookbooks/{id}/meta/cover     { subtitle, dedication, photo, photoOnly, updatedAt }   (owner edits)
  *   cookbooks/{id}/memories/{doc} { text, photo, photoCount, by, byName, at, recipeId, recipeTitle }
  *   cookbooks/{id}/memoryPhotos/{mem}_{n} { memoryId, index, data, by }
+ *   cookbooks/{id}/ratings/{recipe}_{uid} { recipeId, by, byName, stars, at }   (one per member per recipe)
  */
 export interface Cookbook {
   id: string;
@@ -38,7 +39,7 @@ export interface SharedRecipe {
 
 async function me() {
   const u = await user();
-  if (!u) throw new Error("Sign in to cloud backup (in Settings) to use family cookbooks.");
+  if (!u) throw new Error("Sign in to cloud backup (in Settings) to use cookbooks.");
   return u;
 }
 const clean = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
@@ -110,7 +111,7 @@ export async function leaveCookbook(book: Cookbook): Promise<void> {
 export async function deleteCookbook(book: Cookbook): Promise<void> {
   await me();
   const { db, f } = await fb();
-  for (const sub of ["recipes", "memories", "memoryPhotos", "meta"]) {
+  for (const sub of ["recipes", "memories", "memoryPhotos", "meta", "ratings"]) {
     const snap = await f.getDocs(f.collection(db, "cookbooks", book.id, sub));
     for (const d of snap.docs) await f.deleteDoc(d.ref);
   }
@@ -247,6 +248,48 @@ export async function removeFromCookbook(bookIdValue: string, docId: string): Pr
   await me();
   const { db, f } = await fb();
   await f.deleteDoc(f.doc(db, "cookbooks", bookIdValue, "recipes", docId));
+}
+
+// ---------- ratings ----------
+export interface Rating {
+  recipeId: string;
+  by: string;
+  byName: string;
+  stars: number;
+  at: number;
+}
+
+/** Every rating in a cookbook, by recipe. */
+export async function bookRatings(bookIdValue: string): Promise<Record<string, Rating[]>> {
+  await me();
+  const { db, f } = await fb();
+  const snap = await f.getDocs(f.collection(db, "cookbooks", bookIdValue, "ratings"));
+  const out: Record<string, Rating[]> = {};
+  for (const d of snap.docs) {
+    const r = d.data() as Rating;
+    (out[r.recipeId] ??= []).push(r);
+  }
+  return out;
+}
+
+/** Sets (1–5) or clears (null) my rating of a cookbook recipe. */
+export async function rateInCookbook(book: Cookbook, recipeId: string, stars: number | null): Promise<Rating | null> {
+  const u = await me();
+  const { db, f } = await fb();
+  const ref = f.doc(db, "cookbooks", book.id, "ratings", `${recipeId}_${u.uid}`);
+  if (stars === null) {
+    await f.deleteDoc(ref);
+    return null;
+  }
+  const r: Rating = { recipeId, by: u.uid, byName: book.names[u.uid] ?? defaultName(u.email), stars: Math.round(stars), at: Date.now() };
+  await f.setDoc(ref, r);
+  return r;
+}
+
+/** Average stars and how many rated, or null when nobody has. */
+export function ratingSummary(rs: Rating[] | undefined): { average: number; count: number } | null {
+  if (!rs?.length) return null;
+  return { average: rs.reduce((n, r) => n + r.stars, 0) / rs.length, count: rs.length };
 }
 
 /** Where my recipe is shared: cookbook id → when. */
