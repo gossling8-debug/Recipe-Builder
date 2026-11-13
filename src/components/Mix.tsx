@@ -1,23 +1,15 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
-import RecipeView from "./RecipeView";
+import CopyBackedRecipe from "./CopyBackedRecipe";
 import SearchBox from "./SearchBox";
-import CookMode, { clearCookStart, cookStart } from "./CookMode";
-import { TimerBar, useTimers } from "./Timers";
 import { useToast } from "./Toast";
 import { cloudState, subscribeCloud, type CloudState } from "../lib/cloud";
-import { listRecipes, newId, saveRecipe } from "../lib/db";
 import { duplicatesOf } from "../lib/duplicates";
-import { feature } from "../lib/features";
-import { recipeLink } from "../lib/link";
-import { loadProgress, saveProgress } from "../lib/progress";
 import { href, navigate } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
 import { searchRecipe, type SearchScope } from "../lib/search";
-import { recipeToText, shareText } from "../lib/share";
 import { applySwaps } from "../lib/swaps";
-import { addToShopping } from "../lib/shopping";
 import {
   HIDE_AFTER_REPORTS,
   REPORT_REASONS,
@@ -166,42 +158,16 @@ export function MixRecipePage({ id }: { id: string }) {
   const [m, setM] = useState<MixRecipe | null | undefined>(undefined);
   const [error, setError] = useState("");
   const [admin, setAdmin] = useState(false);
-  const [myCopy, setMyCopy] = useState<SavedRecipe | null>(null);
-  const [saving, setSaving] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [toast, showToast] = useToast();
-  const timers = useTimers();
-  const [cooking, setCooking] = useState(false);
-  const [viewKey, setViewKey] = useState(0);
   useEffect(() => {
     if (!on) return;
     getMix(id).then(setM, (e) => setError(errText(e)));
     amAdmin().then(setAdmin, () => {});
   }, [on, id]);
-  useEffect(() => {
-    if (m) listRecipes().then((all) => setMyCopy(duplicatesOf({ ...m.recipe }, all)[0]?.recipe ?? null), () => {});
-  }, [m]);
 
   const mine = !!m && m.by === s.uid;
-  const progressId = myCopy?.id ?? `mix-${id}`;
   const run = (fn: () => Promise<void>) => () => fn().catch((e) => setError(errText(e)));
-
-  async function saveCopy(): Promise<SavedRecipe> {
-    const saved: SavedRecipe = { ...m!.recipe, id: newId(), createdAt: Date.now(), photos: [], source: m!.sourceUrl ?? undefined };
-    await saveRecipe(saved);
-    saveProgress(saved.id, loadProgress(progressId));
-    setMyCopy(saved);
-    return saved;
-  }
-  const save = run(async () => {
-    setSaving(true);
-    try {
-      const saved = await saveCopy();
-      navigate({ name: "recipe", id: saved.id });
-    } finally {
-      setSaving(false);
-    }
-  });
   const myStars = m && s.uid ? m.ratings[s.uid] ?? 0 : 0;
   const rate = (n: number) =>
     run(async () => {
@@ -219,13 +185,6 @@ export function MixRecipePage({ id }: { id: string }) {
         throw e;
       }
     });
-  const share = run(async () => {
-    if (!m) return;
-    const link = m.sourceUrl ?? (await recipeLink(m.recipe).catch(() => ""));
-    const r = link ? await shareText(m.recipe.title, `${m.recipe.title}\nFrom The Mix in Cardamix:`, link) : await shareText(m.recipe.title, recipeToText(m.recipe, 1));
-    if (r === "copied") showToast("Link copied — paste it in a message");
-    if (r === "failed") showToast("Sharing isn't available in this browser");
-  });
   const takeDown = run(async () => {
     if (!m) return;
     const msg = mine ? `Take “${m.recipe.title}” out of The Mix? Copies people saved stay theirs.` : `Take down “${m.recipe.title}” for everyone?`;
@@ -236,144 +195,113 @@ export function MixRecipePage({ id }: { id: string }) {
 
   const r = m ? mixRating(m) : null;
   const hidden = !!m && reportCount(m) >= HIDE_AFTER_REPORTS && !mine && !admin;
-  return (
+  const before = m && (
     <>
-      <Header
+      <p className="muted small shared-note">
+        Published by {mine ? "you" : m.byName} · {new Date(m.at).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}
+        {admin && reportCount(m) > 0 ? ` · reported by ${reportCount(m)}` : ""}
+      </p>
+      <section className="cookbook-rating">
+        {!mine && (
+          <div className="rating-row" role="group" aria-label="Your rating">
+            <span className="small muted">Your rating</span>
+            <span className="stars">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} className={n <= myStars ? "star-pick on" : "star-pick"} aria-label={`${n} ${n === 1 ? "star" : "stars"}`} aria-pressed={myStars === n} onClick={rate(n)}>
+                  <Icon name="star" size={24} filled={n <= myStars} />
+                </button>
+              ))}
+            </span>
+          </div>
+        )}
+        <p className="small mix-average">
+          {r ? (
+            <>
+              <span className="row-stars">★</span> <strong>{one(r.average)}</strong> from {r.count} {r.count === 1 ? "cook" : "cooks"} in The Mix
+            </>
+          ) : (
+            <span className="muted">No ratings yet.</span>
+          )}
+        </p>
+      </section>
+      {error && <div className="callout error">{error}</div>}
+    </>
+  );
+  const buttons = m && (
+    <>
+      {!mine && (
+        <button className="btn" onClick={() => setReporting(true)}>
+          <Icon name="warning" size={18} /> Report
+        </button>
+      )}
+      {(mine || admin) && (
+        <button className="btn danger" onClick={takeDown}>
+          <Icon name="trash" size={18} /> {mine ? "Take it out of The Mix" : "Take down"}
+        </button>
+      )}
+    </>
+  );
+  const sheet = m && reporting && (
+    <ReportSheet
+      onClose={() => setReporting(false)}
+      onReport={async (reason) => {
+        await reportMix(m.id, reason);
+        setM({ ...m, reporters: { ...m.reporters, [s.uid ?? ""]: true } });
+        setReporting(false);
+        showToast("Thanks — it's been reported");
+      }}
+      already={!!s.uid && !!m.reporters[s.uid]}
+    />
+  );
+
+  // A full recipe: the same features as your own recipes.
+  if (m && !hidden && !m.sourceUrl) {
+    return (
+      <CopyBackedRecipe
+        recipe={m.recipe}
+        progressKey={`mix-${id}`}
+        findCopy={(all) => duplicatesOf({ ...m.recipe }, all)[0]?.recipe ?? null}
         title="The Mix"
         back={href({ name: "mix" })}
-        returnToPrevious
-        actions={
-          m ? (
-            <button className="icon-btn" onClick={share} aria-label="Share recipe">
-              <Icon name="share" />
-            </button>
-          ) : null
-        }
-      />
+        offerSave={!mine}
+        before={before}
+        buttons={buttons}
+      >
+        {sheet}
+        {toast}
+      </CopyBackedRecipe>
+    );
+  }
+  // Loading, gone, hidden, or a web recipe (a title and a link to the original).
+  return (
+    <>
+      <Header title="The Mix" back={href({ name: "mix" })} returnToPrevious />
       <main className="page">
         {!on && <NeedsAccount s={s} />}
+        {on && m === undefined && !error && <p className="muted">Loading…</p>}
         {m === null && <div className="callout error">This recipe isn't in The Mix any more.</div>}
         {hidden && <div className="callout">This recipe was reported by several cooks and is hidden while it's checked.</div>}
-        {m && !hidden && (
+        {m && !hidden && m.sourceUrl && (
           <>
-            <p className="muted small shared-note">
-              Published by {mine ? "you" : m.byName} · {new Date(m.at).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}
-              {admin && reportCount(m) > 0 ? ` · reported by ${reportCount(m)}` : ""}
-            </p>
-            {!mine && (
-              <div className="rating-row" role="group" aria-label="Your rating">
-                <span className="small muted">Your rating</span>
-                <span className="stars">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button key={n} className={n <= myStars ? "star-pick on" : "star-pick"} aria-label={`${n} ${n === 1 ? "star" : "stars"}`} aria-pressed={myStars === n} onClick={rate(n)}>
-                      <Icon name="star" size={24} filled={n <= myStars} />
-                    </button>
-                  ))}
-                </span>
+            {before}
+            <section>
+              <h2 className="recipe-title">{m.recipe.title}</h2>
+              <p>
+                This recipe is from <strong>{host(m.sourceUrl)}</strong>. The Mix links to the original instead of copying it.
+              </p>
+              <div className="button-row">
+                <a className="btn primary" href={m.sourceUrl} target="_blank" rel="noopener noreferrer">
+                  Open it on {host(m.sourceUrl)}
+                </a>
               </div>
-            )}
-            <p className="small">
-              {r ? (
-                <>
-                  <span className="row-stars">★</span> <strong>{one(r.average)}</strong> from {r.count} {r.count === 1 ? "cook" : "cooks"}
-                </>
-              ) : (
-                <span className="muted">No ratings yet.</span>
-              )}
-            </p>
-            {myCopy && (
-              <div className="callout small">
-                In your recipes: <a href={href({ name: "recipe", id: myCopy.id })}>“{myCopy.title}”</a>
-              </div>
-            )}
-            {m.sourceUrl ? (
-              <section>
-                <h2 className="recipe-title">{m.recipe.title}</h2>
-                <p>
-                  This recipe is from <strong>{host(m.sourceUrl)}</strong>. The Mix links to the original instead of copying it.
-                </p>
-                <div className="button-row">
-                  <a className="btn primary" href={m.sourceUrl} target="_blank" rel="noopener noreferrer">
-                    Open it on {host(m.sourceUrl)}
-                  </a>
-                </div>
-                <p className="muted small">To keep it, add it with Add Recipe → Website and paste the link.</p>
-              </section>
-            ) : (
-              <>
-                <TimerBar {...timers} />
-                <RecipeView
-                  key={`${progressId}-${viewKey}`}
-                  recipe={m.recipe}
-                  recipeId={progressId}
-                  onStartCooking={feature("cookMode") ? () => (cookStart(progressId), setCooking(true)) : undefined}
-                  listRow={
-                    myCopy ? undefined : (
-                      <div className="list-row">
-                        <button
-                          className="btn"
-                          onClick={run(async () => {
-                            const saved = await saveCopy();
-                            const p = loadProgress(saved.id);
-                            addToShopping(saved.id, p.scale, p.have.filter((i) => i < saved.ingredients.length));
-                            showToast("Saved to your recipes and added to your shopping list");
-                          })}
-                        >
-                          <Icon name="bag" size={18} /> Add to shopping list
-                        </button>
-                      </div>
-                    )
-                  }
-                />
-              </>
-            )}
-            <div className="button-row print-link">
-              {!mine && (
-                <button className="btn" onClick={() => setReporting(true)}>
-                  <Icon name="warning" size={18} /> Report
-                </button>
-              )}
-              {(mine || admin) && (
-                <button className="btn danger" onClick={takeDown}>
-                  <Icon name="trash" size={18} /> {mine ? "Take it out of The Mix" : "Take down"}
-                </button>
-              )}
-            </div>
+              <p className="muted small">To keep it, add it with Add Recipe → Website and paste the link.</p>
+            </section>
+            <div className="button-row print-link">{buttons}</div>
           </>
         )}
-        {error && <div className="callout error">{error}</div>}
+        {error && !m && <div className="callout error">{error}</div>}
       </main>
-      {m && !hidden && !mine && !myCopy && !m.sourceUrl && (
-        <div className="fab-bar">
-          <button className="btn primary big" onClick={save} disabled={saving}>
-            {saving ? "Saving…" : "Save to my recipes"}
-          </button>
-        </div>
-      )}
-      {m && reporting && (
-        <ReportSheet
-          onClose={() => setReporting(false)}
-          onReport={async (reason) => {
-            await reportMix(m.id, reason);
-            setM({ ...m, reporters: { ...m.reporters, [s.uid ?? ""]: true } });
-            setReporting(false);
-            showToast("Thanks — it's been reported");
-          }}
-          already={!!s.uid && !!m.reporters[s.uid]}
-        />
-      )}
-      {m && cooking && (
-        <CookMode
-          recipe={m.recipe}
-          recipeId={progressId}
-          timers={timers}
-          onLog={async () => clearCookStart(progressId)}
-          onClose={() => {
-            setCooking(false);
-            setViewKey((k) => k + 1);
-          }}
-        />
-      )}
+      {sheet}
       {toast}
     </>
   );
