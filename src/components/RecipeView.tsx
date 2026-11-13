@@ -1,8 +1,7 @@
-import { amountWithAlternative } from "../lib/edit";
 import RecipeTips from "./RecipeTips";
 import { feature } from "../lib/features";
 import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/schema";
-import { formatNumber, scaleAmount } from "../lib/quantity";
+import { formatNumber, ingredientText, scaleAmount, stepAmount } from "../lib/quantity";
 import { toggleIn, useProgress } from "../lib/progress";
 import Icon from "./Icon";
 import TagPicker from "./TagPicker";
@@ -24,11 +23,7 @@ const SCALES: [number, string][] = [
   [3, "3×"],
 ];
 
-function ingredientLine(ing: Ingredient, scale: number): string {
-  const amount = scaleAmount([ing.quantity, ing.unit].map((s) => s.trim()).filter(Boolean).join(" "), scale);
-  const head = [amount, ing.name.trim()].filter(Boolean).join(" ");
-  return ing.preparation ? `${head}, ${ing.preparation}` : head;
-}
+const ingredientLine = (ing: Ingredient, scale: number): string => ingredientText(ing, scale);
 
 /**
  * The cook-friendly view: the usual ingredient list on top, then steps with
@@ -367,8 +362,8 @@ export default function RecipeView({
                       text={seg.text}
                       amount={
                         seg.amount &&
-                        // At the original size, the list's alternative ("or 2 small jars") shows in the step too.
-                        (scale === 1 ? amountWithAlternative(scaleAmount(seg.amount, scale), recipe.ingredients[seg.ingredient_index]) : scaleAmount(seg.amount, scale))
+                        // The list's alternative ("or 2 small jars") shows in the step too, scaled with the recipe.
+                        stepAmount(seg.amount, recipe.ingredients[seg.ingredient_index], scale)
                       }
                       crossed={added.has(`${si}-${k}`)}
                       onToggle={() => update((p) => ({ ...p, added: toggleIn(p.added, `${si}-${k}`) }))}

@@ -1,4 +1,4 @@
-import { scaleAmount } from "./quantity";
+import { stepAmount } from "./quantity";
 import type { Step } from "./schema";
 
 // ---------- making recipe text sound natural ----------
@@ -51,7 +51,7 @@ export interface Chunk {
  * ingredient and its amount ("Add the chicken, 2 pounds,"), so there's a
  * pause to add it; long plain text is split into sentences.
  */
-export function stepChunks(step: Step, scale: number): Chunk[] {
+export function stepChunks(step: Step, scale: number, ingredients: { quantity: string; unit: string; preparation: string | null }[] = []): Chunk[] {
   const out: Chunk[] = [];
   let buf = "";
   const flushSentences = (text: string, last: boolean) => {
@@ -66,7 +66,7 @@ export function stepChunks(step: Step, scale: number): Chunk[] {
       buf += seg.text;
       continue;
     }
-    const amount = seg.amount ? `, ${scaleAmount(seg.amount, scale)}` : "";
+    const amount = seg.amount ? `, ${stepAmount(seg.amount, ingredients[seg.ingredient_index], scale)}` : "";
     // Read earlier full sentences on their own, then the part leading into this ingredient.
     const lastStop = Math.max(buf.lastIndexOf(". "), buf.lastIndexOf("! "), buf.lastIndexOf("? "));
     if (lastStop >= 0) {

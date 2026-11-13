@@ -1,4 +1,4 @@
-import { scaleAmount } from "./quantity";
+import { ingredientText, scaleAmount, stepAmount } from "./quantity";
 import type { ScannedRecipe } from "./schema";
 
 /** Plain-text version of a recipe for Messages, email or notes, at the chosen size. */
@@ -13,15 +13,13 @@ export function recipeToText(r: ScannedRecipe, scale = 1): string {
   for (const ing of r.ingredients) {
     if (ing.section && ing.section !== section) lines.push(`${ing.section}:`);
     section = ing.section;
-    const amount = scaleAmount([ing.quantity, ing.unit].filter(Boolean).join(" "), scale);
-    const line = [amount, ing.name].filter(Boolean).join(" ");
-    lines.push(`• ${ing.preparation ? `${line}, ${ing.preparation}` : line}`);
+    lines.push(`• ${ingredientText(ing, scale)}`);
   }
 
   lines.push("", "STEPS");
   r.steps.forEach((step, i) => {
     const text = step.segments
-      .map((s) => (s.ingredient_index !== null && s.amount ? `${s.text} (${scaleAmount(s.amount, scale)})` : s.text))
+      .map((s) => (s.ingredient_index !== null && s.amount ? `${s.text} (${stepAmount(s.amount, r.ingredients[s.ingredient_index], scale)})` : s.text))
       .join("");
     lines.push(`${i + 1}. ${text}`);
   });

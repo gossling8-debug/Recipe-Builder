@@ -3,17 +3,13 @@ import Header from "./Header";
 import Icon from "./Icon";
 import { getRecipe } from "../lib/db";
 import { loadProgress } from "../lib/progress";
-import { scaleAmount } from "../lib/quantity";
+import { ingredientText, scaleAmount, stepAmount } from "../lib/quantity";
 import { href } from "../lib/route";
 import { applySwaps } from "../lib/swaps";
 import { convertRecipe, getUnits } from "../lib/units";
 import type { Ingredient, SavedRecipe } from "../lib/schema";
 
-const line = (ing: Ingredient, scale: number) => {
-  const amount = scaleAmount([ing.quantity, ing.unit].map((s) => s.trim()).filter(Boolean).join(" "), scale);
-  const head = [amount, ing.name.trim()].filter(Boolean).join(" ");
-  return ing.preparation ? `${head}, ${ing.preparation}` : head;
-};
+const line = (ing: Ingredient, scale: number) => ingredientText(ing, scale);
 
 /**
  * A clean, printable recipe card — at the size and units chosen on the recipe,
@@ -94,7 +90,7 @@ export default function PrintPage({ id }: { id: string }) {
                 {st.segments.map((sg, k) =>
                   sg.ingredient_index !== null && sg.amount ? (
                     <span key={k}>
-                      {sg.text} <strong>({scaleAmount(sg.amount, scale)})</strong>
+                      {sg.text} <strong>({stepAmount(sg.amount, r.ingredients[sg.ingredient_index], scale)})</strong>
                     </span>
                   ) : (
                     <span key={k}>{sg.text}</span>

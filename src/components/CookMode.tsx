@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import { IngredientMention } from "./RecipeView";
 import { TimerBar, type useTimers } from "./Timers";
-import { scaleAmount } from "../lib/quantity";
+import { scaleNote, stepAmount } from "../lib/quantity";
 import { convertRecipe, useUnits } from "../lib/units";
 import { toggleIn, useProgress } from "../lib/progress";
 import { findTimers } from "../lib/timers";
@@ -67,7 +67,7 @@ export default function CookMode({
   // Read aloud: one step at a time; it never moves on by itself.
   const reader = useReader();
   const [reading, setReading] = useState(false);
-  const chunksAt = (i: number) => stepChunks(recipe.steps[i], scale);
+  const chunksAt = (i: number) => stepChunks(recipe.steps[i], scale, recipe.ingredients);
   const toggleRead = () => {
     if (reading) {
       setReading(false);
@@ -226,7 +226,7 @@ export default function CookMode({
               <IngredientMention
                 key={k}
                 text={seg.text}
-                amount={seg.amount && scaleAmount(seg.amount, scale)}
+                amount={seg.amount && stepAmount(seg.amount, recipe.ingredients[seg.ingredient_index], scale)}
                 crossed={added.has(`${at}-${k}`)}
                 onToggle={() => update((p) => ({ ...p, added: toggleIn(p.added, `${at}-${k}`) }))}
               />
@@ -252,8 +252,8 @@ export default function CookMode({
                 const ing = recipe.ingredients[seg.ingredient_index!];
                 return (
                   <li key={k}>
-                    <strong>{seg.amount ? scaleAmount(seg.amount, scale) : ""}</strong> {ing?.name ?? seg.text}
-                    {ing?.preparation ? <span className="muted">, {ing.preparation}</span> : null}
+                    <strong>{seg.amount ? stepAmount(seg.amount, ing, scale) : ""}</strong> {ing?.name ?? seg.text}
+                    {ing?.preparation && !/^or\s/i.test(ing.preparation.trim()) ? <span className="muted">, {scaleNote(ing.preparation, scale)}</span> : null}
                   </li>
                 );
               })}
