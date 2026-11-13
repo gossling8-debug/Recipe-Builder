@@ -14,7 +14,7 @@ import { formatQty } from "../lib/qty";
 import { convertText, useUnits } from "../lib/units";
 import { useByLabel } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
-import { walmartSearchUrl } from "../lib/shopping";
+import { getStore, setStore, STORES, storeName, storeSearchUrl, type Store } from "../lib/shopping";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
 import { staplesToBuyOrTicked } from "../lib/shoppingItems";
 import { addPrice, deletePrice, dollars, parsePrice } from "../lib/prices";
@@ -127,6 +127,8 @@ export default function ShoppingList() {
   }
 
   const opened = new Set(state.opened ?? []);
+  const [store, pickStore] = useState<Store>(getStore);
+  const shop = storeName(store);
   const row = (it: (typeof items)[number]) => (
     <li key={it.key} className="shop-row">
       <label className={checked.has(it.key) ? "checked" : ""}>
@@ -139,10 +141,10 @@ export default function ShoppingList() {
         </span>
       </label>
       {feature("walmart") && !checked.has(it.key) && opened.has(it.key) && (
-        // Tapping the ✓ clears it ("not added yet") without opening Walmart again.
+        // Tapping the ✓ clears it ("not added yet") without opening the store again.
         <button
           className="store-undo"
-          aria-label={`Mark ${it.name} as not added to the Walmart cart yet`}
+          aria-label={`Mark ${it.name} as not added to the ${shop} cart yet`}
           onClick={() => update({ ...state, opened: (state.opened ?? []).filter((k) => k !== it.key) })}
         >
           <Icon name="check" size={14} />
@@ -151,13 +153,13 @@ export default function ShoppingList() {
       {feature("walmart") && !checked.has(it.key) && (
         <a
           className={opened.has(it.key) ? "store-btn opened" : "store-btn"}
-          href={walmartSearchUrl(it.name)}
+          href={storeSearchUrl(store, it.name)}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`Find ${it.name} at Walmart`}
+          aria-label={`Find ${it.name} at ${shop}`}
           onClick={() => update({ ...state, opened: [...new Set([...(state.opened ?? []), it.key])] })}
         >
-          Walmart
+          {shop}
         </a>
       )}
       {checked.has(it.key) && state.bought?.[it.key] && (
@@ -271,8 +273,24 @@ export default function ShoppingList() {
             <h3>To buy · {remaining.length}</h3>
             {remaining.length > 0 && feature("walmart") && (
               <>
+                <div className="segmented store-switch" role="radiogroup" aria-label="Store">
+                  {STORES.map((st) => (
+                    <button
+                      key={st.id}
+                      role="radio"
+                      aria-checked={store === st.id}
+                      className={store === st.id ? "chip active" : "chip"}
+                      onClick={() => {
+                        setStore(st.id);
+                        pickStore(st.id);
+                      }}
+                    >
+                      {st.name}
+                    </button>
+                  ))}
+                </div>
                 <p className="muted small">
-                  Tap <strong>Walmart</strong> to find an item in the Walmart app and add it to your cart, then tick it off
+                  Tap <strong>{shop}</strong> to find an item in the {shop} app and add it to your cart, then tick it off
                   here. Tap the ✓ to clear it if you didn't add it. (If it opens the website instead: in DuckDuckGo, turn on
                   Settings → General → Open Links in Associated Apps.)
                 </p>

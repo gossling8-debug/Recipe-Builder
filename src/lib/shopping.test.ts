@@ -27,7 +27,14 @@ describe("combine", () => {
   });
 });
 
-import { walmartSearchUrl } from "./shopping";
+import { hebSearchUrl, storeSearchUrl, walmartSearchUrl } from "./shopping";
+describe("hebSearchUrl", () => {
+  it("searches H-E-B for the cleaned-up name", () => {
+    expect(hebSearchUrl("green onions (for topping)")).toBe("https://www.heb.com/search?q=green%20onions");
+    expect(storeSearchUrl("heb", "cream cheese")).toBe("https://www.heb.com/search?q=cream%20cheese");
+    expect(storeSearchUrl("walmart", "cream cheese")).toBe("https://www.walmart.com/search?q=cream%20cheese");
+  });
+});
 describe("walmartSearchUrl", () => {
   it("searches just the ingredient name", () =>
     expect(walmartSearchUrl("cream cheese")).toBe("https://www.walmart.com/search?q=cream%20cheese"));

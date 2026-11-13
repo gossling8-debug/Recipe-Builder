@@ -240,6 +240,37 @@ export function walmartSearchUrl(name: string): string {
   return `https://www.walmart.com/search?q=${encodeURIComponent(walmartQuery(name))}`;
 }
 
+/** H-E-B's search for one item: opens in the H-E-B app when the phone allows it, otherwise on heb.com. */
+export function hebSearchUrl(name: string): string {
+  return `https://www.heb.com/search?q=${encodeURIComponent(walmartQuery(name))}`;
+}
+
+/** The stores the shopping list's store buttons can search. */
+export type Store = "walmart" | "heb";
+export const STORES: { id: Store; name: string }[] = [
+  { id: "walmart", name: "Walmart" },
+  { id: "heb", name: "H-E-B" },
+];
+export const storeName = (s: Store) => STORES.find((x) => x.id === s)!.name;
+export const storeSearchUrl = (s: Store, name: string) => (s === "heb" ? hebSearchUrl(name) : walmartSearchUrl(name));
+
+const STORE_KEY = "recipe-builder.store";
+/** Which store the buttons search (synced with your account). Walmart unless you chose otherwise. */
+export function getStore(): Store {
+  try {
+    return localStorage.getItem(STORE_KEY) === "heb" ? "heb" : "walmart";
+  } catch {
+    return "walmart";
+  }
+}
+export function setStore(s: Store): void {
+  try {
+    localStorage.setItem(STORE_KEY, s);
+  } catch {
+    /* kept for this visit only */
+  }
+}
+
 function walmartQuery(name: string): string {
   return name
     .replace(/\(.*?\)/g, " ")
