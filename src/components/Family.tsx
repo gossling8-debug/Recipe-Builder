@@ -16,6 +16,13 @@ import AddToWeek from "./AddToWeek";
 import Substitutes from "./Substitutes";
 import NutritionSection from "./NutritionSection";
 import { TimerBar, useTimers } from "./Timers";
+import FreezeHalf from "./FreezeHalf";
+import ThawNote from "./ThawNote";
+import { markMade, unmarkMadeToday } from "../lib/made";
+import { freezeHalfIfPlanned } from "../lib/leftovers";
+import { restore, useForRecipe, type PantryItem } from "../lib/pantry";
+import { makeVariant } from "../lib/variants";
+import { deleteRecipe } from "../lib/db";
 import { loadProgress, saveProgress } from "../lib/progress";
 import { recipeLink } from "../lib/link";
 import { recipeToText } from "../lib/share";
@@ -446,10 +453,79 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
     setViewKey((k) => k + 1);
     return saved;
   }
+  const run = (fn: () => Promise<void>) => () => fn().catch((e) => setError(errText(e)));
   async function updateCopy(updated: SavedRecipe) {
     setMyCopy(updated);
     await saveRecipe(updated);
   }
+
+  // "I made this" (as on your own recipes): subtracts it from the pantry, marks your copy made, and
+  // puts half in the freezer if you doubled it to freeze half. The pantry snapshot is kept 12 h for Undo.
+  const madeKey = (rid: string) => `recipe-builder.made.${rid}`;
+  const [made, setMade] = useState<{ at: number; undo: Record<string, PantryItem | null> } | null>(null);
+  useEffect(() => {
+    if (!myCopy) return setMade(null);
+    try {
+      const m = JSON.parse(localStorage.getItem(madeKey(myCopy.id)) ?? "null") as typeof made;
+      setMade(m && Date.now() - m.at < 12 * 3600_000 ? m : null);
+    } catch {
+      setMade(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myCopy?.id]);
+  const rememberMade = (rid: string, m: typeof made) => {
+    setMade(m);
+    try {
+      if (m) localStorage.setItem(madeKey(rid), JSON.stringify(m));
+      else localStorage.removeItem(madeKey(rid));
+    } catch {
+      /* ignore */
+    }
+  };
+  function freezeHalf(copy: SavedRecipe): boolean {
+    const done = freezeHalfIfPlanned(copy.id, copy.title, loadProgress(copy.id), (p) => saveProgress(copy.id, { ...loadProgress(copy.id), ...p }));
+    if (done) setViewKey((k) => k + 1);
+    return done;
+  }
+  const madeIt = run(async () => {
+    if (!item || made) return;
+    const copy = myCopy ?? (await saveCopy());
+    const { changes, undo } = useForRecipe(item.recipe, loadProgress(copy.id).scale);
+    rememberMade(copy.id, { at: Date.now(), undo });
+    const updated = markMade(copy);
+    if (updated !== copy) await updateCopy(updated);
+    const froze = freezeHalf(copy);
+    showToast(
+      (myCopy ? "" : "Saved to your recipes. ") +
+        (changes.length ? `Pantry: ${changes.map((c) => `${c.name} ${c.left}`).join("; ")}` : "Nothing in your pantry matched this recipe.") +
+        (froze ? " · Half is on your freezer list." : ""),
+    );
+  });
+  const undoMade = run(async () => {
+    if (!made || !myCopy) return;
+    restore(made.undo);
+    rememberMade(myCopy.id, null);
+    await updateCopy(unmarkMadeToday(myCopy));
+    showToast("Pantry change undone");
+  });
+  const makeMyVersion = run(async () => {
+    const base = myCopy ?? (await saveCopy());
+    const copy = makeVariant(base, newId());
+    await saveRecipe(copy);
+    try {
+      sessionStorage.setItem("recipe-builder.editAfterCopy", copy.id);
+    } catch {
+      /* it just opens normally */
+    }
+    navigate({ name: "recipe", id: copy.id });
+  });
+  const deleteMyCopy = run(async () => {
+    if (!myCopy || !confirm(`Delete your copy of “${myCopy.title}” from your recipes? The cookbook's recipe stays.`)) return;
+    await deleteRecipe(myCopy.id);
+    setMyCopy(null);
+    setViewKey((k) => k + 1);
+    showToast("Your copy was deleted. The cookbook's recipe stays.");
+  });
   async function save() {
     if (!item) return;
     setSaving(true);
@@ -461,7 +537,6 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
       setSaving(false);
     }
   }
-  const run = (fn: () => Promise<void>) => () => fn().catch((e) => setError(errText(e)));
   const toggleFavorite = run(async () => {
     if (myCopy) {
       await updateCopy({ ...myCopy, favorite: !myCopy.favorite });
@@ -570,6 +645,8 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
               recipe={item.recipe}
               recipeId={progressId}
               onStartCooking={feature("cookMode") ? () => (cookStart(progressId), setCooking(true)) : undefined}
+              onMade={feature("pantry") ? madeIt : undefined}
+              made={made && myCopy ? { at: made.at, onUndo: undoMade } : undefined}
               listRow={
                 myCopy ? undefined : (
                   <div className="list-row">
@@ -592,10 +669,12 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
                   <>
                     {feature("mealTime") && <PlanMeal recipe={{ ...item.recipe, cookLog: myCopy.cookLog }} recipeId={myCopy.id} />}
                     {feature("weekPlanner") && <AddToWeek recipeId={myCopy.id} />}
+                    {feature("thaw") && <ThawNote key={`thaw-${viewKey}`} recipe={item.recipe} saved={myCopy} scale={loadProgress(myCopy.id).scale} />}
+                    {feature("freezeHalf") && <FreezeHalf key={viewKey} recipeId={myCopy.id} onChange={() => setViewKey((k) => k + 1)} />}
                   </>
                 ) : (
                   <div className="callout small make-it-yours">
-                    Planning it for the week, your notes and photos, and “made it” use your own copy.{" "}
+                    Planning it for the week, thaw reminders, freezing half, your notes and photos use your own copy.{" "}
                     <button className="link-btn small" onClick={save} disabled={saving}>
                       Save to my recipes
                     </button>
@@ -628,6 +707,16 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
                   <Icon name="download" size={18} /> Print or save as PDF
                 </a>
               )}
+              {feature("versions") && (
+                <button className="btn" onClick={makeMyVersion}>
+                  <Icon name="plus" size={18} /> Make my own version
+                </button>
+              )}
+              {myCopy && (
+                <button className="btn" onClick={deleteMyCopy}>
+                  <Icon name="trash" size={18} /> Delete my copy
+                </button>
+              )}
               {canRemove && (
                 <button className="btn" onClick={remove}>
                   Remove from cookbook
@@ -650,6 +739,7 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
           recipe={item.recipe}
           recipeId={progressId}
           timers={timers}
+          onMade={feature("pantry") ? madeIt : undefined}
           onLog={async (minutes) => {
             if (myCopy) {
               await updateCopy({ ...myCopy, cookLog: [...(myCopy.cookLog ?? []), { at: Date.now(), minutes, scale: loadProgress(progressId).scale }] });
