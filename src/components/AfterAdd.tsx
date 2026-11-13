@@ -104,10 +104,10 @@ export function SaveToMinePrompt(props: { title: string; bookName: string; alrea
         <p className="muted small">Your copy is yours to change, plan with and cook from. The cookbook's copy stays as it is.</p>
         {error && <div className="callout error small">{error}</div>}
         <div className="button-row add-to-book-actions">
-          <button className="btn primary" disabled={busy} onClick={() => answer(true)}>
+          <button className="btn" disabled={busy} onClick={() => answer(true)}>
             {busy ? "Saving…" : "Save to my recipes"}
           </button>
-          <button className="btn" disabled={busy} onClick={() => answer(false)}>
+          <button className="btn primary" disabled={busy} onClick={() => answer(false)}>
             No, just the cookbook
           </button>
         </div>
