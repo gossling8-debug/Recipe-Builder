@@ -328,7 +328,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
                 )}
                 {photos.length < MAX_PHOTOS && (
                   <div className="button-row">
-                    <button className="btn" onClick={() => (setNoCamera(""), setScanning(true))}>
+                    <button className={photos.length ? "btn" : "btn primary"} onClick={() => (setNoCamera(""), setScanning(true))}>
                       <Icon name="camera" /> {photos.length ? "Scan another card" : "Scan a card"}
                     </button>
                     <button className="btn" onClick={() => libraryInput.current?.click()}>
