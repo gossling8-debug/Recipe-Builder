@@ -23,7 +23,11 @@ export const ReceiptSchema = z.object({
       size: z
         .string()
         .nullable()
-        .describe('Total amount bought, starting with a number, e.g. "1 gallon", "2 lb", "12 eggs", "3 cans". For 2 × 16 oz say "32 oz". null if unknown.'),
+        .describe(
+          'Total amount bought, starting with the total, then the pack in parentheses when it is a pack: e.g. "1 gallon", "2 lb", "12 eggs", "174 oz (12 × 14.5 oz cans)". For 2 × 16 oz say "32 oz (2 × 16 oz)". If the receipt does not show it, give the usual package size of this product at this store and set size_estimated. null only if you cannot tell at all.',
+        ),
+      size_estimated: z.boolean().describe("true if the size is not printed on the receipt and you gave the usual package size instead."),
+      count: z.number().describe("How many of this item the line is for (e.g. 2 for \"2 @ 0.98\"); 1 if one."),
       price: z.number().describe("What was paid for this line in dollars, after any line discount (the line total, not the unit price)."),
       is_food: z.boolean().describe("true for anything you eat or drink (meat, dairy, produce, snacks, pouches, candy, drinks); false only for household, paper goods, toiletries, bags, fees."),
       storage: z
@@ -47,6 +51,8 @@ const SYSTEM = `You read grocery receipts and online order screenshots (Walmart,
 The images may be several overlapping pieces of one long screenshot, or several screenshots of one order: list each purchased line ONCE (skip lines repeated in an overlap). Skip subtotals, savings summaries, payment lines, and "substituted"/"out of stock" items that were not received; for a substitution, list what was actually received.
 
 For each line give a plain generic name a recipe would use (expand abbreviations: "GV" = Great Value, "MLK" = milk, "BNLS SKNLS CHKN BRST" = boneless skinless chicken breast), the total amount bought, and the line price after discounts. Only household items are not food: anything eaten or drunk is food (meat, dairy, produce, snacks, fruit pouches, cheese sticks, candy, drinks). Say how each food is kept: fresh, frozen (bought frozen), canned (cans and jars) or dry (shelf-stable boxes and bags).
+
+Sizes matter for comparing prices. Use the size printed on the line when there is one. Warehouse stores (Costco, Sam's Club) and many receipts leave it off: then give the usual package size of that product at that store (e.g. Costco "KS CUT GRN BEANS" is typically 12 × 14.5 oz cans, so "174 oz (12 × 14.5 oz cans)") and mark it estimated.
 
 You are given the names on the cook's shopping list. Set "matches" to one of those names, exactly as written, only when it is clearly the same ingredient (e.g. "2% milk" matches "milk"; "shredded cheddar" matches "cheddar cheese"); otherwise null.
 

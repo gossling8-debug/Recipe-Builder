@@ -81,6 +81,12 @@ export default function PrivacyPage() {
           down any recipe. You can take your recipes out of The Mix at any time; copies others already saved stay theirs.
         </p>
 
+        <h3>Barcode sizes</h3>
+        <p>
+          When a receipt shows an item's barcode number but not its size, the app looks the number up in Open Food Facts, a free public
+          product database, to get the package size. Only the barcode number is sent — nothing about you or your receipt.
+        </p>
+
         <h3>Other services you choose to open</h3>
         <ul>
           <li>Walmart and H-E-B buttons open that store's search for the ingredient's name.</li>
