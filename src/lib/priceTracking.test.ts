@@ -81,3 +81,24 @@ describe("exact sizes", () => {
     expect(Math.round((q.qty as { g: number }).g)).toBe(Math.round(174 * 28.3495));
   });
 });
+
+import { joinSize, singular, splitSize } from "./prices";
+describe("packs", () => {
+  it("splits and joins sizes with packs", () => {
+    expect(splitSize("174 oz (12 × 14.5 oz cans)")).toEqual({ total: "174 oz", count: "12", each: "14.5 oz", noun: "cans" });
+    expect(splitSize("12 x 1 gal jugs")).toEqual({ total: "", count: "12", each: "1 gal", noun: "jugs" });
+    expect(splitSize("24 eggs (2 cartons)")).toEqual({ total: "24 eggs", count: "2", each: "", noun: "cartons" });
+    expect(splitSize("10 lb 14 oz")).toEqual({ total: "10 lb 14 oz", count: "", each: "", noun: "" });
+    expect(joinSize({ total: "", count: "12", each: "14.5 oz", noun: "cans" })).toBe("10 lb 14 oz (12 × 14.5 oz cans)");
+    expect(joinSize({ total: "2 lb", count: "", each: "14.5 oz", noun: "cans" })).toBe("2 lb");
+    expect(joinSize({ total: "64 fl oz", count: "2", each: "", noun: "bottles" })).toBe("64 fl oz (2 bottles)");
+  });
+  it("reads the pack for a per-item price, and the total for per-ounce", () => {
+    expect(packOf("10 lb 14 oz (12 × 14.5 oz cans)")).toEqual({ count: 12, noun: "can" });
+    expect(packOf("64 fl oz (2 bottles)")).toEqual({ count: 2, noun: "bottle" });
+    expect(packOf("6 pk")).toEqual({ count: 6, noun: "item" });
+    expect(packOf("2 lb")).toBeNull();
+    expect((pq("10 lb 14 oz (12 × 14.5 oz cans)") as { g: number }).g).toBeCloseTo((pq("174 oz") as { g: number }).g, 0);
+    expect([singular("boxes"), singular("bottles"), singular("pouches"), singular("berries")]).toEqual(["box", "bottle", "pouch", "berry"]);
+  });
+});

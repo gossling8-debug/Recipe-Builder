@@ -1,3 +1,4 @@
+import { SizeField } from "./SizeField";
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
@@ -186,17 +187,18 @@ export default function ReceiptPage() {
         <div>
           <strong>{r.name}</strong>
         </div>
-        <label className="receipt-size">
-          <span className="sr-only">Size of {r.name}</span>
-          <input
-            className="text-input"
+        <div className="receipt-size">
+          <SizeField
+            compact
             value={r.size}
-            placeholder="Size, e.g. 2 lb or 12 × 14.5 oz"
-            onChange={(e) => set(i, { size: e.target.value, sizeFrom: e.target.value.trim() ? "you" : "none" })}
+            label={`Size of ${r.name}`}
+            placeholder="Size, e.g. 2 lb"
+            defaultNoun={r.storage === "canned" ? "cans" : "items"}
+            onChange={(size) => set(i, { size, sizeFrom: size.trim() ? "you" : "none" })}
           />
           {r.sizeFrom === "estimated" && <span className="size-from">usual size — check it</span>}
           {r.sizeFrom === "none" && r.include && <span className="size-from">add a size to compare prices</span>}
-        </label>
+        </div>
         <div className="muted small">{r.receiptText}</div>
         <div className="small receipt-where">
           {r.listItem

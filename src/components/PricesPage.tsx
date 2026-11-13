@@ -1,3 +1,4 @@
+import { SizeField } from "./SizeField";
 import { useMemo, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
@@ -364,15 +365,19 @@ function PurchaseEditSheet(props: {
           <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <div className="field-row">
-          <label className="field">
+          <div className="field">
             <span>Size</span>
-            <input className="text-input" value={size} placeholder="e.g. 10 lb 14 oz, 12 × 14.5 oz cans" onChange={(e) => setSize(e.target.value)} />
-          </label>
-          <label className="field">
-            <span>Price</span>
-            <input className="text-input" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
-          </label>
+            <SizeField value={size} onChange={setSize} defaultNoun={storage === "canned" ? "cans" : "items"} />
+          </div>
         </div>
+        <label className="field">
+          <span>Price</span>
+          <input className="text-input" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
+          {(() => {
+            const pk = packOf(size);
+            return pk && p !== null ? <span className="size-note">{dollars(p / pk.count)} per {pk.noun}</span> : null;
+          })()}
+        </label>
         <label className="field">
           <span>Store</span>
           {other ? (

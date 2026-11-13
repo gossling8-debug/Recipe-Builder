@@ -374,12 +374,67 @@ export function exactSizeText(q: Qty): string {
 /** A price's size: as written, or exactly from its amount. */
 export const sizeOf = (p: Pick<PriceEntry, "size" | "qty">) => p.size ?? (p.qty ? exactSizeText(p.qty) : "");
 
+/** "cans" → "can", "boxes" → "box", "bottles" → "bottle". */
+export function singular(noun: string): string {
+  const n = noun.toLowerCase();
+  if (/(ch|sh|x|ss)es$/.test(n)) return n.slice(0, -2);
+  if (/ies$/.test(n)) return n.slice(0, -3) + "y";
+  return n.replace(/s$/, "");
+}
+
+/** A size split into its total and pack: "174 oz (12 × 14.5 oz cans)" → total "174 oz", 12 × "14.5 oz" "cans". */
+export interface SizeParts {
+  total: string;
+  count: string;
+  each: string;
+  noun: string;
+}
+
+const EACH = /^([\d.\/]+\s*(?:(?:fl\.?\s*oz|oz|lbs?|kg|gal|g|ml|qt|pt|ct|l)\b\.?)?)\s*(.*)$/i;
+
+export function splitSize(size: string | undefined): SizeParts {
+  const text = (size ?? "").trim();
+  const none = { total: text, count: "", each: "", noun: "" };
+  let total = "";
+  let inner = "";
+  const paren = text.match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+  if (paren) [total, inner] = [paren[1], paren[2]];
+  else if (/^\d+\s*[×x*]\s*\d/.test(text)) inner = text;
+  else return none;
+  // "(12 cans)"
+  const only = inner.trim().match(/^(\d+)\s+([a-z][a-z ]*)$/i);
+  if (only) return { total, count: only[1], each: "", noun: only[2].trim() };
+  const m = inner.trim().match(/^(\d+)\s*[×x*]\s*(\d.*)$/);
+  const e = m?.[2].match(EACH);
+  return m && e ? { total, count: m[1], each: e[1].trim(), noun: e[2].trim() } : none;
+}
+
+const times = (q: Qty, n: number): Qty =>
+  q.kind === "weight" ? { kind: "weight", g: q.g * n } : q.kind === "volume" ? { kind: "volume", tsp: q.tsp * n } : { ...q, n: q.n * n };
+
+/** The pack's total size ("12" × "14.5 oz" → "10 lb 14 oz"), or null if it can't be worked out. */
+export function packTotal(count: string, each: string): string | null {
+  const n = Number(count);
+  const q = each.trim() ? parseQty(each) : null;
+  return n > 0 && q ? exactSizeText(times(q, n)) : null;
+}
+
+/** Back into one size: "10 lb 14 oz (12 × 14.5 oz cans)". */
+export function joinSize({ total, count, each, noun }: SizeParts): string {
+  const n = Number(count);
+  const t = total.trim();
+  if (!(n > 1)) return t;
+  const word = noun.trim();
+  if (each.trim()) return `${packTotal(count, each) ?? t} (${n} × ${each.trim()}${word ? ` ${word}` : ""})`.trim();
+  const pack = `${n} ${word || "items"}`;
+  return t ? `${t} (${pack})` : pack;
+}
+
 /** A pack in the size ("174 oz (12 × 14.5 oz cans)" → 12 cans) for a price per can, bottle or item. */
 export function packOf(size: string | undefined): { count: number; noun: string } | null {
-  const m = (size ?? "").match(/(\d+)\s*(?:[×x*]|pk|pack of|-pack)\s*[\d.]*\s*(?:fl\.?\s*oz|oz|lb|g|ml|l|ct)?\.?\s*([a-z]+)?/i);
-  if (!m) return null;
-  const count = Number(m[1]);
-  if (!(count > 1)) return null;
-  const noun = (m[2] ?? "item").toLowerCase().replace(/(es|s)$/, "");
-  return { count, noun: noun === "ct" ? "item" : noun };
+  const parts = splitSize(size);
+  if (Number(parts.count) > 1) return { count: Number(parts.count), noun: singular(parts.noun || "item") || "item" };
+  const m = (size ?? "").match(/(\d+)\s*(?:pk|pack of|-pack)\s*([a-z]+)?/i);
+  if (!m || !(Number(m[1]) > 1)) return null;
+  return { count: Number(m[1]), noun: singular(m[2] ?? "item") };
 }
