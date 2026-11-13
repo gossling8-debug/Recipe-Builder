@@ -3,8 +3,10 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./styles.css";
 import { applyTextSize, getTextSize } from "./lib/textSize";
+import { applyTheme, getTheme } from "./lib/theme";
 
 applyTextSize(getTextSize());
+applyTheme(getTheme(), false);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
