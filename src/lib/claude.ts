@@ -13,7 +13,8 @@ Transcribe faithfully. Keep the cook's own wording, amounts and units; do not co
 Ingredients: list them in the order they appear. Split each into quantity, unit, name and preparation.
 
 Steps: use the source's own steps. If the instructions are one paragraph, split them into short steps at natural breaks (one main action each). Each step is a list of segments whose texts, joined in order, reproduce the step's wording. Whenever the step adds or uses an ingredient from the list, put the words that name it (for example "the flour" or "eggs") in their own segment with that ingredient's ingredient_index and the amount used in that step. The amount is the point of the app: the cook reads it in the step instead of looking back at the list.
-- If the step uses the whole amount, give the full amount from the list, e.g. "2 cups".
+- If the step uses the whole amount, give the full amount from the list, e.g. "2 cups". If the list gives an alternative amount, keep it in the step too, e.g. "1 large jar (or 2 small jars)".
+- Link every mention of a listed ingredient, even when the step uses a shorter or general name (for example "nuts" for "walnuts", "chips" for "chocolate chips"); keep the step's own words in the segment text.
 - If an ingredient is divided across steps, give the portion for each step when the source states it or it is clear (e.g. "1/2 cup (half of the 1 cup)"), and "remaining" for the last use. If the split is not stated, give "part of 1 cup" and add a warning.
 - If the step only refers back to something already added ("stir the batter"), it is plain text, not an ingredient segment.
 - If a step uses an ingredient that is not in the list (for example "salt to taste"), add it to the ingredient list with an empty quantity and reference it.

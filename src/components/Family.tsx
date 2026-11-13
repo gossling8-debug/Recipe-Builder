@@ -9,6 +9,8 @@ import { duplicatesOf } from "../lib/duplicates";
 import { CookbookCover, CookbookMemories } from "./CookbookExtras";
 import AddToCookbook from "./AddToCookbook";
 import RecipeEditor from "./RecipeEditor";
+import SearchBox from "./SearchBox";
+import { searchRecipe, type SearchScope } from "../lib/search";
 import { BookRecipeActions, HoldLink } from "./RecipeActions";
 import {
   bookRecipes,
@@ -177,6 +179,14 @@ export function BookPage({ id }: { id: string }) {
   const myCopyOf = (r: SharedRecipe) =>
     (r.sharedBy === s.uid ? mine.find((m) => m.id === r.sourceId) : undefined) ?? duplicatesOf({ ...r.recipe }, mine)[0]?.recipe ?? null;
   const [menuFor, setMenuFor] = useState<SharedRecipe | null>(null);
+  // Search, as in your own recipes. Who shared a recipe counts as part of its name ("Mom" finds Mom's).
+  const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<SearchScope>("all");
+  const q = query.trim();
+  const found = new Map(
+    q ? (recipes ?? []).map((r) => [r.id, searchRecipe({ ...r.recipe, tags: [...(r.recipe.tags ?? []), r.sharedByName] }, q, scope)] as const) : [],
+  );
+  const shownRecipes = (recipes ?? []).filter((r) => !q || found.get(r.id)?.match);
   async function removeShared(r: SharedRecipe) {
     if (!confirm(`Remove “${r.recipe.title}” from the cookbook? Copies people saved stay.`)) return;
     await removeFromCookbook(id, r.id);
@@ -247,8 +257,14 @@ export function BookPage({ id }: { id: string }) {
                 {recipes === null && !error && <p className="muted">Loading…</p>}
                 {recipes?.length === 0 && <p className="muted">No recipes yet. Tap Add recipes to scan a new one or share some of yours.</p>}
                 {recipes && recipes.length > 0 && (
+                  <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
+                )}
+                {q && recipes && recipes.length > 0 && shownRecipes.length === 0 && (
+                  <p className="muted">No recipes in this cookbook match “{q}”.</p>
+                )}
+                {shownRecipes.length > 0 && (
                   <ul className="recipe-list">
-                    {recipes.map((r) => (
+                    {shownRecipes.map((r) => (
                       <li key={r.id} className="recipe-row">
                         <HoldLink className="recipe-card" href={href({ name: "family", book: id, recipe: r.id })} onHold={() => setMenuFor(r)}>
                           <div className="thumb-placeholder" />
@@ -259,6 +275,9 @@ export function BookPage({ id }: { id: string }) {
                               <div className="small dup-flag">Possible duplicate of “{twinsInBook(r)[0].recipe.title}”</div>
                             )}
                             {r.sharedBy !== myUid && inMine(r) && <div className="muted small">✓ Already in your recipes</div>}
+                            {q && (found.get(r.id)?.ingredientHits.length ?? 0) > 0 && (
+                              <div className="small search-hit">Has: {found.get(r.id)!.ingredientHits.slice(0, 3).join(" · ")}</div>
+                            )}
                           </div>
                         </HoldLink>
                       </li>

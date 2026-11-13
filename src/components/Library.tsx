@@ -21,6 +21,7 @@ import Header from "./Header";
 import RecipeActions, { HoldLink } from "./RecipeActions";
 import { duplicatePairs, notDuplicates } from "../lib/duplicates";
 import { searchRecipe, type SearchScope } from "../lib/search";
+import SearchBox from "./SearchBox";
 import { useToast } from "./Toast";
 import { deleteRecipe } from "../lib/db";
 import { addToShopping, removeFromShopping } from "../lib/shopping";
@@ -351,29 +352,7 @@ export default function Library() {
         {mode === "memory" && <div className="callout error">{STORAGE_MODE_TEXT.memory}</div>}
         {mode === "local" && <div className="callout warn small">{STORAGE_MODE_TEXT.local}</div>}
         {recipes && recipes.length > 0 && (
-          <div className="search-box">
-            <input
-              className="search"
-              type="search"
-              placeholder={scope === "ingredient" ? "Search by ingredient, e.g. garlic" : scope === "name" ? "Search recipe names" : "Search recipes or ingredients"}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search"
-            />
-            <div className="search-scope" role="radiogroup" aria-label="Search in">
-              {(
-                [
-                  ["all", "Everything"],
-                  ["name", "Name"],
-                  ["ingredient", "Ingredient"],
-                ] as const
-              ).map(([v, label]) => (
-                <button key={v} role="radio" aria-checked={scope === v} className={scope === v ? "chip active" : "chip"} onClick={() => setScope(v)}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
         )}
         {recipes === null && !error && <p className="muted">Loading…</p>}
         {recipes?.length === 0 && (

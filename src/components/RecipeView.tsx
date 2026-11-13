@@ -1,3 +1,4 @@
+import { amountWithAlternative } from "../lib/edit";
 import RecipeTips from "./RecipeTips";
 import { feature } from "../lib/features";
 import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/schema";
@@ -364,7 +365,11 @@ export default function RecipeView({
                       key={k}
                       avoid={avoidedAt.has(seg.ingredient_index)}
                       text={seg.text}
-                      amount={seg.amount && scaleAmount(seg.amount, scale)}
+                      amount={
+                        seg.amount &&
+                        // At the original size, the list's alternative ("or 2 small jars") shows in the step too.
+                        (scale === 1 ? amountWithAlternative(scaleAmount(seg.amount, scale), recipe.ingredients[seg.ingredient_index]) : scaleAmount(seg.amount, scale))
+                      }
                       crossed={added.has(`${si}-${k}`)}
                       onToggle={() => update((p) => ({ ...p, added: toggleIn(p.added, `${si}-${k}`) }))}
                     />

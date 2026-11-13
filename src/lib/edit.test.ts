@@ -74,3 +74,15 @@ describe("changing an amount in the ingredient list updates the steps", () => {
     expect(updateStepsForAmount(steps, ings, 0, "2 cups", "3 cups")).toEqual(["Mix [the flour: 3 cups] and [the sugar: 1 cup].", "Add [the remaining flour: remaining]."]);
   });
 });
+
+import { amountWithAlternative } from "./edit";
+describe("amountWithAlternative", () => {
+  const jar = { quantity: "1", unit: "large jar", preparation: "or 2 small jars" };
+  it("adds the list's alternative when the step uses the whole amount", () =>
+    expect(amountWithAlternative("1 large jar", jar)).toBe("1 large jar (or 2 small jars)"));
+  it("leaves partial amounts and plain notes alone", () => {
+    expect(amountWithAlternative("half", jar)).toBe("half");
+    expect(amountWithAlternative("1 pound", { quantity: "1", unit: "pound", preparation: "chopped, optional" })).toBe("1 pound");
+    expect(amountWithAlternative("1 large jar (or 2 small jars)", jar)).toBe("1 large jar (or 2 small jars)");
+  });
+});
