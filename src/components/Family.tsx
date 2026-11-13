@@ -10,6 +10,7 @@ import { CookbookCover, CookbookMemories } from "./CookbookExtras";
 import AddToCookbook from "./AddToCookbook";
 import RecipeEditor from "./RecipeEditor";
 import SearchBox from "./SearchBox";
+import { CookbookRating, RatingBadge } from "./CookbookRating";
 import { searchRecipe, type SearchScope } from "../lib/search";
 import { BookRecipeActions, HoldLink } from "./RecipeActions";
 import {
@@ -21,6 +22,9 @@ import {
   leaveCookbook,
   myCookbooks,
   removeFromCookbook,
+  bookRatings,
+  ratingSummary,
+  type Rating,
   editInCookbook,
   shareToCookbook,
   whereShared,
@@ -186,7 +190,20 @@ export function BookPage({ id }: { id: string }) {
   const found = new Map(
     q ? (recipes ?? []).map((r) => [r.id, searchRecipe({ ...r.recipe, tags: [...(r.recipe.tags ?? []), r.sharedByName] }, q, scope)] as const) : [],
   );
-  const shownRecipes = (recipes ?? []).filter((r) => !q || found.get(r.id)?.match);
+  // Everyone's ratings, and the list's order: A–Z or top rated (unrated last).
+  const [ratings, setRatings] = useState<Record<string, Rating[]>>({});
+  useEffect(() => {
+    if (on) bookRatings(id).then(setRatings, () => {});
+  }, [on, id]);
+  const [order, setOrder] = useState<"az" | "rating">("az");
+  const avg = (r: SharedRecipe) => ratingSummary(ratings[r.id])?.average ?? -1;
+  const shownRecipes = (recipes ?? [])
+    .filter((r) => !q || found.get(r.id)?.match)
+    .sort((a, b) =>
+      order === "rating"
+        ? avg(b) - avg(a) || (ratings[b.id]?.length ?? 0) - (ratings[a.id]?.length ?? 0) || a.recipe.title.localeCompare(b.recipe.title)
+        : a.recipe.title.localeCompare(b.recipe.title),
+    );
   async function removeShared(r: SharedRecipe) {
     if (!confirm(`Remove “${r.recipe.title}” from the cookbook? Copies people saved stay.`)) return;
     await removeFromCookbook(id, r.id);
@@ -259,6 +276,20 @@ export function BookPage({ id }: { id: string }) {
                 {recipes && recipes.length > 0 && (
                   <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
                 )}
+                {recipes && recipes.length > 1 && (
+                  <div className="book-sort" role="radiogroup" aria-label="Order">
+                    {(
+                      [
+                        ["az", "A–Z"],
+                        ["rating", "Top rated"],
+                      ] as const
+                    ).map(([v, label]) => (
+                      <button key={v} role="radio" aria-checked={order === v} className={order === v ? "chip active" : "chip"} onClick={() => setOrder(v)}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {q && recipes && recipes.length > 0 && shownRecipes.length === 0 && (
                   <p className="muted">No recipes in this cookbook match “{q}”.</p>
                 )}
@@ -271,6 +302,7 @@ export function BookPage({ id }: { id: string }) {
                           <div>
                             <div className="recipe-card-title">{r.recipe.title}</div>
                             <div className="muted small">Shared by {r.sharedBy === myUid ? "you" : r.sharedByName}</div>
+                            <RatingBadge ratings={ratings[r.id]} />
                             {twinsInBook(r).length > 0 && (
                               <div className="small dup-flag">Possible duplicate of “{twinsInBook(r)[0].recipe.title}”</div>
                             )}
@@ -369,6 +401,10 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
     listRecipes().then((all) => setHaveIt(duplicatesOf({ ...item.recipe }, all)[0]?.recipe ?? null), () => {});
   }, [item]);
 
+  const [ratings, setRatings] = useState<Rating[]>([]);
+  useEffect(() => {
+    if (on) bookRatings(bookId).then((all) => setRatings(all[docId] ?? []), () => {});
+  }, [on, bookId, docId]);
   useEffect(() => {
     if (!on) return;
     getCookbook(bookId).then(setBook, () => {});
@@ -456,6 +492,7 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
                 You already have this in your recipes: <a href={href({ name: "recipe", id: haveIt.id })}>“{haveIt.title}”</a>.
               </div>
             )}
+            {book && s.uid && <CookbookRating book={book} recipeId={item.id} ratings={ratings} myUid={s.uid} onChange={setRatings} />}
             <RecipeView recipe={item.recipe} recipeId={PREVIEW_ID} preview />
             {canRemove && (
               <div className="button-row">

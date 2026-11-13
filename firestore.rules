@@ -87,6 +87,18 @@ service cloud.firestore {
         allow delete: if isMember(b) && (resource.data.by == uid() || book(b).owner == uid());
       }
 
+      // Ratings: one per member per recipe ({recipeId}_{uid}), 1–5 stars. Members read them all;
+      // each person sets or clears their own; the owner can also remove any (cleanup).
+      match /ratings/{rid} {
+        allow read: if isMember(b);
+        allow create, update: if isMember(b) && request.resource.data.by == uid()
+          && rid == request.resource.data.recipeId + '_' + uid()
+          && request.resource.data.keys().hasOnly(['recipeId', 'by', 'byName', 'stars', 'at'])
+          && request.resource.data.stars is int && request.resource.data.stars >= 1 && request.resource.data.stars <= 5
+          && request.resource.data.byName is string && request.resource.data.byName.size() <= 60;
+        allow delete: if isMember(b) && (resource.data.by == uid() || book(b).owner == uid());
+      }
+
       // Recipes shared into the cookbook: members read them; each person
       // adds their own; the sharer or the cookbook's owner edits or removes one
       // (the owner changes only the recipe itself, never who shared it).
