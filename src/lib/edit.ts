@@ -1,5 +1,5 @@
 import type { Ingredient, Segment, Step } from "./schema";
-import { fixPlurals, parseNumber, scaleAmount, splitAmount } from "./quantity";
+import { fixPlurals, parseNumber, scaleAmount, splitAmount, stepAmount } from "./quantity";
 
 /**
  * Steps are edited as plain text, with ingredients in square brackets and the
@@ -125,19 +125,10 @@ export function updateStepsForAmount(stepTexts: string[], ingredients: Ingredien
   );
 }
 
-/**
- * A step's amount with the ingredient's alternative amount, when the list gives
- * one ("1 large jar" + "or 2 small jars" → "1 large jar (or 2 small jars)") and
- * the step uses the whole amount. Otherwise the amount as it is.
- */
+/** A step's amount with the list's alternative ("1 large jar (or 2 small jars)"), at the recipe's own size. */
 export function amountWithAlternative(
   amount: string,
   ing: { quantity: string; unit: string; preparation: string | null } | undefined,
 ): string {
-  const alt = ing?.preparation?.trim() ?? "";
-  if (!/^or\s/i.test(alt)) return amount;
-  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
-  const full = norm([ing!.quantity, ing!.unit].filter((s) => s.trim()).join(" "));
-  if (!full || norm(amount) !== full || norm(amount).includes(norm(alt))) return amount;
-  return `${amount} (${alt})`;
+  return stepAmount(amount, ing, 1);
 }

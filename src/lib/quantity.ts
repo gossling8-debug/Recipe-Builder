@@ -59,9 +59,14 @@ export function formatNumber(value: number, decimalStyle = false): string {
 export function scaleAmount(text: string, factor: number): string {
   if (factor === 1 || !text) return text;
 
-  // Protect a package-size parenthetical right after the leading count.
+  // Protect a package-size parenthetical right after the leading count ("1 (12 oz) can")
+  // or after the package itself ("1 large bag (12 oz)"): that's the size of each package.
   let protectedRange: [number, number] | null = null;
-  const pkg = text.match(new RegExp(`^\\s*(?:${NUMBER.source})\\s*(\\([^)]*\\))`));
+  const before = text.match(new RegExp(`^\\s*(?:${NUMBER.source})\\s*(\\([^)]*\\))`));
+  const after = before
+    ? null
+    : text.match(new RegExp(`^\\s*(?:${NUMBER.source})\\s+(?:(?:${SIZES.join("|")})\\s+){0,2}(?:${PACKAGES.join("|")})(?:e?s)?\\s*(\\([^)]*\\))`, "i"));
+  const pkg = before ?? after;
   if (pkg) {
     const end = pkg[0].length;
     protectedRange = [end - pkg[1].length, end];
@@ -74,19 +79,37 @@ export function scaleAmount(text: string, factor: number): string {
     const value = parseNumber(token) * factor;
     return leadingSpace + formatNumber(value, /\./.test(token));
   });
-  return fixPlurals(scaled);
+  const out = fixPlurals(scaled);
+  // More than one package: say the size is for each ("2 large bags (12 oz each)").
+  if (after) {
+    const count = out.match(new RegExp(`^\\s*(${NUMBER.source})`));
+    if (count && parseNumber(count[1]) > 1) return out.replace(/\(([^)]*?)\)/, (m, inner: string) => (/\beach\b/i.test(inner) ? m : `(${inner} each)`));
+  }
+  return out;
 }
 
 // Units whose plural is just "+s". Abbreviations (tsp, oz, lb) don't change.
-const UNITS = ["cup", "tablespoon", "teaspoon", "pound", "ounce", "clove", "can", "stick", "slice", "package", "block", "pint", "quart", "gallon", "jar", "bag", "box", "egg", "pinch", "dash"];
-const UNIT_AFTER_NUMBER = new RegExp(`(${NUMBER.source})(\\s+)(${UNITS.join("|")})(e?s)?\\b`, "gi");
+const UNITS = [
+  "cup", "tablespoon", "teaspoon", "pound", "ounce", "clove", "can", "stick", "slice", "package", "block", "pint", "quart",
+  "gallon", "jar", "bag", "box", "egg", "pinch", "dash", "bar", "bottle", "carton", "container", "envelope", "packet", "bunch",
+  "head", "sprig", "tub", "piece", "stalk", "sheet", "handful", "scoop", "drop", "square", "tube", "pouch", "loaf",
+];
+// Containers bought whole: a size after them, "1 large bag (12 oz)", is the size of each one.
+const PACKAGES = ["can", "stick", "package", "block", "jar", "bag", "box", "bar", "bottle", "carton", "container", "envelope", "packet", "tub", "tube", "pouch", "loaf"];
+// Size words that may sit between the number and the unit: "2 large jars", "4 small cans".
+const SIZES = ["large", "small", "medium", "giant", "big", "jumbo", "extra-large", "extra large", "mini", "regular", "whole", "heaping", "level", "scant", "generous", "family-size", "family size", "king-size"];
+const UNIT_AFTER_NUMBER = new RegExp(
+  `(${NUMBER.source})(\\s+)((?:(?:${SIZES.join("|")})\\s+){0,2})(${UNITS.join("|")})(e?s|ves)?\\b`,
+  "gi",
+);
 
-/** "2 cup" → "2 cups", "½ cups" → "½ cup" */
+/** "2 cup" → "2 cups", "2 large jar" → "2 large jars", "½ cups" → "½ cup", "2 loaf" → "2 loaves" */
 export function fixPlurals(text: string): string {
-  return text.replace(UNIT_AFTER_NUMBER, (_m, num: string, space: string, unit: string) => {
+  return text.replace(UNIT_AFTER_NUMBER, (_m, num: string, space: string, size: string, unit: string) => {
     const plural = parseNumber(num) > 1;
+    if (/^loaf$/i.test(unit)) return `${num}${space}${size}${plural ? unit.slice(0, -1) + "ves" : unit}`;
     const suffix = !plural ? "" : /(ch|sh)$/i.test(unit) || /box$/i.test(unit) ? "es" : "s";
-    return `${num}${space}${unit}${suffix}`;
+    return `${num}${space}${size}${unit}${suffix}`;
   });
 }
 
@@ -105,4 +128,45 @@ export function splitAmount(text: string): { quantity: string; unit: string } {
   const m = text.trim().match(new RegExp(`^((?:(?:${NUMBER.source})\\s*(?:[-–]|to)?\\s*)+)(.*)$`));
   if (!m) return { quantity: "", unit: text.trim() };
   return { quantity: m[1].trim(), unit: m[2].trim() };
+}
+
+type IngredientAmount = { quantity: string; unit: string; preparation: string | null };
+
+/**
+ * An ingredient's note at the chosen size. Notes that are themselves amounts
+ * scale with the recipe ("or 2 small jars" → "or 4 small jars", "plus 2 tbsp",
+ * "about 3 cups"); other notes ("chopped", "divided") stay as they are.
+ */
+export function scaleNote(note: string | null, factor: number): string | null {
+  if (!note) return note;
+  return /^\s*(or|plus|\+|about|approx\.?|approximately)\s/i.test(note) ? scaleAmount(note, factor) : note;
+}
+
+/** The list's alternative amount ("or 2 small jars"), if the ingredient has one. */
+const alternativeOf = (ing: IngredientAmount | undefined) => {
+  const alt = ing?.preparation?.trim() ?? "";
+  return /^or\s/i.test(alt) ? alt : "";
+};
+
+/**
+ * A step's amount at the chosen size. When the step uses the whole amount and
+ * the list gives an alternative, the alternative shows (and scales) too:
+ * "1 large jar" + "or 2 small jars", doubled → "2 large jars (or 4 small jars)".
+ */
+export function stepAmount(amount: string, ing: IngredientAmount | undefined, factor: number): string {
+  const scaled = scaleAmount(amount, factor);
+  const alt = alternativeOf(ing);
+  if (!alt) return scaled;
+  const norm = (t: string) => t.toLowerCase().replace(/\s+/g, " ").trim();
+  const full = norm([ing!.quantity, ing!.unit].filter((t) => t.trim()).join(" "));
+  if (!full || norm(amount) !== full || norm(amount).includes(norm(alt))) return scaled;
+  return `${scaled} (${scaleAmount(alt, factor)})`;
+}
+
+/** An ingredient-list line at the chosen size: "2 large jars marshmallow creme, or 4 small jars". */
+export function ingredientText(ing: IngredientAmount & { name: string }, factor: number): string {
+  const amount = scaleAmount([ing.quantity, ing.unit].map((t) => t.trim()).filter(Boolean).join(" "), factor);
+  const head = [amount, ing.name.trim()].filter(Boolean).join(" ");
+  const note = scaleNote(ing.preparation, factor);
+  return note ? `${head}, ${note}` : head;
 }

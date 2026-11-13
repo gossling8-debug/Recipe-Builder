@@ -42,3 +42,39 @@ describe("splitAmount", () => {
     ["2-3", "2-3", ""], ["pinch", "", "pinch"], ["", "", ""],
   ])("%s", (s, q, u) => expect(splitAmount(s)).toEqual({ quantity: q, unit: u }));
 });
+
+describe("plurals with size words", () => {
+  it("doubles packages with a size word in between", () => {
+    expect(scaleAmount("1 large jar", 2)).toBe("2 large jars");
+    expect(scaleAmount("1 large bag (12 oz)", 2)).toBe("2 large bags (12 oz each)");
+    expect(scaleAmount("1 giant bar (8+ oz)", 2)).toBe("2 giant bars (8+ oz each)");
+    expect(scaleAmount("or 2 small jars", 2)).toBe("or 4 small jars");
+    expect(scaleAmount("1 medium head", 2)).toBe("2 medium heads");
+    expect(scaleAmount("1 bunch", 3)).toBe("3 bunches");
+    expect(scaleAmount("1 loaf", 2)).toBe("2 loaves");
+  });
+  it("halves back to singular", () => {
+    expect(scaleAmount("2 large jars", 0.5)).toBe("1 large jar");
+    expect(scaleAmount("1 large can (12 oz)", 0.5)).toBe("½ large can (12 oz)");
+  });
+});
+
+import { ingredientText, scaleNote, stepAmount } from "./quantity";
+describe("alternatives scale with the recipe", () => {
+  const creme = { quantity: "1", unit: "large jar", name: "marshmallow creme", preparation: "or 2 small jars" };
+  it("in the steps", () => {
+    expect(stepAmount("1 large jar", creme, 1)).toBe("1 large jar (or 2 small jars)");
+    expect(stepAmount("1 large jar", creme, 2)).toBe("2 large jars (or 4 small jars)");
+    expect(stepAmount("half", creme, 2)).toBe("half");
+  });
+  it("in the ingredient list", () => {
+    expect(ingredientText(creme, 2)).toBe("2 large jars marshmallow creme, or 4 small jars");
+    expect(ingredientText({ quantity: "1", unit: "pound", name: "walnuts", preparation: "chopped, optional" }, 2)).toBe(
+      "2 pounds walnuts, chopped, optional",
+    );
+  });
+  it("notes that are amounts scale; others don't", () => {
+    expect(scaleNote("plus 2 tbsp for topping", 2)).toBe("plus 4 tbsp for topping");
+    expect(scaleNote("cut into 1-inch pieces", 2)).toBe("cut into 1-inch pieces");
+  });
+});
