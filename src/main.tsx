@@ -4,9 +4,11 @@ import App from "./App";
 import "./styles.css";
 import { applyTextSize, getTextSize } from "./lib/textSize";
 import { applyTheme, getTheme } from "./lib/theme";
+import { keepSheetsAboveKeyboard } from "./lib/keyboard";
 
 applyTextSize(getTextSize());
 applyTheme(getTheme(), false);
+keepSheetsAboveKeyboard();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

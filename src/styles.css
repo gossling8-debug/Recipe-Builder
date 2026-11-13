@@ -889,10 +889,12 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 /* Press-and-hold menu on recipes */
 .recipe-card { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .recipe-card img { -webkit-touch-callout: none; pointer-events: none; }
-.sheet-backdrop { position: fixed; inset: 0; z-index: 900; background: rgba(0, 0, 0, 0.35); display: flex; align-items: flex-end; justify-content: center; }
+.sheet-backdrop { position: fixed; left: 0; right: 0; top: var(--vv-top, 0px); height: var(--vv-height, 100%); z-index: 900; background: rgba(0, 0, 0, 0.35); display: flex; align-items: flex-end; justify-content: center; }
 .sheet {
   width: 100%; max-width: 520px; background: var(--bg); border-radius: 16px 16px 0 0;
   padding: 8px 16px calc(12px + env(safe-area-inset-bottom)); display: flex; flex-direction: column;
+  /* Fit the visible screen (above the keyboard) and scroll inside. */
+  max-height: calc(var(--vv-height, 100vh) - 24px); overflow-y: auto; overscroll-behavior: contain;
 }
 .sheet-title { font-weight: 600; padding: 12px 4px; border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sheet-item {
@@ -1081,7 +1083,7 @@ body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 
 .purchase-row { user-select: none; -webkit-user-select: none; }
 .purchase-price { display: inline-flex; align-items: center; gap: 4px; }
 .icon-btn.small-icon { width: 30px; height: 30px; }
-.price-edit { max-height: 90vh; overflow-y: auto; }
+.price-edit { max-height: min(90vh, calc(var(--vv-height, 100vh) - 24px)); }
 .price-edit .field { margin: 8px 0; }
 .danger-link { color: var(--error); display: inline-flex; align-items: center; gap: 4px; margin: 8px 0 4px; }
 .price-row { user-select: none; -webkit-user-select: none; }
@@ -1090,3 +1092,6 @@ body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 
 .size-from { font-size: 12px; color: var(--warn); }
 .size-from.ok { color: var(--muted); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Date boxes on iPhone keep their own width and spill past the edge. */
+input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-sizing: border-box; -webkit-appearance: none; appearance: none; text-align: left; }
+.sheet > * { flex-shrink: 0; }
