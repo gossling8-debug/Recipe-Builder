@@ -31,7 +31,8 @@ import { hebSearchUrl, storeSearchUrl, walmartSearchUrl } from "./shopping";
 describe("hebSearchUrl", () => {
   it("searches H-E-B for the cleaned-up name", () => {
     expect(hebSearchUrl("green onions (for topping)")).toBe("https://www.heb.com/search?q=green%20onions");
-    expect(storeSearchUrl("heb", "cream cheese")).toBe("https://www.heb.com/search?q=cream%20cheese");
+    expect(storeSearchUrl("hebWeb", "cream cheese")).toBe("https://www.heb.com/search?q=cream%20cheese");
+    expect(storeSearchUrl("heb", "cream cheese")).toBe("https://www.heb.com/"); // the app: home page, name copied
     expect(storeSearchUrl("walmart", "cream cheese")).toBe("https://www.walmart.com/search?q=cream%20cheese");
   });
 });

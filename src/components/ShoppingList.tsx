@@ -14,7 +14,7 @@ import { formatQty } from "../lib/qty";
 import { convertText, useUnits } from "../lib/units";
 import { useByLabel } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
-import { getStore, setStore, STORES, storeName, storeSearchUrl, type Store } from "../lib/shopping";
+import { getStore, searchQuery, setStore, STORES, storeButton, storeSearchUrl, type Store } from "../lib/shopping";
 import { combine, loadShopping, saveShopping, shoppingToText, type ShoppingState } from "../lib/shopping";
 import { staplesToBuyOrTicked } from "../lib/shoppingItems";
 import { addPrice, deletePrice, dollars, parsePrice } from "../lib/prices";
@@ -128,7 +128,17 @@ export default function ShoppingList() {
 
   const opened = new Set(state.opened ?? []);
   const [store, pickStore] = useState<Store>(getStore);
-  const shop = storeName(store);
+  const copyName = (q: string) => {
+    try {
+      void navigator.clipboard.writeText(q).then(
+        () => showToast(`“${q}” copied — paste it into H-E-B's search`),
+        () => showToast(`Search H-E-B for “${q}”`),
+      );
+    } catch {
+      showToast(`Search H-E-B for “${q}”`);
+    }
+  };
+  const shop = storeButton(store);
   const row = (it: (typeof items)[number]) => (
     <li key={it.key} className="shop-row">
       <label className={checked.has(it.key) ? "checked" : ""}>
@@ -157,7 +167,11 @@ export default function ShoppingList() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Find ${it.name} at ${shop}`}
-          onClick={() => update({ ...state, opened: [...new Set([...(state.opened ?? []), it.key])] })}
+          onClick={() => {
+            update({ ...state, opened: [...new Set([...(state.opened ?? []), it.key])] });
+            // The H-E-B app can't be opened on a search, so the name goes on the clipboard to paste there.
+            if (store === "heb") copyName(searchQuery(it.name));
+          }}
         >
           {shop}
         </a>
@@ -290,9 +304,24 @@ export default function ShoppingList() {
                   ))}
                 </div>
                 <p className="muted small">
-                  Tap <strong>{shop}</strong> to find an item in the {shop} app and add it to your cart, then tick it off
-                  here. Tap the ✓ to clear it if you didn't add it. (If it opens the website instead: in DuckDuckGo, turn on
-                  Settings → General → Open Links in Associated Apps.)
+                  {store === "heb" ? (
+                    <>
+                      Tap <strong>H-E-B</strong>: the item's name is copied and the H-E-B app opens. Tap search there and
+                      paste, then tick it off here. (No H-E-B app? Choose H-E-B website.)
+                    </>
+                  ) : store === "hebWeb" ? (
+                    <>
+                      Tap <strong>H-E-B</strong> to search heb.com for an item and add it to your cart (the same cart as the
+                      app when you're signed in), then tick it off here.
+                    </>
+                  ) : (
+                    <>
+                      Tap <strong>Walmart</strong> to find an item in the Walmart app and add it to your cart, then tick it
+                      off here.
+                    </>
+                  )}{" "}
+                  Tap the ✓ to clear it if you didn't add it. (If it opens the website instead of the app: in DuckDuckGo,
+                  turn on Settings → General → Open Links in Associated Apps.)
                 </p>
               </>
             )}
