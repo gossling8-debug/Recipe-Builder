@@ -24,7 +24,8 @@ import {
   reportCount,
   reportMix,
   unpublish,
-  mixId,
+  myMixIds,
+  ANONYMOUS_NAME,
   type MixRecipe,
 } from "../lib/mix";
 
@@ -76,6 +77,7 @@ export function MixPage() {
   const [items, setItems] = useState<MixRecipe[] | null>(null);
   const [error, setError] = useState("");
   const [admin, setAdmin] = useState(false);
+  const [mineIds, setMineIds] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<SearchScope>("all");
   const [order, setOrder] = useState<"newest" | "rating">("newest");
@@ -83,6 +85,7 @@ export function MixPage() {
     if (!on) return;
     latestMix().then(setItems, (e) => setError(errText(e)));
     amAdmin().then(setAdmin, () => {});
+    myMixIds().then(setMineIds, () => {});
   }, [on]);
 
   const q = query.trim();
@@ -90,7 +93,7 @@ export function MixPage() {
   const avg = (m: MixRecipe) => mixRating(m)?.average ?? -1;
   const shown = (items ?? [])
     // Reported by several people: hidden until an admin looks (still shown to its cook and admins).
-    .filter((m) => reportCount(m) < HIDE_AFTER_REPORTS || m.by === s.uid || admin)
+    .filter((m) => reportCount(m) < HIDE_AFTER_REPORTS || mineIds.has(m.id) || admin)
     .filter((m) => !q || found.get(m.id)?.match)
     .sort((a, b) => (order === "rating" ? avg(b) - avg(a) || Object.keys(b.ratings).length - Object.keys(a.ratings).length || b.at - a.at : b.at - a.at));
 
@@ -129,7 +132,7 @@ export function MixPage() {
                     <div>
                       <div className="recipe-card-title">{m.recipe.title}</div>
                       <div className="muted small">
-                        by {m.by === s.uid ? "you" : m.byName}
+                        by {mineIds.has(m.id) ? (m.anonymous ? "you (anonymously)" : "you") : m.byName}
                         <MixStars m={m} />
                       </div>
                       {m.sourceUrl && <div className="muted small">From {host(m.sourceUrl)}</div>}
@@ -159,14 +162,14 @@ export function MixRecipePage({ id }: { id: string }) {
   const [error, setError] = useState("");
   const [admin, setAdmin] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [mine, setMine] = useState(false);
   const [toast, showToast] = useToast();
   useEffect(() => {
     if (!on) return;
     getMix(id).then(setM, (e) => setError(errText(e)));
     amAdmin().then(setAdmin, () => {});
+    myMixIds().then((ids) => setMine(ids.has(id)), () => {});
   }, [on, id]);
-
-  const mine = !!m && m.by === s.uid;
   const run = (fn: () => Promise<void>) => () => fn().catch((e) => setError(errText(e)));
   const myStars = m && s.uid ? m.ratings[s.uid] ?? 0 : 0;
   const rate = (n: number) =>
@@ -198,7 +201,7 @@ export function MixRecipePage({ id }: { id: string }) {
   const before = m && (
     <>
       <p className="muted small shared-note">
-        Published by {mine ? "you" : m.byName} · {new Date(m.at).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}
+        Published by {mine ? (m.anonymous ? "you (anonymously)" : "you") : m.byName} · {new Date(m.at).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}
         {admin && reportCount(m) > 0 ? ` · reported by ${reportCount(m)}` : ""}
       </p>
       <section className="cookbook-rating">
@@ -363,9 +366,11 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
   const s = useCloud();
   const on = signedIn(s);
   const [at, setAt] = useState<number | null | undefined>(undefined);
+  const [pubId, setPubId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(() => publicName());
   const [title, setTitle] = useState(recipe.title);
+  const [anonymous, setAnonymous] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -373,7 +378,11 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
       publishedInfo(recipe.id).then(
         (info) => {
           setAt(info?.at ?? null);
-          if (info) setTitle(info.title); // keep the name it's published under
+          setPubId(info?.id ?? null);
+          if (info) {
+            setTitle(info.title); // keep the name it's published under
+            setAnonymous(info.anonymous);
+          }
         },
         () => setAt(null),
       );
@@ -385,7 +394,7 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
     setBusy(true);
     setError("");
     try {
-      await publishToMix(recipe, applySwaps(recipe), name, title);
+      setPubId(await publishToMix(recipe, applySwaps(recipe), { name, anonymous, title }));
       setAt(Date.now());
       setOpen(false);
     } catch (e) {
@@ -397,8 +406,9 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
     if (!confirm(`Take “${recipe.title}” out of The Mix? Copies people saved stay theirs.`)) return;
     setBusy(true);
     try {
-      await unpublish(mixId(s.uid ?? "", recipe.id));
+      if (pubId) await unpublish(pubId);
       setAt(null);
+      setPubId(null);
     } catch (e) {
       setError(errText(e));
     }
@@ -410,7 +420,8 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
       <h3>The Mix</h3>
       {at !== null ? (
         <p className="small">
-          <Icon name="check" size={16} /> Published in <a href={href({ name: "mix", id: mixId(s.uid ?? "", recipe.id) })}>The Mix</a>.{" "}
+          <Icon name="check" size={16} /> Published in <a href={href({ name: "mix", id: pubId ?? "" })}>The Mix</a>
+          {anonymous ? " anonymously" : ""}.{" "}
           {changed && (
             <button className="link-btn small" disabled={busy} onClick={() => setOpen(true)}>
               Update with my changes
@@ -444,13 +455,22 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
             <span>Recipe name</span>
             <input className="text-input" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
           </label>
-          <label className="field">
-            <span>Your name (shown as the cook)</span>
-            <input className="text-input" value={name} maxLength={40} placeholder="e.g. Grandma Carlson's Kitchen" onChange={(e) => setName(e.target.value)} />
-            <span className="muted small">Shown as “by …” on your recipes in The Mix. It's remembered for next time.</span>
+          <label className="check-line">
+            <input type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} />
+            <span>
+              Publish anonymously
+              <span className="muted small"> — shown as “by {ANONYMOUS_NAME}”. Nobody can tell it's yours.</span>
+            </span>
           </label>
+          {!anonymous && (
+            <label className="field">
+              <span>Your name (shown as the cook)</span>
+              <input className="text-input" value={name} maxLength={40} placeholder="e.g. Grandma Carlson's Kitchen" onChange={(e) => setName(e.target.value)} />
+              <span className="muted small">Shown as “by …” on your recipes in The Mix. It's remembered for next time.</span>
+            </label>
+          )}
           <div className="button-row">
-            <button className="btn primary" disabled={busy || !name.trim() || !title.trim()} onClick={publish}>
+            <button className="btn primary" disabled={busy || (!anonymous && !name.trim()) || !title.trim()} onClick={publish}>
               {busy ? "Publishing…" : at !== null ? "Update" : "Publish"}
             </button>
             <button className="btn" disabled={busy} onClick={() => setOpen(false)}>

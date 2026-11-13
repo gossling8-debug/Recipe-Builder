@@ -8,8 +8,13 @@ import type { SavedRecipe, ScannedRecipe } from "./schema";
  * email. Recipes read from a web page aren't reposted: only the title and a
  * link to the original site are published.
  *
+ * Published recipes have a random id and carry no account id: who published
+ * one is kept in mixOwners/{id}, readable only by that person. So a recipe
+ * published anonymously can't be traced back, or linked to the cook's others.
+ *
  * Firestore (see firestore.rules):
- *   mix/{uid}_{recipeId}     { recipe, sourceUrl, by, byName, at, updatedAt, ratings{uid: 1–5}, reporters{uid: true} }
+ *   mix/{id}                 { recipe, sourceUrl, byName, anonymous, at, updatedAt, ratings{uid: 1–5}, reporters{uid: true} }
+ *   mixOwners/{id}           { uid, recipeId }   (only its owner can read it)
  *   mix/{id}/reports/{uid}   { reason, at }   (read by admins only)
  *   admins/{uid}             (created by hand in the Firebase console; can take any recipe down)
  */
@@ -18,8 +23,10 @@ export interface MixRecipe {
   recipe: ScannedRecipe;
   /** Set when the recipe came from a web page: the Mix links there instead of reposting it. */
   sourceUrl: string | null;
-  by: string;
+  /** Only on recipes published before ids were made anonymous. */
+  by?: string;
   byName: string;
+  anonymous?: boolean;
   at: number;
   updatedAt: number;
   ratings: Record<string, number>;
@@ -60,41 +67,83 @@ function publishable(r: ScannedRecipe, fromWeb: boolean): ScannedRecipe {
   return { title: r.title, servings: r.servings, time: r.time, ingredients: r.ingredients, steps: r.steps, notes: r.notes, tags: r.tags ?? [], warnings: [] };
 }
 
-export const mixId = (uid: string, recipeId: string) => `${uid}_${recipeId}`;
+export const ANONYMOUS_NAME = "Anonymous cook";
+/** The id a recipe published before ids were made anonymous has. */
+const legacyId = (uid: string, recipeId: string) => `${uid}_${recipeId}`;
+const randomId = () => Array.from(crypto.getRandomValues(new Uint8Array(15)), (b) => b.toString(36).padStart(2, "0")).join("").slice(0, 24);
 
-/** Publishes (or updates) one of my recipes, optionally under a different title. */
-export async function publishToMix(source: SavedRecipe, asCooked: ScannedRecipe, name: string, title?: string): Promise<string> {
+/** The Mix id of one of my recipes, if I published it. */
+async function myMixIdFor(recipeId: string): Promise<{ id: string; legacy: boolean } | null> {
   const u = await me();
   const { db, f } = await fb();
-  const byName = name.trim().slice(0, 40);
-  if (!byName) throw new Error("Choose a name to publish under.");
-  rememberName(byName);
-  const id = mixId(u.uid, source.id);
-  const ref = f.doc(db, "mix", id);
-  const existing = await f.getDoc(ref);
+  const snap = await f.getDocs(f.query(f.collection(db, "mixOwners"), f.where("uid", "==", u.uid), f.where("recipeId", "==", recipeId)));
+  if (snap.docs[0]) return { id: snap.docs[0].id, legacy: false };
+  const old = await f.getDoc(f.doc(db, "mix", legacyId(u.uid, recipeId))).catch(() => null);
+  return old?.exists() ? { id: old.id, legacy: true } : null;
+}
+
+/** The ids of everything I've published (to show "by you"). */
+export async function myMixIds(): Promise<Set<string>> {
+  const u = await user();
+  if (!u) return new Set();
+  const { db, f } = await fb();
+  const [owned, old] = await Promise.all([
+    f.getDocs(f.query(f.collection(db, "mixOwners"), f.where("uid", "==", u.uid))).catch(() => null),
+    f.getDocs(f.query(f.collection(db, "mix"), f.where("by", "==", u.uid))).catch(() => null),
+  ]);
+  return new Set([...(owned?.docs ?? []), ...(old?.docs ?? [])].map((d) => d.id));
+}
+
+/**
+ * Publishes (or updates) one of my recipes — under a name I choose, or
+ * anonymously — optionally with a different title. Returns its id.
+ */
+export async function publishToMix(
+  source: SavedRecipe,
+  asCooked: ScannedRecipe,
+  opts: { name: string; anonymous: boolean; title?: string },
+): Promise<string> {
+  const u = await me();
+  const { db, f } = await fb();
+  const byName = opts.anonymous ? ANONYMOUS_NAME : opts.name.trim().slice(0, 40);
+  if (!byName) throw new Error("Choose a name to publish under, or publish anonymously.");
+  if (!opts.anonymous) rememberName(byName);
   const now = Date.now();
   const fromWeb = !!source.source;
-  const recipe = { ...asCooked, title: title?.trim().slice(0, 200) || asCooked.title };
-  const content = { recipe: clean(publishable(recipe, fromWeb)), sourceUrl: source.source ?? null, byName, updatedAt: now };
-  if (existing.exists()) await f.updateDoc(ref, content);
-  else await f.setDoc(ref, { ...content, by: u.uid, at: now, ratings: {}, reporters: {} });
+  const recipe = { ...asCooked, title: opts.title?.trim().slice(0, 200) || asCooked.title };
+  const content = { recipe: clean(publishable(recipe, fromWeb)), sourceUrl: source.source ?? null, byName, anonymous: opts.anonymous, updatedAt: now };
+  const mine = await myMixIdFor(source.id);
+  if (mine && !mine.legacy) {
+    await f.updateDoc(f.doc(db, "mix", mine.id), content);
+    return mine.id;
+  }
+  // New (or moving an older one, which had my account id on it, to a random id).
+  const id = randomId();
+  const batch = f.writeBatch(db);
+  batch.set(f.doc(db, "mix", id), { ...content, at: now, ratings: {}, reporters: {} });
+  batch.set(f.doc(db, "mixOwners", id), { uid: u.uid, recipeId: source.id });
+  await batch.commit();
+  if (mine?.legacy) await f.deleteDoc(f.doc(db, "mix", mine.id)).catch(() => {});
   return id;
 }
 
+/** Takes a recipe out of The Mix (yours, or any if you're an admin). */
 export async function unpublish(id: string): Promise<void> {
   await me();
   const { db, f } = await fb();
   await f.deleteDoc(f.doc(db, "mix", id));
+  await f.deleteDoc(f.doc(db, "mixOwners", id)).catch(() => {}); // an admin taking down an older recipe has none
 }
 
-/** When my recipe was published and the name it's published under, or null. */
-export async function publishedInfo(recipeId: string): Promise<{ at: number; title: string } | null> {
-  const u = await me();
+/** My published copy of a recipe: its id, when, the title and whether it's anonymous — or null. */
+export async function publishedInfo(recipeId: string): Promise<{ id: string; at: number; title: string; anonymous: boolean } | null> {
+  const mine = await myMixIdFor(recipeId).catch(() => null);
+  if (!mine) return null;
   const { db, f } = await fb();
-  const d = await f.getDoc(f.doc(db, "mix", mixId(u.uid, recipeId))).catch(() => null);
+  const d = await f.getDoc(f.doc(db, "mix", mine.id)).catch(() => null);
   if (!d?.exists()) return null;
   const m = d.data() as MixRecipe;
-  return { at: m.updatedAt, title: m.recipe.title };
+  return { id: mine.id, at: m.updatedAt, title: m.recipe.title, anonymous: !!m.anonymous };
 }
 
 const toMix = (d: { id: string; data: () => unknown }): MixRecipe => {
@@ -146,9 +195,14 @@ export function mixRating(m: MixRecipe): { average: number; count: number } | nu
 }
 export const reportCount = (m: MixRecipe) => Object.keys(m.reporters).length;
 
-/** Account deletion: my published recipes. */
+/** Account deletion: my published recipes (and the private records of which are mine). */
 export async function deleteMyMix(uid: string): Promise<void> {
   const { db, f } = await fb();
-  const snap = await f.getDocs(f.query(f.collection(db, "mix"), f.where("by", "==", uid)));
-  for (const d of snap.docs) await f.deleteDoc(d.ref);
+  const owned = await f.getDocs(f.query(f.collection(db, "mixOwners"), f.where("uid", "==", uid)));
+  for (const d of owned.docs) {
+    await f.deleteDoc(f.doc(db, "mix", d.id)).catch(() => {});
+    await f.deleteDoc(d.ref);
+  }
+  const old = await f.getDocs(f.query(f.collection(db, "mix"), f.where("by", "==", uid)));
+  for (const d of old.docs) await f.deleteDoc(d.ref);
 }
