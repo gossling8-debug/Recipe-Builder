@@ -72,6 +72,14 @@ export default function PrivacyPage() {
           you trust.
         </p>
 
+        <h3>The Mix</h3>
+        <p>
+          A recipe you publish to The Mix — the recipe as you cook it, the name you publish under and when you published it — can be seen
+          by anyone with a Cardamix account. Your email, photos and notes are never published. Recipes from a website are published as a
+          title and a link only. Ratings show as totals, not who gave them. Reports go privately to the app's administrators, who can take
+          down any recipe. You can take your recipes out of The Mix at any time; copies others already saved stay theirs.
+        </p>
+
         <h3>Other services you choose to open</h3>
         <ul>
           <li>Walmart and H-E-B buttons open that store's search for the ingredient's name.</li>
