@@ -10,6 +10,7 @@ import { convertRecipe, getUnits } from "../lib/units";
 import type { Ingredient, SavedRecipe } from "../lib/schema";
 import { dollars, recipeCost } from "../lib/prices";
 import { realServings } from "../lib/autoPlan";
+import { printOrShare, recipePdf, type PdfBlock } from "../lib/printPdf";
 
 const line = (ing: Ingredient, scale: number) => ingredientText(ing, scale);
 
@@ -70,6 +71,20 @@ export default function PrintPage({ id }: { id: string }) {
     getRecipe(id).then((r) => setSaved(r ?? null), () => setSaved(null));
   }, [id]);
 
+  // The PDF is made ahead (when the choices change), so the share sheet can open right on the tap — phones require that.
+  const [pdf, setPdf] = useState<File | null>(null);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    if (!saved) return;
+    let live = true;
+    setPdf(null);
+    recipePdf(pdfBlocks(saved, parts), saved.title, large).then((f) => live && setPdf(f), () => live && setPdf(null));
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved, parts, large]);
+
   if (saved === undefined) return <p className="muted page">Loading…</p>;
   if (saved === null) return <div className="callout error page">That recipe wasn't found on this device.</div>;
 
@@ -127,8 +142,8 @@ export default function PrintPage({ id }: { id: string }) {
           </div>
           {!on("ingredients") && !on("steps") && <p className="callout small">Pick at least the ingredients or the directions.</p>}
           <p className="muted small">
-            Uses the size{scale !== 1 ? ` (×${scale})` : ""} and units chosen on the recipe. If nothing happens on iPhone, tap the share
-            button in DuckDuckGo, then <strong>Print</strong> (pinch out on the preview to save it as a PDF).
+            Uses the size{scale !== 1 ? ` (×${scale})` : ""} and units chosen on the recipe. On a phone, the button opens the share menu:
+            choose <strong>Print</strong>, or <strong>Save to Files</strong> to keep the PDF.
           </p>
         </div>
 
@@ -204,12 +219,79 @@ export default function PrintPage({ id }: { id: string }) {
             </>
           )}
         </article>
+        {message && <p className="callout small">{message}</p>}
       </main>
       <div className="fab-bar">
-        <button className="btn primary big" onClick={() => window.print()} disabled={!on("ingredients") && !on("steps")}>
-          <Icon name="download" size={18} /> Print or save as PDF
+        <button
+          className="btn primary big"
+          disabled={(!on("ingredients") && !on("steps")) || !pdf}
+          onClick={async () => {
+            setMessage("");
+            const r = await printOrShare(pdf);
+            if (r === "shared") setMessage("");
+          }}
+        >
+          <Icon name="download" size={18} /> {pdf ? "Print or save as PDF" : "Getting it ready…"}
         </button>
       </div>
     </>
   );
+}
+
+/** The same card as the preview, as blocks for the PDF. */
+function pdfBlocks(saved: SavedRecipe, parts: Set<Part>): PdfBlock[] {
+  const on = (p: Part) => parts.has(p);
+  const scale = loadProgress(saved.id).scale;
+  const r = convertRecipe(applySwaps(saved), getUnits());
+  const out: PdfBlock[] = [];
+  if (on("photo") && saved.dishPhoto) out.push({ kind: "img", src: saved.dishPhoto });
+  out.push({ kind: "title", text: r.title });
+  const meta = [r.servings && scaleAmount(r.servings, scale), r.time].filter(Boolean).join(" · ");
+  if (on("info") && meta) out.push({ kind: "meta", text: meta });
+  if (on("ingredients")) {
+    out.push({ kind: "h2", text: "Ingredients" });
+    let section: string | null = null;
+    for (const ing of r.ingredients) {
+      if (ing.section && ing.section !== section) out.push({ kind: "h3", text: ing.section });
+      section = ing.section;
+      out.push({ kind: "bullet", text: line(ing, scale) });
+    }
+  }
+  if (on("steps")) {
+    out.push({ kind: "h2", text: "Directions" });
+    r.steps.forEach((st, i) =>
+      out.push({
+        kind: "step",
+        n: i + 1,
+        text: st.segments
+          .map((sg) =>
+            on("amounts") && sg.ingredient_index !== null && sg.amount
+              ? `${sg.text} (${stepAmount(sg.amount, r.ingredients[sg.ingredient_index], scale)})`
+              : sg.text,
+          )
+          .join(""),
+      }),
+    );
+  }
+  if (on("cardNotes") && r.notes) out.push({ kind: "h2", text: "Notes" }, { kind: "p", text: r.notes });
+  if (on("myNotes") && saved.myNotes) out.push({ kind: "h2", text: "My notes" }, { kind: "p", text: saved.myNotes });
+  const n = saved.nutrition?.result;
+  if (on("nutrition") && n) {
+    out.push(
+      { kind: "h2", text: "Nutrition per serving" },
+      {
+        kind: "p",
+        text:
+          `${n.serving_size ? `${n.serving_size.measure} · ` : ""}${Math.round(n.per_serving.calories)} calories · protein ${Math.round(n.per_serving.protein_g)} g · ` +
+          `carbs ${Math.round(n.per_serving.carbs_g)} g · fat ${Math.round(n.per_serving.fat_g)} g · sodium ${Math.round(n.per_serving.sodium_mg)} mg` +
+          (n.source !== "card" ? " (estimated)" : ""),
+      },
+    );
+  }
+  const cost = recipeCost(applySwaps(saved), scale);
+  const serves = realServings(saved);
+  if (on("cost") && cost.priced > 0) {
+    out.push({ kind: "h2", text: "Cost" }, { kind: "p", text: `Ingredients ≈ ${dollars(cost.total)}${serves ? ` · ${dollars(cost.total / (serves * scale))} per serving` : ""}` });
+  }
+  return out;
 }
