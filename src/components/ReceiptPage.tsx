@@ -148,12 +148,12 @@ export default function ReceiptPage() {
         const text = r.size || r.listItem.amount || "";
         const before = prev ? prev.before : recordPurchase(r.listItem.name, text, r.storage);
         if (prev) recordPurchase(r.listItem.name, text, r.storage);
-        const priceId = addPrice(r.listItem.name, text, price, at, { store, code: r.code });
+        const priceId = addPrice(r.listItem.name, text, price, at, { store, code: r.code, storage: r.storage });
         bought[key] = { text: text || "some", before, price, priceId };
         if (!checked.has(key)) ticked++;
         checked.add(key);
       } else {
-        addPrice(r.name, r.size, price, at, { store, code: r.code });
+        addPrice(r.name, r.size, price, at, { store, code: r.code, storage: r.isFood ? r.storage : null });
         if (r.isFood) {
           recordPurchase(r.name, r.size, r.storage);
           pantryAdded++;
@@ -199,7 +199,7 @@ export default function ReceiptPage() {
         <span>$</span>
         <input className="text-input" inputMode="decimal" value={r.price} onChange={(e) => set(i, { price: e.target.value })} aria-label={`Price of ${r.name}`} />
       </label>
-        {r.include && <PriceNote name={r.listItem?.name ?? r.name} size={r.size || r.listItem?.amount || ""} price={r.price} store={store} />}
+        {r.include && <PriceNote name={r.listItem?.name ?? r.name} size={r.size || r.listItem?.amount || ""} price={r.price} store={store} storage={r.isFood || r.listItem ? r.storage : null} />}
         {r.include && (r.isFood || r.listItem) && (
           <div className="storage-chips receipt-storage" role="radiogroup" aria-label={`How ${r.name} is kept`}>
             {STORAGE_KINDS.map((k) => (
@@ -363,10 +363,10 @@ export default function ReceiptPage() {
 }
 
 /** "↑ 12% since Oct 3" / "Cheaper at Kroger: $0.12/oz" — how this price compares with what you've paid. */
-function PriceNote({ name, size, price, store }: { name: string; size: string; price: string; store: string }) {
+function PriceNote({ name, size, price, store, storage }: { name: string; size: string; price: string; store: string; storage: StorageKind | null }) {
   const p = parsePrice(price);
   if (p === null) return null;
-  const i = priceInsight(name, size, p, store || null);
+  const i = priceInsight(name, size, p, store || null, undefined, storage);
   const parts: string[] = [];
   if (i.change !== null && Math.abs(i.change) >= 0.03 && i.since)
     parts.push(`${i.change > 0 ? "↑" : "↓"} ${Math.round(Math.abs(i.change) * 100)}% since ${new Date(i.since).toLocaleDateString([], { month: "short", day: "numeric" })}`);

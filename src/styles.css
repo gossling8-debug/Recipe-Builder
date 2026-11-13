@@ -1077,3 +1077,11 @@ body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 
 .price-stores li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 14px; border-bottom: 1px dashed var(--line); }
 .by-store { margin-top: 6px; }
 .appearance-control { margin-top: 6px; }
+.price-kind { margin-left: 8px; vertical-align: middle; font-weight: 500; }
+.purchase-row { user-select: none; -webkit-user-select: none; }
+.purchase-price { display: inline-flex; align-items: center; gap: 4px; }
+.icon-btn.small-icon { width: 30px; height: 30px; }
+.price-edit { max-height: 90vh; overflow-y: auto; }
+.price-edit .field { margin: 8px 0; }
+.danger-link { color: var(--error); display: inline-flex; align-items: center; gap: 4px; margin: 8px 0 4px; }
+.price-row { user-select: none; -webkit-user-select: none; }

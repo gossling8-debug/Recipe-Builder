@@ -8,7 +8,7 @@ import { href } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
 import { shareText } from "../lib/share";
 import { applySwaps } from "../lib/swaps";
-import { boughtWhen, recordPurchase, setItem, statusFor } from "../lib/pantry";
+import { boughtWhen, loadPantry, recordPurchase, setItem, statusFor } from "../lib/pantry";
 import { legacyNameKey } from "../lib/shopping";
 import { formatQty } from "../lib/qty";
 import { convertText, useUnits } from "../lib/units";
@@ -117,7 +117,7 @@ export default function ShoppingList() {
     if (prev.priceId) deletePrice(prev.priceId);
     const price = parsePrice(priceText);
     // Kept under the store chosen above the list, so prices compare by store.
-    const priceId = price !== null ? addPrice(it.name, text.trim(), price, Date.now(), { store: storeInfo(store).name }) : undefined;
+    const priceId = price !== null ? addPrice(it.name, text.trim(), price, Date.now(), { store: storeInfo(store).name, storage: loadPantry()[key]?.storage }) : undefined;
     update({ ...state, bought: { ...state.bought, [key]: { text: text.trim(), before: prev.before, price: price ?? undefined, priceId } } });
     setEditing(null);
   };
