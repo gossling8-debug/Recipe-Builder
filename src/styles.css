@@ -1013,8 +1013,9 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .book-cover.photo-only { padding: 0 0 8px; }
 .book-cover.photo-only .cover-photo-btn { width: 100%; background: var(--line); }
 .book-cover.photo-only .cover-page-photo { max-height: 220px; width: 100%; object-fit: contain; }
-.add-new-to-book { width: 100%; margin-top: 10px; }
-.pick-or { text-align: center; margin: 10px 0 0; }
 .store-switch { margin: 4px 0 8px; }
 .dup-matches { margin: 4px 0 8px; padding-left: 18px; }
 .dup-matches li { margin: 4px 0; }
+.fab-bar > .fab-stack { flex-direction: column; gap: 10px; }
+/* The page leaves room for a taller bottom bar. */
+body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 170px); }

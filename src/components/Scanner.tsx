@@ -326,10 +326,10 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
                     </button>
                   </div>
                 )}
-                {photos.length < MAX_PHOTOS && (
+                {photos.length > 0 && photos.length < MAX_PHOTOS && (
                   <div className="button-row">
-                    <button className={photos.length ? "btn" : "btn primary"} onClick={() => (setNoCamera(""), setScanning(true))}>
-                      <Icon name="camera" /> {photos.length ? "Scan another card" : "Scan a card"}
+                    <button className="btn" onClick={() => (setNoCamera(""), setScanning(true))}>
+                      <Icon name="camera" /> Scan another card
                     </button>
                     <button className="btn" onClick={() => libraryInput.current?.click()}>
                       <Icon name="image" /> Choose from photos
@@ -419,6 +419,19 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
           </>
         )}
       </main>
+      {!busy && mode === "photo" && photos.length === 0 && (
+        // Before the first card: the scan buttons sit at the bottom, within thumb reach.
+        <div className="fab-bar">
+          <div className="fab-stack">
+            <button className="btn primary big" onClick={() => (setNoCamera(""), setScanning(true))}>
+              <Icon name="camera" /> Scan a card
+            </button>
+            <button className="btn" onClick={() => libraryInput.current?.click()}>
+              <Icon name="image" /> Choose from photos
+            </button>
+          </div>
+        </div>
+      )}
       {!busy && ready && (
         <div className="fab-bar">
           <button className="btn primary big" onClick={read}>
