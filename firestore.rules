@@ -88,11 +88,15 @@ service cloud.firestore {
       }
 
       // Recipes shared into the cookbook: members read them; each person
-      // adds and updates their own; the sharer or the cookbook's owner removes.
+      // adds their own; the sharer or the cookbook's owner edits or removes one
+      // (the owner changes only the recipe itself, never who shared it).
       match /recipes/{r} {
         allow read: if isMember(b);
         allow create: if isMember(b) && request.resource.data.sharedBy == uid();
-        allow update: if isMember(b) && resource.data.sharedBy == uid() && request.resource.data.sharedBy == uid();
+        allow update: if isMember(b) && request.resource.data.sharedBy == resource.data.sharedBy
+          && (resource.data.sharedBy == uid()
+            || (book(b).owner == uid()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipe', 'editedBy', 'editedByName', 'editedAt'])));
         allow delete: if isMember(b) && (resource.data.sharedBy == uid() || book(b).owner == uid());
       }
     }

@@ -30,6 +30,10 @@ export interface SharedRecipe {
   sharedByName: string;
   sharedAt: number;
   sourceId: string;
+  /** Who last edited it in the cookbook, and when. */
+  editedBy?: string;
+  editedByName?: string;
+  editedAt?: number;
 }
 
 async function me() {
@@ -225,6 +229,18 @@ export async function shareToCookbook(book: Cookbook, source: SavedRecipe, asCoo
     sourceId: source.id,
   };
   await f.setDoc(f.doc(db, "cookbooks", book.id, "recipes", `${u.uid}_${source.id}`), doc);
+}
+
+/** Edits a recipe in the cookbook (the sharer or the owner). Everyone's own saved copies stay as they are. */
+export async function editInCookbook(book: Cookbook, docId: string, recipe: ScannedRecipe): Promise<void> {
+  const u = await me();
+  const { db, f } = await fb();
+  await f.updateDoc(f.doc(db, "cookbooks", book.id, "recipes", docId), {
+    recipe: clean(shareable(recipe)),
+    editedBy: u.uid,
+    editedByName: book.names[u.uid] ?? defaultName(u.email),
+    editedAt: Date.now(),
+  });
 }
 
 export async function removeFromCookbook(bookIdValue: string, docId: string): Promise<void> {

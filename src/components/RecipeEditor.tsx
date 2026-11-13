@@ -19,6 +19,8 @@ export default function RecipeEditor(props: {
   onSave: (r: SavedRecipe) => Promise<void>;
   onCancel: () => void;
   onDelete: () => void;
+  /** Wording for the delete button (a cookbook recipe is removed, not deleted). */
+  deleteLabel?: string;
 }) {
   const { recipe } = props;
   const [title, setTitle] = useState(recipe.title);
@@ -193,7 +195,7 @@ export default function RecipeEditor(props: {
       {error && <div className="callout error">{error}</div>}
       <div className="danger-zone">
         <button className="btn danger" onClick={props.onDelete} disabled={saving}>
-          <Icon name="trash" size={18} /> Delete this recipe
+          <Icon name="trash" size={18} /> {props.deleteLabel ?? "Delete this recipe"}
         </button>
       </div>
       <p className="muted small">Saving clears this recipe's checkmarks. If you change the ingredients, chosen substitutes are cleared too.</p>
