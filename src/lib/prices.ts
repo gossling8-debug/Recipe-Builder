@@ -1,5 +1,5 @@
 import { isBasic } from "./canMake";
-import { convert, parseQty, type Qty } from "./qty";
+import { convert, formatQty, parseQty, type Qty } from "./qty";
 import { scaleAmount } from "./quantity";
 import { ingredientName, nameKey } from "./shopping";
 import type { ScannedRecipe } from "./schema";
@@ -23,6 +23,8 @@ export interface PriceEntry {
   code?: string;
   /** Fresh, frozen, canned or dry — canned green beans aren't the same buy as fresh ones. */
   storage?: StorageKind;
+  /** The size as written ("174 oz (12 × 14.5 oz cans)"), so packs and exact weights show as entered. */
+  size?: string;
 }
 
 const KEY = "recipe-builder.prices";
@@ -67,7 +69,8 @@ export function addPrice(
   // The same item number at the same store is the same product, even if the receipt words it differently.
   const same = code && store ? all.find((p) => p.code === code && p.store === store) : undefined;
   const storage = extra.storage ?? same?.storage ?? undefined;
-  save([...all, { id, key: same?.key ?? nameKey(name), name: same?.name ?? name, qty: parseQty(amountText, name), price, at, store, code, storage }]);
+  const size = amountText.trim() || undefined;
+  save([...all, { id, key: same?.key ?? nameKey(name), name: same?.name ?? name, qty: parseQty(amountText, name), price, at, store, code, storage, size }]);
   return id;
 }
 
@@ -118,7 +121,10 @@ export function editPrice(
       if (p.id !== id) return p;
       const name = patch.name?.trim() || p.name;
       const next: PriceEntry = { ...p, name, key: nameKey(name) };
-      if (patch.amountText !== undefined) next.qty = patch.amountText.trim() ? parseQty(patch.amountText, name) : null;
+      if (patch.amountText !== undefined) {
+        next.qty = patch.amountText.trim() ? parseQty(patch.amountText, name) : null;
+        next.size = patch.amountText.trim() || undefined;
+      }
       if (patch.price !== undefined) next.price = patch.price;
       if (patch.store !== undefined) next.store = patch.store?.trim() || undefined;
       if (patch.storage !== undefined) next.storage = patch.storage ?? undefined;
@@ -342,4 +348,38 @@ export function spendingByStore(from: number): { store: string; total: number }[
     m.set(s, (m.get(s) ?? 0) + p.price);
   }
   return [...m.entries()].map(([store, total]) => ({ store, total })).sort((a, b) => b.total - a.total);
+}
+
+/**
+ * A size exactly, for showing a price's size when it wasn't written down:
+ * "14.5 oz", "10 lb 14 oz", "1 gal", "33.8 fl oz", "12 eggs" — never rounded to the pound.
+ */
+export function exactSizeText(q: Qty): string {
+  const r = (n: number, d = 1) => String(Math.round(n * 10 ** d) / 10 ** d);
+  if (q.kind === "weight") {
+    const oz = q.g / 28.3495;
+    if (oz < 16) return `${r(oz)} oz`;
+    const lb = Math.floor(oz / 16 + 1e-9);
+    const rest = Math.round((oz - lb * 16) * 10) / 10;
+    return rest >= 16 ? `${lb + 1} lb` : rest > 0 ? `${lb} lb ${r(rest)} oz` : `${lb} lb`;
+  }
+  if (q.kind === "volume") {
+    const floz = q.tsp / 6;
+    if (floz >= 128 && Math.abs(floz / 128 - Math.round(floz / 128 * 4) / 4) < 0.01) return `${r(floz / 128, 2)} gal`;
+    return `${r(floz)} fl oz`;
+  }
+  return formatQty(q);
+}
+
+/** A price's size: as written, or exactly from its amount. */
+export const sizeOf = (p: Pick<PriceEntry, "size" | "qty">) => p.size ?? (p.qty ? exactSizeText(p.qty) : "");
+
+/** A pack in the size ("174 oz (12 × 14.5 oz cans)" → 12 cans) for a price per can, bottle or item. */
+export function packOf(size: string | undefined): { count: number; noun: string } | null {
+  const m = (size ?? "").match(/(\d+)\s*(?:[×x*]|pk|pack of|-pack)\s*[\d.]*\s*(?:fl\.?\s*oz|oz|lb|g|ml|l|ct)?\.?\s*([a-z]+)?/i);
+  if (!m) return null;
+  const count = Number(m[1]);
+  if (!(count > 1)) return null;
+  const noun = (m[2] ?? "item").toLowerCase().replace(/(es|s)$/, "");
+  return { count, noun: noun === "ct" ? "item" : noun };
 }

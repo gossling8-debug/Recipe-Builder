@@ -60,3 +60,24 @@ describe("canned vs fresh, editing", () => {
     expect(allRows()).toEqual([]);
   });
 });
+
+import { exactSizeText, packOf, sizeOf } from "./prices";
+import { parseQty as pq } from "./qty";
+describe("exact sizes", () => {
+  it("reads and shows pounds and ounces exactly", () => {
+    expect(pq("10 lb 14 oz")).toEqual({ kind: "weight", g: 10 * 453.592 + 14 * 28.3495 });
+    expect(exactSizeText(pq("174 oz")!)).toBe("10 lb 14 oz");
+    expect(exactSizeText(pq("14.5 oz")!)).toBe("14.5 oz");
+    expect(exactSizeText(pq("1 gallon")!)).toBe("1 gal");
+  });
+  it("keeps the size as written, pack included", () => {
+    const id = addPrice("green beans", "174 oz (12 × 14.5 oz cans)", 8.99, 1, { store: "Costco" });
+    const p = loadPrices().find((x) => x.id === id)!;
+    expect(sizeOf(p)).toBe("174 oz (12 × 14.5 oz cans)");
+    expect(packOf(p.size)).toEqual({ count: 12, noun: "can" });
+    editPrice(id, { amountText: "10 lb 14 oz" });
+    const q = loadPrices().find((x) => x.id === id)!;
+    expect(sizeOf(q)).toBe("10 lb 14 oz");
+    expect(Math.round((q.qty as { g: number }).g)).toBe(Math.round(174 * 28.3495));
+  });
+});

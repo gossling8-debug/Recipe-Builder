@@ -68,6 +68,9 @@ function unitFactor(word: string): { kind: "volume" | "weight"; f: number } | nu
 /** "1½ cups", "4 lb", "2 (8 oz) blocks", "3 eggs", "16 oz" → Qty; null if there's no number. */
 export function parseQty(text: string, name = ""): Qty | null {
   let t = text.trim().toLowerCase();
+  // Pounds and ounces together: "10 lb 14 oz" = 174 oz.
+  const lbOz = t.match(/^(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?)\.?,?\s*(?:and\s+)?(\d+(?:\.\d+)?)\s*(?:oz|ounces?)\b/);
+  if (lbOz) return { kind: "weight", g: Number(lbOz[1]) * 453.592 + Number(lbOz[2]) * 28.3495 };
   const m = t.match(NUM);
   if (!m) return null;
   const n = parseNumber(m[1]);
