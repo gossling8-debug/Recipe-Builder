@@ -38,7 +38,7 @@ export interface SharedRecipe {
 
 async function me() {
   const u = await user();
-  if (!u) throw new Error("Sign in to cloud backup (in Settings) to use family cookbooks.");
+  if (!u) throw new Error("Sign in to cloud backup (in Settings) to use cookbooks.");
   return u;
 }
 const clean = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;

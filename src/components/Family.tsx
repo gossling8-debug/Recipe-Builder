@@ -46,10 +46,10 @@ function NeedsSignIn({ s }: { s: CloudState }) {
   return (
     <div className="callout">
       {s.status === "off" ? (
-        <>Family cookbooks need cloud backup, which isn't set up in this app yet.</>
+        <>Cookbooks need cloud backup, which isn't set up in this app yet.</>
       ) : (
         <>
-          Family cookbooks use your cloud account. <a href={href({ name: "settings" })}>Sign in in Settings</a>, then come back.
+          Cookbooks use your cloud account. <a href={href({ name: "settings" })}>Sign in in Settings</a>, then come back.
         </>
       )}
     </div>
@@ -59,7 +59,7 @@ function NeedsSignIn({ s }: { s: CloudState }) {
 async function invite(book: Cookbook, toast: (m: string) => void) {
   const r = await shareText(
     `Join “${book.name}”`,
-    `Join our family cookbook “${book.name}” in Cardamix. Open this link (you'll need a free account):`,
+    `Join our cookbook “${book.name}” in Cardamix. Open this link (you'll need a free account):`,
     inviteLink(book),
   );
   if (r === "copied") toast("Invite link copied — paste it in a message");
@@ -92,7 +92,7 @@ export function FamilyPage() {
 
   return (
     <>
-      <Header title="Family cookbooks" back={href({ name: "library" })} returnToPrevious />
+      <Header title="Cookbooks" back={href({ name: "library" })} returnToPrevious />
       <main className="page">
         <p className="muted small">
           A shared shelf for your family or friends. You choose which recipes to share; everyone can save a copy to their own
@@ -135,7 +135,7 @@ export function FamilyPage() {
           </div>
         ) : (
           <button className="btn" onClick={() => setCreating(true)}>
-            <Icon name="plus" size={18} /> New family cookbook
+            <Icon name="plus" size={18} /> New cookbook
           </button>
         ))}
         {books?.length === 0 && !creating && (
@@ -216,7 +216,7 @@ export function BookPage({ id }: { id: string }) {
   return (
     <>
       <Header
-        title={book?.name ?? "Family cookbook"}
+        title={book?.name ?? "Cookbook"}
         back={href({ name: "family" })}
         returnToPrevious
         actions={
@@ -575,7 +575,7 @@ export function ShareToFamily({ recipe }: { recipe: SavedRecipe }) {
 
   return (
     <section className="family-share">
-      <h3>Family cookbook</h3>
+      <h3>Cookbooks</h3>
       {books.map((b) => (
         <p key={b.id} className="small family-row">
           {shared[b.id] ? (
