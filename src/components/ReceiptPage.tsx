@@ -4,6 +4,7 @@ import Icon from "./Icon";
 import { listRecipes } from "../lib/db";
 import { receiptPieces } from "../lib/image";
 import { loadPantry, recordPurchase, setItem } from "../lib/pantry";
+import { STORAGE_KINDS, estimateUseBy, guessStorage, keepsText, type StorageKind } from "../lib/shelfLife";
 import { addPrice, deletePrice, dollars, parsePrice } from "../lib/prices";
 import { alreadyImported, receiptId, receiptTime, rememberImported, type Receipt } from "../lib/receipt";
 import { href, navigate } from "../lib/route";
@@ -23,6 +24,8 @@ interface Row {
   listItem: ShoppingItem | null;
   /** Already in the pantry (by this name). */
   inPantry: boolean;
+  /** Fresh, frozen, canned or dry: sets how long the pantry expects it to last. */
+  storage: StorageKind;
 }
 
 /**
@@ -80,15 +83,18 @@ export default function ReceiptPage() {
       setRows(
         r.items.map((it) => {
           const listItem = it.matches ? (byName.get(it.matches) ?? null) : null;
+          // Something that spoils is food, even if the reader said otherwise.
+          const isFood = it.is_food || estimateUseBy(it.name) !== null;
           return {
-            include: keepByDefault(it, !!listItem),
+            include: keepByDefault({ is_food: isFood }, !!listItem),
             name: listItem?.name ?? it.name,
             receiptText: it.receipt_text,
             size: it.size ?? "",
             price: it.price.toFixed(2),
-            isFood: it.is_food,
+            isFood,
             listItem,
             inPantry: !!pantry[nameKey(it.name)],
+            storage: it.storage ?? guessStorage(it.name, it.receipt_text),
           };
         }),
       );
@@ -129,8 +135,8 @@ export default function ReceiptPage() {
           if (prev.priceId) deletePrice(prev.priceId);
         }
         const text = r.size || r.listItem.amount || "";
-        const before = prev ? prev.before : recordPurchase(r.listItem.name, text);
-        if (prev) recordPurchase(r.listItem.name, text);
+        const before = prev ? prev.before : recordPurchase(r.listItem.name, text, r.storage);
+        if (prev) recordPurchase(r.listItem.name, text, r.storage);
         const priceId = addPrice(r.listItem.name, text, price, at);
         bought[key] = { text: text || "some", before, price, priceId };
         if (!checked.has(key)) ticked++;
@@ -138,7 +144,7 @@ export default function ReceiptPage() {
       } else {
         addPrice(r.name, r.size, price, at);
         if (r.isFood) {
-          recordPurchase(r.name, r.size);
+          recordPurchase(r.name, r.size, r.storage);
           pantryAdded++;
         }
       }
@@ -175,12 +181,29 @@ export default function ReceiptPage() {
                 : r.inPantry
                   ? "Adds to your pantry"
                   : "New in your pantry"}
+          {r.include && (r.isFood || r.listItem) && <span className="muted"> · {keepsText(r.listItem?.name ?? r.name, r.storage)}</span>}
         </div>
       </div>
       <label className="receipt-price">
         <span>$</span>
         <input className="text-input" inputMode="decimal" value={r.price} onChange={(e) => set(i, { price: e.target.value })} aria-label={`Price of ${r.name}`} />
       </label>
+        {r.include && (r.isFood || r.listItem) && (
+          <div className="storage-chips receipt-storage" role="radiogroup" aria-label={`How ${r.name} is kept`}>
+            {STORAGE_KINDS.map((k) => (
+              <button
+                key={k.id}
+                type="button"
+                role="radio"
+                aria-checked={r.storage === k.id}
+                className={r.storage === k.id ? "chip active" : "chip"}
+                onClick={() => set(i, { storage: k.id })}
+              >
+                {k.label}
+              </button>
+            ))}
+          </div>
+        )}
     </li>
   );
 

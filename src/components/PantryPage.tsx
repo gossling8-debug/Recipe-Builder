@@ -11,7 +11,7 @@ import Header from "./Header";
 import Icon from "./Icon";
 import { href } from "../lib/route";
 import { boughtWhen, loadPantry, setItem, useSoon, type PantryItem, type UseSoon } from "../lib/pantry";
-import { estimateUseBy, freshness, fromDateInput, toDateInput, useByLabel } from "../lib/shelfLife";
+import { STORAGE_KINDS, freshness, fromDateInput, guessStorage, toDateInput, useByFor, useByLabel, type StorageKind } from "../lib/shelfLife";
 import { formatQty, parseQty } from "../lib/qty";
 import { nameKey } from "../lib/shopping";
 
@@ -25,6 +25,18 @@ export default function PantryPage() {
   const [ideas, setIdeas] = useState<CanMake[] | null>(null);
   const [soon, setSoon] = useState<UseSoon[]>([]);
   const [dateFor, setDateFor] = useState<string | null>(null); // item key whose date is being edited
+  const [storageFor, setStorageFor] = useState<string | null>(null); // item key whose fresh/frozen/canned/dry is being changed
+  const [show, setShow] = useState<StorageKind | "all">("all");
+  const [newStorage, setNewStorage] = useState<StorageKind | null>(null); // chosen for "Add something you have"
+  const kept = (it: PantryItem): StorageKind => it.storage ?? guessStorage(it.name);
+  /** Changing how it's kept re-estimates the date, unless the cook set one. */
+  function setStorage(it: PantryItem, storage: StorageKind) {
+    const reestimate = it.useByEstimated || (!it.useBy && !it.noUseBy);
+    const useBy = reestimate ? (useByFor(it.name, storage, it.boughtAt ?? Date.now()) ?? undefined) : it.useBy;
+    setItem(it.key, { ...it, storage, useBy, useByEstimated: reestimate ? useBy !== undefined : it.useByEstimated, updatedAt: Date.now() });
+    setStorageFor(null);
+    refresh();
+  }
   const [listed, setListed] = useState(() => new Set(loadShopping().recipes.map((r) => r.id)));
   const loadIdeas = () =>
     listRecipes().then(
@@ -51,7 +63,8 @@ export default function PantryPage() {
   function addItem() {
     if (!name.trim()) return;
     const key = nameKey(name);
-    const useBy = estimateUseBy(name) ?? undefined;
+    const storage = newStorage ?? guessStorage(name);
+    const useBy = useByFor(name, storage) ?? undefined;
     setItem(key, {
       key,
       name: name.trim(),
@@ -59,9 +72,11 @@ export default function PantryPage() {
       updatedAt: Date.now(),
       useBy,
       useByEstimated: useBy !== undefined,
+      storage,
     });
     setName("");
     setAmount("");
+    setNewStorage(null);
     refresh();
   }
 
@@ -176,8 +191,20 @@ export default function PantryPage() {
             <p className="muted">Tick items on your shopping list as you buy them, or add what you already have below.</p>
           </div>
         ) : (
+          <>
+          <div className="segmented storage-filter" role="radiogroup" aria-label="Show">
+            {([["all", "All"], ...STORAGE_KINDS.map((k) => [k.id, k.label])] as [StorageKind | "all", string][]).map(([v, label]) => {
+              const n = v === "all" ? items.length : items.filter((it) => kept(it) === v).length;
+              return (
+                <button key={v} role="radio" aria-checked={show === v} className={show === v ? "chip active" : "chip"} onClick={() => setShow(v)} disabled={v !== "all" && n === 0}>
+                  {label}
+                  {v !== "all" && n > 0 ? ` · ${n}` : ""}
+                </button>
+              );
+            })}
+          </div>
           <ul className="pantry-list">
-            {items.map((it) => (
+            {items.filter((it) => show === "all" || kept(it) === show).map((it) => (
               <li key={it.key}>
                 <div className="pantry-main">
                   <div className="pantry-name">{it.name}</div>
@@ -207,6 +234,19 @@ export default function PantryPage() {
                     </button>
                   )}
                   {boughtWhen(it) && <div className="muted small">Bought {boughtWhen(it)}</div>}
+                  {storageFor === it.key ? (
+                    <div className="storage-chips" role="radiogroup" aria-label={`How ${it.name} is kept`}>
+                      {STORAGE_KINDS.map((k) => (
+                        <button key={k.id} role="radio" aria-checked={kept(it) === k.id} className={kept(it) === k.id ? "chip active" : "chip"} onClick={() => setStorage(it, k.id)}>
+                          {k.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <button className="link-btn small storage-tag" onClick={() => setStorageFor(it.key)} aria-label={`${STORAGE_KINDS.find((k) => k.id === kept(it))!.label} — change how ${it.name} is kept`}>
+                      {STORAGE_KINDS.find((k) => k.id === kept(it))!.label}
+                    </button>
+                  )}
                   <button
                     className={isStaple(it.key) ? "link-btn small keep-on" : "link-btn small"}
                     aria-pressed={isStaple(it.key)}
@@ -262,6 +302,7 @@ export default function PantryPage() {
               </li>
             ))}
           </ul>
+          </>
         )}
 
         <StaplesSection />
@@ -271,6 +312,18 @@ export default function PantryPage() {
           <div className="pantry-add">
             <input className="text-input" placeholder="Ingredient, e.g. sugar" value={name} onChange={(e) => setName(e.target.value)} />
             <input className="text-input" placeholder="Amount, e.g. 4 lb" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            {name.trim() && (
+              <div className="storage-chips" role="radiogroup" aria-label="How it's kept">
+                {STORAGE_KINDS.map((k) => {
+                  const on = (newStorage ?? guessStorage(name)) === k.id;
+                  return (
+                    <button key={k.id} type="button" role="radio" aria-checked={on} className={on ? "chip active" : "chip"} onClick={() => setNewStorage(k.id)}>
+                      {k.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <button className="btn" onClick={addItem} disabled={!name.trim()}>
               <Icon name="plus" size={18} /> Add
             </button>

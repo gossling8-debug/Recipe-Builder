@@ -1024,3 +1024,10 @@ body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 
 .who-rated { list-style: none; padding: 0; margin: 4px 0 8px; }
 .who-rated li { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--line); }
 .book-sort { display: flex; gap: 8px; margin: 0 0 6px; }
+/* Fresh / Frozen / Canned / Dry on receipt rows and pantry items */
+.storage-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
+.storage-chips .chip { padding: 3px 8px; min-height: 28px; font-size: 12.5px; }
+.storage-filter { margin: 4px 0 10px; flex-wrap: wrap; }
+.storage-tag { display: inline-block; margin-right: 10px; }
+.pantry-add .storage-chips { grid-column: 1 / -1; margin: 0; }
+.receipt-rows .receipt-storage { grid-column: 2 / -1; margin: -2px 0 0; }

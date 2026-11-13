@@ -21,7 +21,11 @@ export const ReceiptSchema = z.object({
         .nullable()
         .describe('Total amount bought, starting with a number, e.g. "1 gallon", "2 lb", "12 eggs", "3 cans". For 2 × 16 oz say "32 oz". null if unknown.'),
       price: z.number().describe("What was paid for this line in dollars, after any line discount (the line total, not the unit price)."),
-      is_food: z.boolean().describe("true for food and drink ingredients; false for household, paper goods, toiletries, bags, fees."),
+      is_food: z.boolean().describe("true for anything you eat or drink (meat, dairy, produce, snacks, pouches, candy, drinks); false only for household, paper goods, toiletries, bags, fees."),
+      storage: z
+        .enum(["fresh", "frozen", "canned", "dry"])
+        .nullable()
+        .describe('How it is kept: "fresh" (refrigerated or produce, bakery, dairy, meat), "frozen" (bought frozen), "canned" (cans and jars), "dry" (shelf-stable boxes and bags: flour, pasta, cereal, chips). null if not food.'),
       matches: z
         .string()
         .nullable()
@@ -38,7 +42,7 @@ const SYSTEM = `You read grocery receipts and online order screenshots (Walmart,
 
 The images may be several overlapping pieces of one long screenshot, or several screenshots of one order: list each purchased line ONCE (skip lines repeated in an overlap). Skip subtotals, savings summaries, payment lines, and "substituted"/"out of stock" items that were not received; for a substitution, list what was actually received.
 
-For each line give a plain generic name a recipe would use (expand abbreviations: "GV" = Great Value, "MLK" = milk, "BNLS SKNLS CHKN BRST" = boneless skinless chicken breast), the total amount bought, and the line price after discounts. Mark household items as not food (snacks, candy and drinks are food).
+For each line give a plain generic name a recipe would use (expand abbreviations: "GV" = Great Value, "MLK" = milk, "BNLS SKNLS CHKN BRST" = boneless skinless chicken breast), the total amount bought, and the line price after discounts. Only household items are not food: anything eaten or drunk is food (meat, dairy, produce, snacks, fruit pouches, cheese sticks, candy, drinks). Say how each food is kept: fresh, frozen (bought frozen), canned (cans and jars) or dry (shelf-stable boxes and bags).
 
 You are given the names on the cook's shopping list. Set "matches" to one of those names, exactly as written, only when it is clearly the same ingredient (e.g. "2% milk" matches "milk"; "shredded cheddar" matches "cheddar cheese"); otherwise null.
 
