@@ -10,7 +10,7 @@ import Icon from "./Icon";
 /** What each "help with" choice turns on or off (Cooking basics are always on). */
 const HELP: { group: Feature["group"]; label: string; what: string }[] = [
   { group: "Planning", label: "Planning meals", what: "Week planner, Tonight, meal times, thaw reminders" },
-  { group: "Shopping & pantry", label: "Shopping & pantry", what: "What's on hand, budget, receipts, Walmart" },
+  { group: "Shopping & pantry", label: "Shopping & pantry", what: "What's on hand, budget, receipts, Walmart & H-E-B" },
   { group: "Health", label: "Health", what: "Calories, healthier swaps, allergies" },
   { group: "Extras", label: "Sharing with family", what: "A family cookbook (needs cloud backup)" },
 ];

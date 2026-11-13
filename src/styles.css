@@ -1015,3 +1015,4 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .book-cover.photo-only .cover-page-photo { max-height: 220px; width: 100%; object-fit: contain; }
 .add-new-to-book { width: 100%; margin-top: 10px; }
 .pick-or { text-align: center; margin: 10px 0 0; }
+.store-switch { margin: 4px 0 8px; }

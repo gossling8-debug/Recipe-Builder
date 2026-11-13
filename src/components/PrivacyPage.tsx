@@ -74,7 +74,7 @@ export default function PrivacyPage() {
 
         <h3>Other services you choose to open</h3>
         <ul>
-          <li>Walmart buttons open a Walmart search for that ingredient's name.</li>
+          <li>Walmart and H-E-B buttons open that store's search for the ingredient's name.</li>
           <li>“Add to calendar” opens Google Calendar with the meal's name and time.</li>
           <li>Share links put the recipe itself in the link; whoever you send it to can read it.</li>
           <li>
