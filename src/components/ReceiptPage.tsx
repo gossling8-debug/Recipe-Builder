@@ -29,6 +29,10 @@ interface Row {
   storage: StorageKind;
   /** The item number printed next to it, if any. */
   code: string | null;
+  /** Where the size came from: the receipt, the usual package (estimated by the reader), or you. */
+  sizeFrom: "receipt" | "estimated" | "you" | "none";
+  /** How many of the item the line is for. */
+  count: number;
 }
 
 /**
@@ -100,6 +104,8 @@ export default function ReceiptPage() {
             name: listItem?.name ?? it.name,
             receiptText: it.receipt_text,
             size: it.size ?? "",
+            sizeFrom: !it.size ? "none" : it.size_estimated ? "estimated" : "receipt",
+            count: it.count || 1,
             price: it.price.toFixed(2),
             isFood,
             listItem,
@@ -179,8 +185,18 @@ export default function ReceiptPage() {
       <div className="receipt-main">
         <div>
           <strong>{r.name}</strong>
-          {r.size && <span className="muted"> · {r.size}</span>}
         </div>
+        <label className="receipt-size">
+          <span className="sr-only">Size of {r.name}</span>
+          <input
+            className="text-input"
+            value={r.size}
+            placeholder="Size, e.g. 2 lb or 12 × 14.5 oz"
+            onChange={(e) => set(i, { size: e.target.value, sizeFrom: e.target.value.trim() ? "you" : "none" })}
+          />
+          {r.sizeFrom === "estimated" && <span className="size-from">usual size — check it</span>}
+          {r.sizeFrom === "none" && r.include && <span className="size-from">add a size to compare prices</span>}
+        </label>
         <div className="muted small">{r.receiptText}</div>
         <div className="small receipt-where">
           {r.listItem

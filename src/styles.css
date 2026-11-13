@@ -1085,3 +1085,8 @@ body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 
 .price-edit .field { margin: 8px 0; }
 .danger-link { color: var(--error); display: inline-flex; align-items: center; gap: 4px; margin: 8px 0 4px; }
 .price-row { user-select: none; -webkit-user-select: none; }
+.receipt-size { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 4px 0 2px; }
+.receipt-size .text-input { padding: 6px 8px; font-size: 15px; flex: 1 1 140px; min-width: 0; }
+.size-from { font-size: 12px; color: var(--warn); }
+.size-from.ok { color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
