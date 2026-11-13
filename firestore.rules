@@ -19,6 +19,55 @@ service cloud.firestore {
       allow read: if signedIn() && uid() == owner;
     }
 
+    // The Mix: recipes anyone can publish for everyone signed in. Each person
+    // publishes and edits only their own (one per recipe: {uid}_{recipeId});
+    // anyone signed in can rate (not their own) and report, each touching only
+    // their own entry. Admins (admins/{uid}, created by hand) can take any down.
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(uid())); }
+    match /admins/{a} {
+      allow get: if signedIn() && uid() == a;
+    }
+    function okMixContent(d) {
+      return d.recipe is map && d.recipe.title is string && d.recipe.title.size() <= 200
+        && d.byName is string && d.byName.size() > 0 && d.byName.size() <= 40
+        && (d.sourceUrl == null || (d.sourceUrl is string && d.sourceUrl.size() <= 2000))
+        && d.updatedAt is int;
+    }
+    match /mix/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.by == uid()
+        && id.matches(uid() + '_.+')
+        && request.resource.data.keys().hasOnly(['recipe', 'sourceUrl', 'by', 'byName', 'at', 'updatedAt', 'ratings', 'reporters'])
+        && request.resource.data.ratings.size() == 0 && request.resource.data.reporters.size() == 0
+        && request.resource.data.at is int
+        && okMixContent(request.resource.data);
+      allow update: if signedIn() && request.resource.data.by == resource.data.by && request.resource.data.at == resource.data.at && (
+        // The publisher changes the recipe, its link or their name.
+        (resource.data.by == uid()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipe', 'sourceUrl', 'byName', 'updatedAt'])
+          && okMixContent(request.resource.data))
+        // Anyone else sets or clears their own rating (1–5).
+        || (resource.data.by != uid()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings'])
+          && request.resource.data.ratings.diff(resource.data.ratings).affectedKeys().hasOnly([uid()])
+          && (!(uid() in request.resource.data.ratings)
+            || (request.resource.data.ratings[uid()] is int && request.resource.data.ratings[uid()] >= 1 && request.resource.data.ratings[uid()] <= 5)))
+        // Anyone else reports it (once).
+        || (resource.data.by != uid()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reporters'])
+          && request.resource.data.reporters.diff(resource.data.reporters).affectedKeys().hasOnly([uid()])
+          && request.resource.data.reporters[uid()] == true)
+      );
+      allow delete: if signedIn() && (resource.data.by == uid() || isAdmin());
+
+      match /reports/{r} {
+        allow create: if signedIn() && r == uid()
+          && request.resource.data.keys().hasOnly(['reason', 'at'])
+          && request.resource.data.reason is string && request.resource.data.reason.size() <= 200;
+        allow read, delete: if isAdmin();
+      }
+    }
+
     // Family cookbooks. The cookbook's id is the invite code: it's random and
     // only shared by its members, so knowing it is what lets someone join.
     function book(b) { return get(/databases/$(database)/documents/cookbooks/$(b)).data; }

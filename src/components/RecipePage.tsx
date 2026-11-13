@@ -10,6 +10,7 @@ import MyNotes from "./MyNotes";
 import AddToWeek from "./AddToWeek";
 import NutritionSection from "./NutritionSection";
 import { ShareToFamily } from "./Family";
+import { PublishToMix } from "./Mix";
 import { markMade, unmarkMadeToday } from "../lib/made";
 import { freezeHalfIfPlanned } from "../lib/leftovers";
 import FreezeHalf from "./FreezeHalf";
@@ -363,6 +364,7 @@ export default function RecipePage({ id }: { id: string }) {
                     }}
                   />}
                   {feature("family") && <ShareToFamily recipe={recipe} />}
+                  {feature("mix") && <PublishToMix recipe={recipe} />}
                   {feature("nutrition") && <NutritionSection
                     recipe={recipe}
                     onSaved={async (updated) => {

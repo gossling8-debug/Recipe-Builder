@@ -423,6 +423,15 @@ export default function Library() {
             </button>
           </p>
         )}
+        {familyOn && feature("mix") && (
+          <a className="plan-strip mix-link" href={href({ name: "mix" })}>
+            <Icon name="share" size={18} />
+            <span>
+              <strong>The Mix</strong>
+              <span className="muted small"> · recipes cooks everywhere have shared</span>
+            </span>
+          </a>
+        )}
         {familyOn && feature("family") && (
           <a className="plan-strip family-link" href={href({ name: "family" })}>
             <Icon name="book" size={18} />

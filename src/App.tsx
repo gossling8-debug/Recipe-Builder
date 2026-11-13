@@ -28,6 +28,7 @@ import TonightPage from "./components/TonightPage";
 import BudgetPage from "./components/BudgetPage";
 import TabBar from "./components/TabBar";
 import { BookPage, FamilyPage, JoinPage, SharedRecipePage } from "./components/Family";
+import { MixPage, MixRecipePage } from "./components/Mix";
 
 function Screen() {
   const route = useRoute();
@@ -41,6 +42,8 @@ function Screen() {
     case "family":
       if (route.book && route.recipe) return <SharedRecipePage bookId={route.book} docId={route.recipe} />;
       return route.book ? <BookPage id={route.book} /> : <FamilyPage />;
+    case "mix":
+      return route.id ? <MixRecipePage key={route.id} id={route.id} /> : <MixPage />;
     case "join":
       return <JoinPage id={route.id} />;
     case "tips":

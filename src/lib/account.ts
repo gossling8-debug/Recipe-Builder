@@ -86,6 +86,10 @@ export async function deleteAccount(password: string): Promise<void> {
     const { closeMyAccount } = await import("./subscription");
     await closeMyAccount();
 
+    // Recipes published to The Mix
+    const { deleteMyMix } = await import("./mix");
+    await deleteMyMix(u.uid);
+
     // Family cookbooks
     const books: Cookbook[] = await myCookbooks();
     for (const book of books) {

@@ -116,6 +116,15 @@ export function FamilyPage() {
     <>
       <Header title="Cookbooks" back={href({ name: "library" })} returnToPrevious />
       <main className="page">
+        {feature("mix") && (
+          <a className="plan-strip mix-link" href={href({ name: "mix" })}>
+            <Icon name="share" size={18} />
+            <span>
+              <strong>The Mix</strong>
+              <span className="muted small"> · recipes cooks everywhere have shared</span>
+            </span>
+          </a>
+        )}
         <p className="muted small">
           A shared shelf for your family or friends. You choose which recipes to share; everyone can save a copy to their own
           recipes. Your other recipes stay private.
