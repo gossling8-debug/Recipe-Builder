@@ -19,7 +19,7 @@ import {
   mixRating,
   publicName,
   publishToMix,
-  publishedAt,
+  publishedInfo,
   rateMix,
   reportCount,
   reportMix,
@@ -365,10 +365,18 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
   const [at, setAt] = useState<number | null | undefined>(undefined);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(() => publicName());
+  const [title, setTitle] = useState(recipe.title);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
-    if (on) publishedAt(recipe.id).then(setAt, () => setAt(null));
+    if (on)
+      publishedInfo(recipe.id).then(
+        (info) => {
+          setAt(info?.at ?? null);
+          if (info) setTitle(info.title); // keep the name it's published under
+        },
+        () => setAt(null),
+      );
   }, [on, recipe.id]);
   if (!on || at === undefined) return null;
   const changed = at !== null && (recipe.updatedAt ?? recipe.createdAt) > at;
@@ -377,7 +385,7 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
     setBusy(true);
     setError("");
     try {
-      await publishToMix(recipe, applySwaps(recipe), name);
+      await publishToMix(recipe, applySwaps(recipe), name, title);
       setAt(Date.now());
       setOpen(false);
     } catch (e) {
@@ -433,11 +441,16 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
             )}
           </p>
           <label className="field">
-            <span>Publish as</span>
+            <span>Recipe name</span>
+            <input className="text-input" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
+          </label>
+          <label className="field">
+            <span>Your name (shown as the cook)</span>
             <input className="text-input" value={name} maxLength={40} placeholder="e.g. Grandma Carlson's Kitchen" onChange={(e) => setName(e.target.value)} />
+            <span className="muted small">Shown as “by …” on your recipes in The Mix. It's remembered for next time.</span>
           </label>
           <div className="button-row">
-            <button className="btn primary" disabled={busy || !name.trim()} onClick={publish}>
+            <button className="btn primary" disabled={busy || !name.trim() || !title.trim()} onClick={publish}>
               {busy ? "Publishing…" : at !== null ? "Update" : "Publish"}
             </button>
             <button className="btn" disabled={busy} onClick={() => setOpen(false)}>

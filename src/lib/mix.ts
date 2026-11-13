@@ -62,8 +62,8 @@ function publishable(r: ScannedRecipe, fromWeb: boolean): ScannedRecipe {
 
 export const mixId = (uid: string, recipeId: string) => `${uid}_${recipeId}`;
 
-/** Publishes (or updates) one of my recipes. */
-export async function publishToMix(source: SavedRecipe, asCooked: ScannedRecipe, name: string): Promise<string> {
+/** Publishes (or updates) one of my recipes, optionally under a different title. */
+export async function publishToMix(source: SavedRecipe, asCooked: ScannedRecipe, name: string, title?: string): Promise<string> {
   const u = await me();
   const { db, f } = await fb();
   const byName = name.trim().slice(0, 40);
@@ -74,7 +74,8 @@ export async function publishToMix(source: SavedRecipe, asCooked: ScannedRecipe,
   const existing = await f.getDoc(ref);
   const now = Date.now();
   const fromWeb = !!source.source;
-  const content = { recipe: clean(publishable(asCooked, fromWeb)), sourceUrl: source.source ?? null, byName, updatedAt: now };
+  const recipe = { ...asCooked, title: title?.trim().slice(0, 200) || asCooked.title };
+  const content = { recipe: clean(publishable(recipe, fromWeb)), sourceUrl: source.source ?? null, byName, updatedAt: now };
   if (existing.exists()) await f.updateDoc(ref, content);
   else await f.setDoc(ref, { ...content, by: u.uid, at: now, ratings: {}, reporters: {} });
   return id;
@@ -86,12 +87,14 @@ export async function unpublish(id: string): Promise<void> {
   await f.deleteDoc(f.doc(db, "mix", id));
 }
 
-/** When my recipe was published, or null. */
-export async function publishedAt(recipeId: string): Promise<number | null> {
+/** When my recipe was published and the name it's published under, or null. */
+export async function publishedInfo(recipeId: string): Promise<{ at: number; title: string } | null> {
   const u = await me();
   const { db, f } = await fb();
   const d = await f.getDoc(f.doc(db, "mix", mixId(u.uid, recipeId))).catch(() => null);
-  return d?.exists() ? ((d.data() as MixRecipe).updatedAt ?? null) : null;
+  if (!d?.exists()) return null;
+  const m = d.data() as MixRecipe;
+  return { at: m.updatedAt, title: m.recipe.title };
 }
 
 const toMix = (d: { id: string; data: () => unknown }): MixRecipe => {
