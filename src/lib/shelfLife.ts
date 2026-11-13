@@ -107,3 +107,38 @@ export function useByLabel(useBy: number, now = Date.now()): string {
   if (t.startsWith("in ")) return `Use within ${t.slice(3)}`;
   return `Use by ${t}`;
 }
+
+/** How something is kept: it decides how long it lasts. */
+export type StorageKind = "fresh" | "frozen" | "canned" | "dry";
+export const STORAGE_KINDS: { id: StorageKind; label: string }[] = [
+  { id: "fresh", label: "Fresh" },
+  { id: "frozen", label: "Frozen" },
+  { id: "canned", label: "Canned" },
+  { id: "dry", label: "Dry" },
+];
+/** Frozen food is best within about 3 months (the same as "freeze half"). */
+const FROZEN_DAYS = 90;
+
+/** A first guess from the name (and the receipt's own wording): frozen, canned, fresh if it spoils, else dry. */
+export function guessStorage(name: string, receiptText = ""): StorageKind {
+  const t = `${name} ${receiptText}`.toLowerCase();
+  if (/\b(frozen|frz|froz)\b/.test(t)) return "frozen";
+  if (/\b(canned|cans?|cnd|jarred|jars?)\b/.test(t)) return "canned";
+  return estimateUseBy(name) !== null ? "fresh" : "dry";
+}
+
+/** Estimated use-by for something kept this way: fresh by type, frozen ≈ 3 months, canned and dry none. */
+export function useByFor(name: string, storage: StorageKind, from = Date.now()): number | null {
+  if (storage === "frozen") return endOfDay(from + FROZEN_DAYS * DAY);
+  if (storage === "fresh") return estimateUseBy(name, from);
+  return null;
+}
+
+/** "Use within 2 days", "Keeps about 3 months", "No use-by date" — for choosing how it's kept. */
+export function keepsText(name: string, storage: StorageKind, now = Date.now()): string {
+  const t = useByFor(name, storage, now);
+  if (t === null) return storage === "fresh" ? "No date needed" : "No use-by date";
+  const days = Math.max(1, Math.round((t - now) / DAY));
+  if (storage === "frozen") return "Keeps about 3 months";
+  return days === 1 ? "Use within a day" : days < 14 ? `Use within ${days} days` : `Use within ${Math.round(days / 7)} weeks`;
+}

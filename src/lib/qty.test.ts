@@ -39,3 +39,11 @@ describe("arithmetic", () => {
   it("4 lb sugar covers 2 cups", () => expect(compare(parseQty("4 lb")!, parseQty("2 cups")!, sugar)).toEqual({ status: "enough" }));
   it("never below zero", () => expect(formatQty(subtract(parseQty("1 cup")!, parseQty("3 cups")!, "milk")!)).toBe("0 tsp"));
 });
+
+import { parseQty as pq } from "./qty";
+describe("sticks", () => {
+  it("are butter by weight, but a count for other things", () => {
+    expect(pq("2 sticks", "butter")?.kind).toBe("weight");
+    expect(pq("24 sticks", "string cheese")).toEqual({ kind: "count", n: 24, noun: "stick" });
+  });
+});

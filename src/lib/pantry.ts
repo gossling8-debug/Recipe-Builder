@@ -1,7 +1,7 @@
 import { add, compare, formatQty, isEmpty, parseQty, subtract, type Qty } from "./qty";
 import { scaleAmount } from "./quantity";
 import { ingredientName, isTapWater, nameKey } from "./shopping";
-import { estimateUseBy, freshness } from "./shelfLife";
+import { estimateUseBy, freshness, useByFor, type StorageKind } from "./shelfLife";
 import type { ScannedRecipe } from "./schema";
 
 /**
@@ -22,6 +22,8 @@ export interface PantryItem {
   noUseBy?: boolean;
   /** How much was bought last time (to tell when an "always keep" staple is running low). */
   lastBought?: Qty;
+  /** Fresh, frozen, canned or dry — sets how long it's estimated to last. */
+  storage?: StorageKind;
 }
 
 export type Pantry = Record<string, PantryItem>;
@@ -57,7 +59,7 @@ function fillDates(p: Pantry): Pantry {
   const out: Pantry = {};
   for (const [k, it] of Object.entries(p)) {
     if (it.useBy === undefined && !it.noUseBy) {
-      const est = estimateUseBy(it.name, it.boughtAt ?? it.updatedAt);
+      const est = it.storage ? useByFor(it.name, it.storage, it.boughtAt ?? it.updatedAt) : estimateUseBy(it.name, it.boughtAt ?? it.updatedAt);
       if (est !== null) {
         out[k] = { ...it, useBy: est, useByEstimated: true };
         changed = true;
@@ -122,7 +124,7 @@ export function setItem(key: string, item: PantryItem | null): PantryItem | null
 }
 
 /** Adds a purchase. Returns what the item was before, so unticking can undo it. */
-export function recordPurchase(name: string, amountText: string): PantryItem | null {
+export function recordPurchase(name: string, amountText: string, storage?: StorageKind): PantryItem | null {
   const key = nameKey(name);
   if (isTapWater(name)) return loadPantry()[key] ?? null; // never stocked
   const bought = parseQty(amountText, name);
@@ -131,9 +133,11 @@ export function recordPurchase(name: string, amountText: string): PantryItem | n
   const qty = prev?.qty && bought ? (add(prev.qty, bought, name) ?? bought) : bought;
   // Perishables get an estimated use-by date. Adding to what's already there
   // keeps the earlier date — the older portion goes bad first.
-  const estimate = estimateUseBy(name);
-  const useBy = prev?.useBy ?? estimate ?? undefined;
-  const useByEstimated = prev?.useBy ? prev.useByEstimated : estimate !== null;
+  // Bought kept a different way (frozen this time, say), the new way's estimate applies.
+  const estimate = storage ? useByFor(name, storage) : estimateUseBy(name);
+  const keepPrev = !!prev?.useBy && !(storage && prev.storage && prev.storage !== storage);
+  const useBy = keepPrev ? prev!.useBy : (estimate ?? undefined);
+  const useByEstimated = keepPrev ? prev!.useByEstimated : estimate !== null;
   return setItem(key, {
     key,
     name: prev?.name ?? name,
@@ -143,6 +147,7 @@ export function recordPurchase(name: string, amountText: string): PantryItem | n
     useBy,
     useByEstimated,
     lastBought: bought ?? prev?.lastBought,
+    storage: storage ?? prev?.storage,
   });
 }
 

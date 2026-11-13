@@ -90,7 +90,8 @@ export function parseQty(text: string, name = ""): Qty | null {
   const u1 = unitFactor(first);
   if (u1) return u1.kind === "volume" ? { kind: "volume", tsp: n * u1.f } : { kind: "weight", g: n * u1.f };
   const piece = singular(first);
-  if (piece in PIECE_WEIGHT) return { kind: "weight", g: n * PIECE_WEIGHT[piece] };
+  // "2 sticks" means butter (or margarine); "24 sticks" of string cheese or celery stays a count.
+  if (piece in PIECE_WEIGHT && /\b(butter|margarine)\b/i.test(name || "butter")) return { kind: "weight", g: n * PIECE_WEIGHT[piece] };
   // A count: "3" (eggs), "2 cans", "4 cloves".
   const fromName = /\beggs? (whites?|yolks?)\b/i.test(name) ? "egg" : singular((name.split(/\s+/).pop() ?? "").toLowerCase());
   return { kind: "count", n, noun: first ? piece : fromName };

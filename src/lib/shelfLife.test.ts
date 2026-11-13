@@ -54,3 +54,22 @@ describe("useByLabel", () => {
     (d, label) => expect(useByLabel(at(d as number), NOW)).toBe(label),
   );
 });
+
+import { guessStorage, keepsText, useByFor } from "./shelfLife";
+describe("fresh / frozen / canned / dry", () => {
+  const now = new Date(2026, 10, 13, 10).getTime();
+  it("guesses from the name and the receipt's wording", () => {
+    expect(guessStorage("ground beef", "BEEF CHUBS")).toBe("fresh");
+    expect(guessStorage("green beans", "DM GRN BEAN CAN")).toBe("canned");
+    expect(guessStorage("peas", "GV FRZ PEAS")).toBe("frozen");
+    expect(guessStorage("flour")).toBe("dry");
+  });
+  it("estimates the use-by for how it's kept", () => {
+    expect(useByFor("ground beef", "fresh", now)).not.toBeNull();
+    expect(Math.floor((useByFor("ground beef", "frozen", now)! - now) / 86_400_000)).toBe(90);
+    expect(useByFor("green beans", "canned", now)).toBeNull();
+    expect(useByFor("flour", "dry", now)).toBeNull();
+    expect(keepsText("ground beef", "frozen", now)).toBe("Keeps about 3 months");
+    expect(keepsText("green beans", "canned", now)).toBe("No use-by date");
+  });
+});
