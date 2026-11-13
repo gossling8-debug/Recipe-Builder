@@ -10,7 +10,7 @@
  */
 const PREFIX = "recipe-builder.";
 const SYNCED = new Set([
-  "week", "plans", "units", "textSize", "staples", "shopping", "receipts", "prices", "spendingFrom", "budget",
+  "week", "plans", "units", "textSize", "theme", "staples", "shopping", "receipts", "prices", "spendingFrom", "budget",
   "pantry", "leftovers", "people", "avoid", "featuresOff", "model", "usage", "waitForTap",
   "thaw.notFrozen", "thaw.done", "welcomeDone", "notDuplicates", "store", "storeFavorites",
 ]);

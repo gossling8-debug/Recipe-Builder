@@ -36,3 +36,27 @@ describe("price tracking", () => {
     ]);
   });
 });
+
+import { allItemPrices as allRows, editPrice, deletePrices, priceInsight as insight } from "./prices";
+describe("canned vs fresh, editing", () => {
+  beforeEach(() => [...loadPrices()].forEach((p) => deletePrice(p.id)));
+  it("keeps canned and fresh green beans apart", () => {
+    addPrice("green beans", "1 lb", 2.0, 1, { store: "Walmart", storage: "fresh" });
+    addPrice("green beans", "14.5 oz", 0.9, 2, { store: "Walmart", storage: "canned" });
+    const rows = allRows();
+    expect(rows.map((r) => r.storage).sort()).toEqual(["canned", "fresh"]);
+    // Fresh isn't "cheaper elsewhere" than canned: they aren't compared.
+    expect(insight("green beans", "14.5 oz", 1.2, "H-E-B", undefined, "canned").cheaperAt?.store).toBe("Walmart");
+    expect(insight("green beans", "1 lb", 2.5, "H-E-B", undefined, "fresh").cheaperAt?.store).toBe("Walmart");
+  });
+  it("edits and deletes purchases", () => {
+    const id = addPrice("green beans", "14.5 oz", 0.9, 1, { store: "Walmart" });
+    editPrice(id, { price: 1.1, store: "Aldi", storage: "canned", amountText: "15 oz" });
+    const row = allRows()[0];
+    expect(row.latest.price).toBe(1.1);
+    expect(row.latest.store).toBe("Aldi");
+    expect(row.storage).toBe("canned");
+    deletePrices(row.ids);
+    expect(allRows()).toEqual([]);
+  });
+});

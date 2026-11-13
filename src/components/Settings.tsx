@@ -7,6 +7,7 @@ import CloudSection from "./CloudSection";
 import AppLockSection from "./AppLockSection";
 import { cloudState, subscribeCloud } from "../lib/cloud";
 import { applyTextSize, getTextSize, TEXT_SIZES, type TextSize } from "../lib/textSize";
+import { applyTheme, getTheme, THEMES, type Theme } from "../lib/theme";
 import { getApiKey, ownKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
 import { ALLERGEN_GROUPS, loadAvoid, saveAvoid, type AvoidList } from "../lib/avoid";
@@ -30,6 +31,7 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [keyError, setKeyError] = useState("");
   const [textSize, setTextSize] = useState<TextSize>(getTextSize());
+  const [theme, setTheme] = useState<Theme>(getTheme());
   const [avoid, setAvoid] = useState<AvoidList>(loadAvoid);
   const [modelId, setModelId] = useState(getModel().id);
   const usage = loadUsage();
@@ -108,6 +110,27 @@ export default function Settings() {
                 <span className="aa" style={{ fontSize: `${15 + i * 4}px` }} aria-hidden>
                   Aa
                 </span>
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h3>Appearance</h3>
+          <p className="muted small">Night is a black background with white text — easier on the eyes in the dark. Automatic follows your phone.</p>
+          <div className="segmented appearance-control" role="radiogroup" aria-label="Appearance">
+            {THEMES.map(({ value, label }) => (
+              <button
+                key={value}
+                role="radio"
+                aria-checked={theme === value}
+                className={theme === value ? "chip active" : "chip"}
+                onClick={() => {
+                  applyTheme(value);
+                  setTheme(value);
+                }}
+              >
                 {label}
               </button>
             ))}

@@ -20,20 +20,37 @@
   --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23faf8f5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E");
   color-scheme: light;
 }
+/* Night: black background, white text. Chosen in Settings → Appearance, or
+   automatically when the phone is in dark mode (unless Light is chosen). */
+:root[data-theme="night"] {
+  --bg: #000000;
+  --surface: #121212;
+  --text: #ffffff;
+  --muted: #a6a6a6;
+  --line: #2b2b2b;
+  --ink: #ffffff;
+  --ink-text: #000000;
+  --accent: #e8a27e;
+  --accent-soft: rgba(232, 162, 126, 0.14);
+  --warn: #e0b763;
+  --error: #ef8a7e;
+  --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E");
+  color-scheme: dark;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141311;
-    --surface: #1c1a17;
-    --text: #ece8e2;
-    --muted: #9a938a;
-    --line: #2d2a26;
-    --ink: #ece8e2;
-    --ink-text: #141311;
-    --accent: #dc9a76;
-    --accent-soft: rgba(220, 154, 118, 0.12);
-    --warn: #d6ad5c;
-    --error: #e07f74;
-    --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23141311' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E");
+  :root:not([data-theme]) {
+    --bg: #000000;
+    --surface: #121212;
+    --text: #ffffff;
+    --muted: #a6a6a6;
+    --line: #2b2b2b;
+    --ink: #ffffff;
+    --ink-text: #000000;
+    --accent: #e8a27e;
+    --accent-soft: rgba(232, 162, 126, 0.14);
+    --warn: #e0b763;
+    --error: #ef8a7e;
+    --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
 }
@@ -1059,3 +1076,12 @@ body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 
 .price-stores { list-style: none; padding: 0; margin: 4px 0 10px; }
 .price-stores li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 14px; border-bottom: 1px dashed var(--line); }
 .by-store { margin-top: 6px; }
+.appearance-control { margin-top: 6px; }
+.price-kind { margin-left: 8px; vertical-align: middle; font-weight: 500; }
+.purchase-row { user-select: none; -webkit-user-select: none; }
+.purchase-price { display: inline-flex; align-items: center; gap: 4px; }
+.icon-btn.small-icon { width: 30px; height: 30px; }
+.price-edit { max-height: 90vh; overflow-y: auto; }
+.price-edit .field { margin: 8px 0; }
+.danger-link { color: var(--error); display: inline-flex; align-items: center; gap: 4px; margin: 8px 0 4px; }
+.price-row { user-select: none; -webkit-user-select: none; }

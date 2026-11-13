@@ -8,6 +8,7 @@ import { cloudState, subscribeCloud } from "./lib/cloud";
 import { loadLock, shouldRelock } from "./lib/appLock";
 import { useEffect, useState } from "react";
 import { applyTextSize, getTextSize } from "./lib/textSize";
+import { applyTheme, getTheme } from "./lib/theme";
 import { useRoute } from "./lib/route";
 import { requestPersistentStorage } from "./lib/db";
 import Library from "./components/Library";
@@ -115,6 +116,7 @@ export default function App() {
     startCloud().catch(() => {});
     const on = () => {
       applyTextSize(getTextSize());
+      applyTheme(getTheme(), false);
       setSynced((n) => n + 1);
     };
     window.addEventListener("state-synced", on);

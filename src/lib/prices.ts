@@ -3,6 +3,7 @@ import { convert, parseQty, type Qty } from "./qty";
 import { scaleAmount } from "./quantity";
 import { ingredientName, nameKey } from "./shopping";
 import type { ScannedRecipe } from "./schema";
+import type { StorageKind } from "./shelfLife";
 
 /**
  * What the cook actually paid, typed in when ticking items off the shopping
@@ -20,6 +21,8 @@ export interface PriceEntry {
   store?: string;
   /** The item number printed next to it on the receipt, when there is one (same store only). */
   code?: string;
+  /** Fresh, frozen, canned or dry — canned green beans aren't the same buy as fresh ones. */
+  storage?: StorageKind;
 }
 
 const KEY = "recipe-builder.prices";
@@ -50,14 +53,21 @@ export function parsePrice(text: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
-export function addPrice(name: string, amountText: string, price: number, at = Date.now(), extra: { store?: string | null; code?: string | null } = {}): string {
+export function addPrice(
+  name: string,
+  amountText: string,
+  price: number,
+  at = Date.now(),
+  extra: { store?: string | null; code?: string | null; storage?: StorageKind | null } = {},
+): string {
   const id = `${at}-${Math.random().toString(36).slice(2, 8)}`;
   const all = loadPrices();
   const store = extra.store?.trim() || undefined;
   const code = extra.code?.replace(/[^0-9]/g, "") || undefined;
   // The same item number at the same store is the same product, even if the receipt words it differently.
   const same = code && store ? all.find((p) => p.code === code && p.store === store) : undefined;
-  save([...all, { id, key: same?.key ?? nameKey(name), name: same?.name ?? name, qty: parseQty(amountText, name), price, at, store, code }]);
+  const storage = extra.storage ?? same?.storage ?? undefined;
+  save([...all, { id, key: same?.key ?? nameKey(name), name: same?.name ?? name, qty: parseQty(amountText, name), price, at, store, code, storage }]);
   return id;
 }
 
@@ -96,6 +106,32 @@ export const spentSince = (from: number) => spendingEntries(from).reduce((s, p) 
 /** Corrects what was paid for one purchase. */
 export function updatePrice(id: string, price: number): void {
   save(loadPrices().map((p) => (p.id === id ? { ...p, price } : p)));
+}
+
+/** Corrects one purchase: what it was, how much, what it cost, where, how it's kept, when. */
+export function editPrice(
+  id: string,
+  patch: { name?: string; amountText?: string; price?: number; store?: string | null; storage?: StorageKind | null; at?: number },
+): void {
+  save(
+    loadPrices().map((p) => {
+      if (p.id !== id) return p;
+      const name = patch.name?.trim() || p.name;
+      const next: PriceEntry = { ...p, name, key: nameKey(name) };
+      if (patch.amountText !== undefined) next.qty = patch.amountText.trim() ? parseQty(patch.amountText, name) : null;
+      if (patch.price !== undefined) next.price = patch.price;
+      if (patch.store !== undefined) next.store = patch.store?.trim() || undefined;
+      if (patch.storage !== undefined) next.storage = patch.storage ?? undefined;
+      if (patch.at !== undefined) next.at = patch.at;
+      return next;
+    }),
+  );
+}
+
+/** Deletes several purchases at once (e.g. every price for one item). */
+export function deletePrices(ids: string[]): void {
+  const gone = new Set(ids);
+  save(loadPrices().filter((p) => !gone.has(p.id)));
 }
 
 /** Start of this week (Sunday) and of this month. */
@@ -190,6 +226,10 @@ export function usedStores(prices = loadPrices()): string[] {
 
 export interface ItemPrices {
   key: string;
+  /** How it's kept, when this row is one kind of several (canned vs fresh green beans), or when known. */
+  storage: StorageKind | null;
+  /** Every purchase in this row (for editing and deleting). */
+  ids: string[];
   name: string;
   latest: PriceEntry;
   latestUnit: UnitPrice | null;
@@ -205,8 +245,29 @@ export interface ItemPrices {
 /** Comparing two unit prices only makes sense in the same unit. */
 const comparable = (a: UnitPrice | null, b: UnitPrice | null): a is UnitPrice => !!a && !!b && a.unit === b.unit;
 
-export function itemPrices(key: string, prices = loadPrices()): ItemPrices | null {
+/**
+ * The purchases of one item as rows: one row, unless it's been bought kept
+ * different ways (canned and fresh), then one row each — those prices don't
+ * compare. Purchases with no "kept" recorded join the row when there's only one.
+ */
+export function itemGroups(key: string, prices = loadPrices()): { storage: StorageKind | null; entries: PriceEntry[] }[] {
   const h = priceHistory(key, prices);
+  const kinds = [...new Set(h.map((p) => p.storage).filter((k): k is StorageKind => !!k))];
+  if (kinds.length <= 1) return h.length ? [{ storage: kinds[0] ?? null, entries: h }] : [];
+  const groups = kinds.map((k) => ({ storage: k as StorageKind | null, entries: h.filter((p) => p.storage === k) }));
+  const unknown = h.filter((p) => !p.storage);
+  if (unknown.length) groups.push({ storage: null, entries: unknown });
+  return groups;
+}
+
+export function itemPrices(key: string, prices = loadPrices(), storage?: StorageKind | null): ItemPrices | null {
+  const groups = itemGroups(key, prices);
+  const group = storage === undefined ? groups[0] : groups.find((g) => g.storage === storage);
+  if (!group) return null;
+  return summarize(key, group.storage, group.entries);
+}
+
+function summarize(key: string, storage: StorageKind | null, h: PriceEntry[]): ItemPrices | null {
   if (!h.length) return null;
   const latest = h[0];
   const latestUnit = unitPrice(latest);
@@ -227,6 +288,8 @@ export function itemPrices(key: string, prices = loadPrices()): ItemPrices | nul
   }
   return {
     key,
+    storage,
+    ids: h.map((p) => p.id),
     name: latest.name,
     latest,
     latestUnit,
@@ -240,7 +303,7 @@ export function itemPrices(key: string, prices = loadPrices()): ItemPrices | nul
 /** Every item with a price, for the price tracker. */
 export function allItemPrices(prices = loadPrices()): ItemPrices[] {
   const keys = [...new Set(prices.map((p) => p.key))].filter((k) => k !== TAX_KEY());
-  return keys.map((k) => itemPrices(k, prices)).filter((x): x is ItemPrices => !!x);
+  return keys.flatMap((k) => itemGroups(k, prices).map((g) => summarize(k, g.storage, g.entries))).filter((x): x is ItemPrices => !!x);
 }
 
 /**
@@ -253,9 +316,11 @@ export function priceInsight(
   price: number,
   store: string | null,
   prices = loadPrices(),
+  storage?: StorageKind | null,
 ): { change: number | null; since: number | null; cheaperAt: { store: string; unit: UnitPrice } | null; unit: UnitPrice | null } {
   const unit = unitPrice({ qty: parseQty(amountText, name), price });
-  const h = priceHistory(nameKey(name), prices);
+  // Canned isn't compared with fresh: only the same kind (or purchases where it wasn't recorded).
+  const h = priceHistory(nameKey(name), prices).filter((p) => !storage || !p.storage || p.storage === storage);
   const prev = h.find((p) => comparable(unit, unitPrice(p)));
   const prevUnit = prev ? unitPrice(prev) : null;
   const change = unit && prevUnit && prevUnit.value > 0 ? unit.value / prevUnit.value - 1 : null;
