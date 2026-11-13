@@ -1016,3 +1016,6 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .store-switch { margin: 4px 0 8px; }
 .dup-matches { margin: 4px 0 8px; padding-left: 18px; }
 .dup-matches li { margin: 4px 0; }
+.fab-bar > .fab-stack { flex-direction: column; gap: 10px; }
+/* The page leaves room for a taller bottom bar. */
+body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 170px); }
