@@ -179,7 +179,7 @@ export default function RecipeView({
         </p>
       )}
 
-      <div className="scale-row" role="group" aria-label="Recipe size">
+      <div className="scale-row no-print" role="group" aria-label="Recipe size">
         <span className="small muted">Size</span>
         <div className="segmented">
         {SCALES.map(([value, label]) => (
@@ -195,7 +195,7 @@ export default function RecipeView({
         </div>
       </div>
       {feature("units") && (
-      <div className="scale-row" role="group" aria-label="Units">
+      <div className="scale-row no-print" role="group" aria-label="Units">
         <span className="small muted">Units</span>
         <div className="segmented">
           {UNIT_CHOICES.map(([value, label]) => (
@@ -211,13 +211,13 @@ export default function RecipeView({
         </div>
       </div>
       )}
-      {feature("tips") && !preview && <RecipeTips recipe={original} />}
+      {feature("tips") && !preview && <div className="no-print"><RecipeTips recipe={original} /></div>}
       {units !== "original" && (
         <p className="small muted">
           Converted from the card and rounded to kitchen-friendly amounts. Teaspoons and tablespoons stay as they are.
         </p>
       )}
-      {top}
+      {top && <div className="no-print">{top}</div>}
       {scale !== 1 && (
         <p className="small muted">
           Amounts are {scale < 1 ? "reduced" : "multiplied"} ×{scaleLabel(scale)}. Cooking times and pan sizes aren't changed —
@@ -302,9 +302,9 @@ export default function RecipeView({
         ))}
       </section>
 
-      {!preview && listRow}
+      {!preview && listRow && <div className="no-print">{listRow}</div>}
       {!preview && !listRow && (
-      <div className="list-row">
+      <div className="list-row no-print">
         {listed && listed.scale === scale && sameSkip(listed.skip, crossedOff) ? (
           <>
             <span className="small">
@@ -338,7 +338,7 @@ export default function RecipeView({
       <section>
         <h3>Instructions</h3>
         {onStartCooking && (
-          <button className="btn primary cook-btn" onClick={onStartCooking}>
+          <button className="btn primary cook-btn no-print" onClick={onStartCooking}>
             Start cooking — one step at a time
           </button>
         )}
@@ -381,7 +381,7 @@ export default function RecipeView({
       </section>
 
       {onMade && (
-        <div className="made-row">
+        <div className="made-row no-print">
           {made ? (
             <span className="small">
               <Icon name="check" size={16} /> Pantry updated for this meal ·{" "}
@@ -424,13 +424,13 @@ export default function RecipeView({
           <p className="notes">{recipe.notes}</p>
         </section>
       )}
-      {myNotes}
+      {myNotes && <div className="no-print">{myNotes}</div>}
       {!preview && feature("budget") && (() => {
         const c = recipeCost(original, scale);
         if (!c.priced) return null;
         const serves = realServings(original);
         return (
-          <section className="cost-section">
+          <section className="cost-section no-print">
             <h3>Cost</h3>
             <p className="small cost-line">
             Ingredients ≈ <strong>{dollars(c.total)}</strong>
@@ -444,10 +444,10 @@ export default function RecipeView({
         );
       })()}
 
-      {extra}
+      {extra && <div className="no-print">{extra}</div>}
 
       {conversions.length > 0 && (
-        <section>
+        <section className="no-print">
           <h3>Conversions</h3>
           <p className="muted small">
             Using a different form of an ingredient? Amounts are for the size shown above and are approximate — garlic

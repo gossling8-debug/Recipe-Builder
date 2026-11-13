@@ -375,7 +375,7 @@ export default function RecipePage({ id }: { id: string }) {
                 </>
               }
             />
-            <div className="button-row print-link">
+            <div className="button-row print-link no-print">
               {feature("print") && (
                 <a className="btn" href={href({ name: "print", id: recipe.id })}>
                   <Icon name="download" size={18} /> Print or save as PDF
@@ -402,7 +402,7 @@ export default function RecipePage({ id }: { id: string }) {
               </p>
             )}
             {recipe.photos.length > 0 && (
-              <section className="original">
+              <section className="original no-print">
                 <button className="btn" onClick={() => setShowPhotos((s) => !s)}>
                   {showPhotos ? "Hide original card" : "Show original card"}
                 </button>

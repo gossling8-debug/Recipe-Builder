@@ -8,8 +8,43 @@ import { href } from "../lib/route";
 import { applySwaps } from "../lib/swaps";
 import { convertRecipe, getUnits } from "../lib/units";
 import type { Ingredient, SavedRecipe } from "../lib/schema";
+import { dollars, recipeCost } from "../lib/prices";
+import { realServings } from "../lib/autoPlan";
 
 const line = (ing: Ingredient, scale: number) => ingredientText(ing, scale);
+
+/** The parts of a recipe that can be printed. */
+type Part = "photo" | "info" | "ingredients" | "steps" | "amounts" | "cardNotes" | "myNotes" | "nutrition" | "cost";
+const PART_LABELS: Record<Part, string> = {
+  photo: "Your photo",
+  info: "Servings and time",
+  ingredients: "Ingredients",
+  steps: "Directions",
+  amounts: "Amounts in the directions",
+  cardNotes: "Notes from the recipe",
+  myNotes: "Your notes",
+  nutrition: "Nutrition",
+  cost: "Cost",
+};
+const DEFAULT_PARTS: Part[] = ["photo", "info", "ingredients", "steps", "amounts", "cardNotes"];
+const JUST_THE_RECIPE: Part[] = ["ingredients", "steps", "amounts"];
+const PARTS_KEY = "recipe-builder.printParts";
+function loadParts(): Set<Part> {
+  try {
+    const raw = localStorage.getItem(PARTS_KEY);
+    if (raw) return new Set(JSON.parse(raw) as Part[]);
+  } catch {
+    /* defaults */
+  }
+  return new Set(DEFAULT_PARTS);
+}
+function saveParts(parts: Set<Part>) {
+  try {
+    localStorage.setItem(PARTS_KEY, JSON.stringify([...parts]));
+  } catch {
+    /* this time only */
+  }
+}
 
 /**
  * A clean, printable recipe card — at the size and units chosen on the recipe,
@@ -18,8 +53,19 @@ const line = (ing: Ingredient, scale: number) => ingredientText(ing, scale);
 export default function PrintPage({ id }: { id: string }) {
   const [saved, setSaved] = useState<SavedRecipe | null | undefined>(undefined);
   const [large, setLarge] = useState(true);
-  const [withNotes, setWithNotes] = useState(false);
-  const [withPhoto, setWithPhoto] = useState(true);
+  // What to print, remembered for next time.
+  const [parts, setPartsState] = useState<Set<Part>>(loadParts);
+  const setParts = (next: Set<Part>) => {
+    setPartsState(next);
+    saveParts(next);
+  };
+  const toggle = (p: Part) => {
+    const next = new Set(parts);
+    if (next.has(p)) next.delete(p);
+    else next.add(p);
+    setParts(next);
+  };
+  const on = (p: Part) => parts.has(p);
   useEffect(() => {
     getRecipe(id).then((r) => setSaved(r ?? null), () => setSaved(null));
   }, [id]);
@@ -30,6 +76,20 @@ export default function PrintPage({ id }: { id: string }) {
   const scale = loadProgress(id).scale;
   const r = convertRecipe(applySwaps(saved), getUnits());
   const meta = [r.servings && scaleAmount(r.servings, scale), r.time].filter(Boolean).join(" · ");
+  const n = saved.nutrition?.result;
+  const cost = recipeCost(applySwaps(saved), scale);
+  const serves = realServings(saved);
+  // Only offer what this recipe has.
+  const available: Part[] = (Object.keys(PART_LABELS) as Part[]).filter((p) =>
+    p === "photo" ? !!saved.dishPhoto
+    : p === "info" ? !!meta
+    : p === "cardNotes" ? !!r.notes
+    : p === "myNotes" ? !!saved.myNotes
+    : p === "nutrition" ? !!n
+    : p === "cost" ? cost.priced > 0
+    : p === "amounts" ? on("steps")
+    : true,
+  );
   const groups: { section: string | null; items: Ingredient[] }[] = [];
   for (const ing of r.ingredients) {
     const last = groups[groups.length - 1];
@@ -44,24 +104,28 @@ export default function PrintPage({ id }: { id: string }) {
       </div>
       <main className="page">
         <div className="no-print print-controls">
-          <div className="filters">
-            <button className={large ? "tag on" : "tag"} aria-pressed={large} onClick={() => setLarge((v) => !v)}>
-              Large print
+          <h3 className="list-heading">What to print</h3>
+          <div className="filters print-presets">
+            <button className="tag" onClick={() => setParts(new Set(JUST_THE_RECIPE))}>
+              Just the recipe
             </button>
-            {saved.dishPhoto && (
-              <button className={withPhoto ? "tag on" : "tag"} aria-pressed={withPhoto} onClick={() => setWithPhoto((v) => !v)}>
-                Your photo
-              </button>
-            )}
-            {saved.myNotes && (
-              <button className={withNotes ? "tag on" : "tag"} aria-pressed={withNotes} onClick={() => setWithNotes((v) => !v)}>
-                Your notes
-              </button>
-            )}
+            <button className="tag" onClick={() => setParts(new Set(available))}>
+              Everything
+            </button>
           </div>
-          <button className="btn primary" onClick={() => window.print()}>
-            <Icon name="download" size={18} /> Print or save as PDF
-          </button>
+          <div className="print-parts">
+            {available.map((p) => (
+              <label key={p} className={p === "amounts" ? "check-line print-sub" : "check-line"}>
+                <input type="checkbox" checked={on(p)} onChange={() => toggle(p)} />
+                <span>{PART_LABELS[p]}</span>
+              </label>
+            ))}
+            <label className="check-line">
+              <input type="checkbox" checked={large} onChange={() => setLarge((v) => !v)} />
+              <span>Large print</span>
+            </label>
+          </div>
+          {!on("ingredients") && !on("steps") && <p className="callout small">Pick at least the ingredients or the directions.</p>}
           <p className="muted small">
             Uses the size{scale !== 1 ? ` (×${scale})` : ""} and units chosen on the recipe. If nothing happens on iPhone, tap the share
             button in DuckDuckGo, then <strong>Print</strong> (pinch out on the preview to save it as a PDF).
@@ -69,26 +133,32 @@ export default function PrintPage({ id }: { id: string }) {
         </div>
 
         <article className={large ? "print-card large" : "print-card"}>
-          {withPhoto && saved.dishPhoto && <img className="print-photo" src={saved.dishPhoto} alt="" />}
+          {on("photo") && saved.dishPhoto && <img className="print-photo" src={saved.dishPhoto} alt="" />}
           <h1>{r.title}</h1>
-          {meta && <p className="print-meta">{meta}</p>}
-          <h2>Ingredients</h2>
-          {groups.map((g, gi) => (
-            <div key={gi}>
-              {g.section && <h3>{g.section}</h3>}
-              <ul className="print-ings">
-                {g.items.map((ing, i) => (
-                  <li key={i}>{line(ing, scale)}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-          <h2>Instructions</h2>
+          {on("info") && meta && <p className="print-meta">{meta}</p>}
+          {on("ingredients") && (
+            <>
+              <h2>Ingredients</h2>
+              {groups.map((g, gi) => (
+                <div key={gi}>
+                  {g.section && <h3>{g.section}</h3>}
+                  <ul className="print-ings">
+                    {g.items.map((ing, i) => (
+                      <li key={i}>{line(ing, scale)}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </>
+          )}
+          {on("steps") && (
+          <>
+          <h2>Directions</h2>
           <ol className="print-steps">
             {r.steps.map((st, i) => (
               <li key={i}>
                 {st.segments.map((sg, k) =>
-                  sg.ingredient_index !== null && sg.amount ? (
+                  on("amounts") && sg.ingredient_index !== null && sg.amount ? (
                     <span key={k}>
                       {sg.text} <strong>({stepAmount(sg.amount, r.ingredients[sg.ingredient_index], scale)})</strong>
                     </span>
@@ -99,20 +169,47 @@ export default function PrintPage({ id }: { id: string }) {
               </li>
             ))}
           </ol>
-          {r.notes && (
+          </>
+          )}
+          {on("cardNotes") && r.notes && (
             <>
               <h2>Notes</h2>
               <p className="print-notes">{r.notes}</p>
             </>
           )}
-          {withNotes && saved.myNotes && (
+          {on("myNotes") && saved.myNotes && (
             <>
               <h2>My notes</h2>
               <p className="print-notes">{saved.myNotes}</p>
             </>
           )}
+          {on("nutrition") && n && (
+            <>
+              <h2>Nutrition per serving</h2>
+              <p className="print-notes">
+                {n.serving_size ? `${n.serving_size.measure} · ` : ""}
+                {Math.round(n.per_serving.calories)} calories · protein {Math.round(n.per_serving.protein_g)} g · carbs{" "}
+                {Math.round(n.per_serving.carbs_g)} g · fat {Math.round(n.per_serving.fat_g)} g · sodium {Math.round(n.per_serving.sodium_mg)} mg
+                {n.source !== "card" ? " (estimated)" : ""}
+              </p>
+            </>
+          )}
+          {on("cost") && cost.priced > 0 && (
+            <>
+              <h2>Cost</h2>
+              <p className="print-notes">
+                Ingredients ≈ {dollars(cost.total)}
+                {serves ? ` · ${dollars(cost.total / (serves * scale))} per serving` : ""}
+              </p>
+            </>
+          )}
         </article>
       </main>
+      <div className="fab-bar">
+        <button className="btn primary big" onClick={() => window.print()} disabled={!on("ingredients") && !on("steps")}>
+          <Icon name="download" size={18} /> Print or save as PDF
+        </button>
+      </div>
     </>
   );
 }
