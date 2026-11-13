@@ -7,7 +7,6 @@ import { loadPantry, recordPurchase, setItem } from "../lib/pantry";
 import { STORAGE_KINDS, estimateUseBy, guessStorage, keepsText, type StorageKind } from "../lib/shelfLife";
 import { addPrice, deletePrice, dollars, parsePrice, priceInsight, unitText, usedStores } from "../lib/prices";
 import { STORE_NAMES, normalizeStore } from "../lib/stores";
-import { barcodeQuantity, normalizeBarcode, sizeFromPackage } from "../lib/barcode";
 import { alreadyImported, receiptId, receiptTime, rememberImported, type Receipt } from "../lib/receipt";
 import { href, navigate } from "../lib/route";
 import { getApiKey, aiReady } from "../lib/settings";
@@ -30,8 +29,8 @@ interface Row {
   storage: StorageKind;
   /** The item number printed next to it, if any. */
   code: string | null;
-  /** Where the size came from: the receipt, the usual package (estimated), the barcode, or you. */
-  sizeFrom: "receipt" | "estimated" | "barcode" | "you" | "none";
+  /** Where the size came from: the receipt, the usual package (estimated by the reader), or you. */
+  sizeFrom: "receipt" | "estimated" | "you" | "none";
   /** How many of the item the line is for. */
   count: number;
 }
@@ -116,17 +115,6 @@ export default function ReceiptPage() {
           };
         }),
       );
-      // Barcode sizes: only where the receipt didn't print one (only the number is sent).
-      r.items.forEach((it, i) => {
-        const code = normalizeBarcode(it.item_code);
-        if (!code || (it.size && !it.size_estimated)) return;
-        void barcodeQuantity(code).then((q) => {
-          const size = q && sizeFromPackage(q, it.count || 1, it.name);
-          if (!size) return;
-          // Only if you haven't typed one meanwhile.
-          setRows((rs) => rs.map((row, j) => (j === i && row.sizeFrom !== "you" ? { ...row, size, sizeFrom: "barcode" } : row)));
-        });
-      });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -207,7 +195,6 @@ export default function ReceiptPage() {
             onChange={(e) => set(i, { size: e.target.value, sizeFrom: e.target.value.trim() ? "you" : "none" })}
           />
           {r.sizeFrom === "estimated" && <span className="size-from">usual size — check it</span>}
-          {r.sizeFrom === "barcode" && <span className="size-from ok">from the barcode</span>}
           {r.sizeFrom === "none" && r.include && <span className="size-from">add a size to compare prices</span>}
         </label>
         <div className="muted small">{r.receiptText}</div>

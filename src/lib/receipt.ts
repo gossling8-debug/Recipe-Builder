@@ -52,7 +52,7 @@ The images may be several overlapping pieces of one long screenshot, or several 
 
 For each line give a plain generic name a recipe would use (expand abbreviations: "GV" = Great Value, "MLK" = milk, "BNLS SKNLS CHKN BRST" = boneless skinless chicken breast), the total amount bought, and the line price after discounts. Only household items are not food: anything eaten or drunk is food (meat, dairy, produce, snacks, fruit pouches, cheese sticks, candy, drinks). Say how each food is kept: fresh, frozen (bought frozen), canned (cans and jars) or dry (shelf-stable boxes and bags).
 
-Sizes matter for comparing prices. Use the size printed on the line when there is one. Warehouse stores (Costco, Sam's Club) and many receipts leave it off: then give the usual package size of that product at that store (e.g. Costco "KS CUT GRN BEANS" is typically 12 × 14.5 oz cans, so "174 oz (12 × 14.5 oz cans)") and mark it estimated.
+Sizes matter for comparing prices. Use the size printed on the line when there is one. Warehouse stores (Costco, Sam's Club) and many receipts leave it off: then give the usual package size of that product at that store — from the description, the item or barcode number and the price (e.g. Costco "KS CUT GRN BEANS" is typically 12 × 14.5 oz cans, so "174 oz (12 × 14.5 oz cans)") and mark it estimated.
 
 You are given the names on the cook's shopping list. Set "matches" to one of those names, exactly as written, only when it is clearly the same ingredient (e.g. "2% milk" matches "milk"; "shredded cheddar" matches "cheddar cheese"); otherwise null.
 
