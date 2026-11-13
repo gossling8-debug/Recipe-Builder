@@ -224,7 +224,7 @@ export default function CopyBackedRecipe(props: {
         }
       />
       <main className="page">
-        {props.before}
+        {props.before && <div className="no-print">{props.before}</div>}
         <TimerBar {...timers} />
         <RecipeView
           key={`${progressId}-${viewKey}-${props.version ?? 0}`}
@@ -286,7 +286,7 @@ export default function CopyBackedRecipe(props: {
             ) : undefined
           }
         />
-        <div className="button-row print-link">
+        <div className="button-row print-link no-print">
           {feature("print") && myCopy && (
             <a className="btn" href={href({ name: "print", id: myCopy.id })}>
               <Icon name="download" size={18} /> Print or save as PDF
