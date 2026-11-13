@@ -155,6 +155,8 @@ export function BookRecipeActions(props: {
   /** Your own copy of this recipe, if you have one. */
   myCopy: SavedRecipe | null;
   canRemove: boolean;
+  /** Edit the cookbook's copy (shown when canRemove: the sharer or the owner). */
+  onEdit?: () => void;
   onClose: () => void;
   onSaved: (r: SavedRecipe) => void;
   onRemove: () => Promise<void>;
@@ -262,6 +264,11 @@ export function BookRecipeActions(props: {
           <a className="sheet-item" href={href({ name: "print", id: myCopy.id })} onClick={onClose}>
             <Icon name="download" size={20} /> Print or save as PDF
           </a>
+        )}
+        {props.canRemove && props.onEdit && (
+          <button className="sheet-item" onClick={act(props.onEdit)}>
+            <Icon name="edit" size={20} /> Edit
+          </button>
         )}
         {props.canRemove && (
           <button className="sheet-item danger" onClick={act(props.onRemove)}>

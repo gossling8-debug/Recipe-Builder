@@ -8,6 +8,7 @@ import { listRecipes, newId, saveRecipe } from "../lib/db";
 import { duplicatesOf } from "../lib/duplicates";
 import { CookbookCover, CookbookMemories } from "./CookbookExtras";
 import AddToCookbook from "./AddToCookbook";
+import RecipeEditor from "./RecipeEditor";
 import { BookRecipeActions, HoldLink } from "./RecipeActions";
 import {
   bookRecipes,
@@ -18,6 +19,7 @@ import {
   leaveCookbook,
   myCookbooks,
   removeFromCookbook,
+  editInCookbook,
   shareToCookbook,
   whereShared,
   type Cookbook,
@@ -290,6 +292,14 @@ export function BookPage({ id }: { id: string }) {
           recipe={menuFor.recipe}
           myCopy={myCopyOf(menuFor)}
           canRemove={menuFor.sharedBy === s.uid || owner}
+          onEdit={() => {
+            try {
+              sessionStorage.setItem(EDIT_SHARED_KEY, menuFor.id);
+            } catch {
+              /* opens without the editor */
+            }
+            navigate({ name: "family", book: id, recipe: menuFor.id });
+          }}
           onClose={() => setMenuFor(null)}
           onSaved={(r) => setMine((m) => [...m.filter((x) => x.id !== r.id), r])}
           onRemove={() => removeShared(menuFor)}
@@ -325,6 +335,16 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
   const on = signedIn(s);
   useState(() => clearProgress(PREVIEW_ID));
   const [haveIt, setHaveIt] = useState<SavedRecipe | null>(null);
+  // Opened with "Edit" from the press-and-hold menu.
+  const [editing, setEditing] = useState(() => {
+    try {
+      if (sessionStorage.getItem(EDIT_SHARED_KEY) !== docId) return false;
+      sessionStorage.removeItem(EDIT_SHARED_KEY);
+      return true;
+    } catch {
+      return false;
+    }
+  });
   useEffect(() => {
     if (!item) return;
     listRecipes().then((all) => setHaveIt(duplicatesOf({ ...item.recipe }, all)[0]?.recipe ?? null), () => {});
@@ -360,16 +380,57 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
   }
 
   const canRemove = item && (item.sharedBy === s.uid || book?.owner === s.uid);
+  // The person who shared it and the cookbook's owner can edit the cookbook's copy.
+  const canEdit = !!canRemove && !!book;
+  if (editing && item && book && canEdit) {
+    return (
+      <>
+        <Header title="Edit cookbook recipe" />
+        <main className="page">
+          <p className="muted small">
+            This changes the recipe in {book.name} for everyone. Copies people saved to their own recipes stay as they are.
+          </p>
+          <RecipeEditor
+            recipe={{ ...item.recipe, id: item.id, createdAt: item.sharedAt, photos: [] }}
+            onCancel={() => setEditing(false)}
+            onDelete={remove}
+            deleteLabel="Remove from cookbook"
+            onSave={async (updated) => {
+              await editInCookbook(book, item.id, updated);
+              setItem({ ...item, recipe: updated, editedBy: s.uid ?? undefined, editedByName: book.names[s.uid ?? ""], editedAt: Date.now() });
+              clearProgress(PREVIEW_ID);
+              setEditing(false);
+            }}
+          />
+        </main>
+      </>
+    );
+  }
   return (
     <>
-      <Header title={book?.name ?? ""} back={href({ name: "family", book: bookId })} returnToPrevious />
+      <Header
+        title={book?.name ?? ""}
+        back={href({ name: "family", book: bookId })}
+        returnToPrevious
+        actions={
+          canEdit ? (
+            <button className="icon-btn" onClick={() => setEditing(true)} aria-label="Edit recipe">
+              <Icon name="edit" />
+            </button>
+          ) : null
+        }
+      />
       <main className="page">
         {!on && <NeedsSignIn s={s} />}
         {item === null && <div className="callout error">This recipe was removed from the cookbook.</div>}
         {item && (
           <>
             <p className="muted small shared-note">
-              Shared by {item.sharedBy === s.uid ? "you" : item.sharedByName}. Save it to cook from it, check things off and make it your own.
+              Shared by {item.sharedBy === s.uid ? "you" : item.sharedByName}
+              {item.editedAt && item.editedBy !== item.sharedBy
+                ? `, edited by ${item.editedBy === s.uid ? "you" : item.editedByName ?? "the cookbook's owner"}`
+                : ""}
+              . Save it to cook from it, check things off and make it your own.
             </p>
             {haveIt && item.sharedBy !== s.uid && (
               <div className="callout small">
@@ -397,6 +458,8 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
   );
 }
 const PREVIEW_ID = "family-preview";
+/** Set by the press-and-hold menu's "Edit" so the recipe opens in the editor. */
+export const EDIT_SHARED_KEY = "recipe-builder.editShared";
 
 // ---------- joining from an invite link ----------
 export function JoinPage({ id }: { id: string }) {
