@@ -34,6 +34,7 @@ export default function RecipeView({
   recipe: original,
   recipeId,
   preview = false,
+  listRow,
   extra,
   myNotes,
   swaps = new Map(),
@@ -49,6 +50,8 @@ export default function RecipeView({
   recipe: ScannedRecipe;
   recipeId: string;
   preview?: boolean;
+  /** Replaces the "Add to shopping list" row (a cookbook recipe you haven't saved yet). */
+  listRow?: ReactNode;
   /** Shown after the notes, before the conversions (the substitutes section). */
   extra?: ReactNode;
   /** The cook's own notes (My notes), shown after the card's notes and before the cost. */
@@ -299,7 +302,8 @@ export default function RecipeView({
         ))}
       </section>
 
-      {!preview && (
+      {!preview && listRow}
+      {!preview && !listRow && (
       <div className="list-row">
         {listed && listed.scale === scale && sameSkip(listed.skip, crossedOff) ? (
           <>

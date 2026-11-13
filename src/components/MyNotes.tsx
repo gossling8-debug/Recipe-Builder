@@ -14,8 +14,11 @@ export default function MyNotes({
   recipe,
   onSaved,
   onMarkedMade,
+  hideRating,
 }: {
   recipe: SavedRecipe;
+  /** On a cookbook recipe, the cookbook's rating is shown instead. */
+  hideRating?: boolean;
   onSaved: (r: SavedRecipe) => Promise<void>;
   /** After "Made it today" (e.g. to put a doubled batch's extra half in the freezer). */
   onMarkedMade?: () => void;
@@ -190,7 +193,7 @@ export default function MyNotes({
           )
         )}
       </p>
-      <div className="rating-row" role="group" aria-label="Your rating">
+      {!hideRating && <div className="rating-row" role="group" aria-label="Your rating">
         <span className="small muted">Your rating</span>
         <span className="stars">
           {[1, 2, 3, 4, 5].map((n) => (
@@ -206,7 +209,7 @@ export default function MyNotes({
             </button>
           ))}
         </span>
-      </div>
+      </div>}
       <div className="make-again" role="group" aria-label="Would you make it again?">
         {(
           [
