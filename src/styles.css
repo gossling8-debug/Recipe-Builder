@@ -1034,3 +1034,28 @@ body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 
 .print-parts { display: grid; gap: 2px; margin: 4px 0 12px; }
 .print-parts .print-sub { padding-left: 26px; }
 .print-presets { margin-bottom: 6px; }
+/* Store menu on the shopping list */
+.store-picker { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 4px 0 8px; }
+.store-select { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.store-select select { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); }
+.store-picker .store-note { flex-basis: 100%; margin: 0; }
+.receipt-store { margin: 4px 0 10px; }
+.receipt-store select.text-input { font-size: 16px; }
+.receipt-rows .price-note { grid-column: 2 / -1; margin: -4px 0 0; color: var(--muted); }
+.receipt-rows .price-note.up { color: var(--warn, #b45309); }
+/* Price tracker */
+.price-filters { display: flex; gap: 10px; margin: 8px 0 10px; }
+.price-filters label { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.price-filters select { font: inherit; font-size: 16px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); }
+.price-list { list-style: none; padding: 0; margin: 0 0 40px; }
+.price-list > li { border-bottom: 1px solid var(--line); }
+.price-row { display: flex; width: 100%; gap: 10px; align-items: flex-start; padding: 12px 0; background: none; border: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.price-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.price-amount { font-weight: 600; }
+.price-up { color: var(--warn, #b45309); }
+.price-down { color: var(--accent); }
+.price-best { color: var(--accent); }
+.price-history { padding: 0 0 12px; }
+.price-stores { list-style: none; padding: 0; margin: 4px 0 10px; }
+.price-stores li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 14px; border-bottom: 1px dashed var(--line); }
+.by-store { margin-top: 6px; }

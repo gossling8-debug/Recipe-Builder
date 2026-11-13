@@ -12,7 +12,7 @@ const PREFIX = "recipe-builder.";
 const SYNCED = new Set([
   "week", "plans", "units", "textSize", "staples", "shopping", "receipts", "prices", "spendingFrom", "budget",
   "pantry", "leftovers", "people", "avoid", "featuresOff", "model", "usage", "waitForTap",
-  "thaw.notFrozen", "thaw.done", "welcomeDone", "notDuplicates", "store",
+  "thaw.notFrozen", "thaw.done", "welcomeDone", "notDuplicates", "store", "storeFavorites",
 ]);
 const SYNCED_PREFIXES = ["progress."];
 const META_KEY = PREFIX + "syncMeta";
