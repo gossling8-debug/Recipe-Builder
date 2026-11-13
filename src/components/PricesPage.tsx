@@ -10,26 +10,21 @@ import {
   dollars,
   editPrice,
   loadPrices,
+  packOf,
   parsePrice,
+  sizeOf,
   unitPrice,
   unitText,
   usedStores,
   type ItemPrices,
   type PriceEntry,
 } from "../lib/prices";
-import { formatQty, type Qty } from "../lib/qty";
-import { formatNumber } from "../lib/quantity";
 import { href } from "../lib/route";
 import { STORAGE_KINDS, fromDateInput, toDateInput, type StorageKind } from "../lib/shelfLife";
 import { STORE_NAMES } from "../lib/stores";
 
 const day = (ms: number) =>
   new Date(ms).toLocaleDateString([], { month: "short", day: "numeric", year: new Date(ms).getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
-/** Sizes as they're sold: "1 gal", "2 qt", "12 oz", "12 eggs". */
-const sizeText = (q: Qty) =>
-  q.kind === "volume" && q.tsp >= 768 ? `${formatNumber(q.tsp / 768)} gal`
-  : q.kind === "volume" && q.tsp >= 192 ? `${formatNumber(q.tsp / 192)} qt`
-  : formatQty(q);
 const pct = (c: number) => `${c > 0 ? "↑" : "↓"} ${Math.round(Math.abs(c) * 100)}%`;
 const kindLabel = (k: StorageKind | null | undefined) => STORAGE_KINDS.find((x) => x.id === k)?.label ?? null;
 const rowId = (it: ItemPrices) => `${it.key}|${it.storage ?? ""}`;
@@ -211,9 +206,10 @@ function ItemRow(props: {
             {it.name}
             {kind && <span className="tag small-tag price-kind">{kind}</span>}
           </strong>
-          <span className="muted small">{[it.latest.qty ? sizeText(it.latest.qty) : null, it.latest.store, day(it.latest.at)].filter(Boolean).join(" · ")}</span>
+          <span className="muted small">{[sizeOf(it.latest) || null, it.latest.store, day(it.latest.at)].filter(Boolean).join(" · ")}</span>
           <span className="small">
             {it.latestUnit ? unitText(it.latestUnit) : ""}
+            {perPack(it.latest)}
             {it.change !== null && Math.abs(it.change) >= 0.03 && <span className={it.change > 0 ? "price-up" : "price-down"}> {pct(it.change)} since last time</span>}
           </span>
           {all.byStore.length > 1 && all.byStore[0].store !== it.latest.store && (
@@ -268,11 +264,11 @@ function PurchaseRow({ p, onEdit }: { p: PriceEntry; onEdit: () => void }) {
       <span>
         {day(p.at)}
         {p.store ? ` · ${p.store}` : ""}
-        {p.qty ? ` · ${sizeText(p.qty)}` : ""}
+        {sizeOf(p) ? ` · ${sizeOf(p)}` : ""}
       </span>
       <span className="purchase-price">
         {dollars(p.price)}
-        {u ? <span className="muted"> ({unitText(u)})</span> : null}
+        {u ? <span className="muted"> ({unitText(u)}{perPack(p)})</span> : null}
         <button className="icon-btn small-icon" onClick={onEdit} aria-label={`Edit the ${dollars(p.price)} price from ${day(p.at)}`}>
           <Icon name="edit" size={16} />
         </button>
@@ -341,7 +337,7 @@ function PurchaseEditSheet(props: {
 }) {
   const e0 = props.entry;
   const [name, setName] = useState(e0.name);
-  const [size, setSize] = useState(e0.qty ? sizeText(e0.qty) : "");
+  const [size, setSize] = useState(sizeOf(e0));
   const [price, setPrice] = useState(e0.price.toFixed(2));
   const [store, setStore] = useState(e0.store ?? "");
   const [other, setOther] = useState(!!e0.store && !props.stores.includes(e0.store));
@@ -370,7 +366,7 @@ function PurchaseEditSheet(props: {
         <div className="field-row">
           <label className="field">
             <span>Size</span>
-            <input className="text-input" value={size} placeholder="e.g. 1 gal, 2 lb, 12" onChange={(e) => setSize(e.target.value)} />
+            <input className="text-input" value={size} placeholder="e.g. 10 lb 14 oz, 12 × 14.5 oz cans" onChange={(e) => setSize(e.target.value)} />
           </label>
           <label className="field">
             <span>Price</span>
@@ -415,4 +411,10 @@ function PurchaseEditSheet(props: {
       </form>
     </div>
   );
+}
+
+/** " · $0.75/can" when the size is a pack ("174 oz (12 × 14.5 oz cans)"). */
+function perPack(p: PriceEntry): string {
+  const pack = packOf(p.size);
+  return pack ? ` · ${dollars(p.price / pack.count)}/${pack.noun}` : "";
 }
