@@ -16,6 +16,7 @@ describe("create a recipe", () => {
     expect(n).toContain("Untested");
     expect(n).toContain("Why this works: Rendering");
     expect(n).toContain("• Add kale last.");
+    expect(createdNotes({ inspiredBy: null, whyItWorks: "", chefTips: [], plating: "Ladle into warm bowls." })).toContain("To plate: Ladle into warm bowls.");
     expect(createdNotes({ inspiredBy: null, whyItWorks: "", chefTips: [] })).toBe("Created by Claude. Untested: rate it after you cook it.");
   });
 });

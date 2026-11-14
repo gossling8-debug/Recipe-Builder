@@ -405,8 +405,8 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
             {mode === "create" && (
               <>
                 <p className="muted">
-                  Describe a dish, an occasion, or a restaurant favorite to recreate. Claude develops a restaurant-quality recipe
-                  using proven cooking science, sized for {getPeople()} {getPeople() === 1 ? "person" : "people"}.
+                  Describe a dish, an occasion, or a restaurant favorite to recreate. Claude develops a recipe
+                  the way a competition chef would, built on proven cooking science, sized for {getPeople()} {getPeople() === 1 ? "person" : "people"}.
                 </p>
                 <textarea
                   className="text-input"
