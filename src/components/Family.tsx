@@ -3,7 +3,7 @@ import Header from "./Header";
 import Icon from "./Icon";
 import { useToast } from "./Toast";
 import { cloudState, subscribeCloud, type CloudState } from "../lib/cloud";
-import { listRecipes } from "../lib/db";
+import { listRecipes, saveRecipe } from "../lib/db";
 import { duplicatesOf } from "../lib/duplicates";
 import { CookbookCover, CookbookMemories } from "./CookbookExtras";
 import AddToCookbook from "./AddToCookbook";
@@ -18,6 +18,10 @@ import { BookRecipeActions, HoldLink } from "./RecipeActions";
 import {
   bookRecipes,
   createCookbook,
+  mergeLabels,
+  removedLabels,
+  sameLabels,
+  setCookbookLabels,
   renameCookbook,
   getCookbook,
   inviteLink,
@@ -452,6 +456,9 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
   }
 
   const canRemove = !!item && (item.sharedBy === s.uid || book?.owner === s.uid);
+  // Your own copy: the one you shared it from, else a matching recipe of yours.
+  const findCopy = (all: SavedRecipe[]): SavedRecipe | null =>
+    !item ? null : (item.sharedBy === s.uid ? all.find((r) => r.id === item.sourceId) : undefined) ?? duplicatesOf({ ...item.recipe }, all)[0]?.recipe ?? null;
   // The person who shared it and the cookbook's owner can edit the cookbook's copy.
   const canEdit = canRemove && !!book;
   if (editing && item && book && canEdit) {
@@ -468,6 +475,13 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
             onDelete={remove}
             deleteLabel="Remove from cookbook"
             onSave={async (updated) => {
+              // Same labels on your copy (and any it had that this was missing).
+              const copy = findCopy(await listRecipes());
+              if (copy) {
+                const merged = mergeLabels(updated.tags ?? [], copy.tags ?? [], removedLabels(item.recipe.tags ?? [], updated.tags ?? []));
+                if (!sameLabels(merged, copy.tags ?? [])) await saveRecipe({ ...copy, tags: merged });
+                updated = { ...updated, tags: merged };
+              }
               await editInCookbook(book, item.id, updated);
               setItem({ ...item, recipe: updated, editedBy: s.uid ?? undefined, editedByName: book.names[s.uid ?? ""], editedAt: Date.now() });
               setVersion((v) => v + 1);
@@ -495,8 +509,16 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
     <CopyBackedRecipe
       recipe={item.recipe}
       progressKey={`cookbook-${docId}`}
-      // Your own copy: the one you shared it from, else a matching recipe of yours.
-      findCopy={(all) => (item.sharedBy === s.uid ? all.find((r) => r.id === item.sourceId) : undefined) ?? duplicatesOf({ ...item.recipe }, all)[0]?.recipe ?? null}
+      findCopy={findCopy}
+      labels={{
+        tags: item.recipe.tags ?? [],
+        save: canEdit
+          ? async (tags) => {
+              await setCookbookLabels(bookId, docId, tags);
+              setItem((it) => (it ? { ...it, recipe: { ...it.recipe, tags } } : it));
+            }
+          : null,
+      }}
       title={book?.name ?? ""}
       back={href({ name: "family", book: bookId })}
       version={version}

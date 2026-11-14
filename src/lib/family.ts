@@ -1,6 +1,6 @@
 import { fb, user } from "./cloud";
 import { newId } from "./db";
-import type { SavedRecipe, ScannedRecipe } from "./schema";
+import { cleanTags, type SavedRecipe, type ScannedRecipe } from "./schema";
 
 /**
  * Family cookbooks: a shared shelf of recipes for a group (needs cloud
@@ -317,3 +317,47 @@ export async function whereShared(books: Cookbook[], recipeId: string): Promise<
 }
 
 export const inviteLink = (book: Cookbook) => `${location.origin}${location.pathname}#/join/${book.id}`;
+
+// ---------- labels kept the same on your recipe and its cookbook copies ----------
+const lower = (t: string) => t.toLowerCase();
+
+/** Labels in `before` that aren't in `after` (taken off). */
+export const removedLabels = (before: string[], after: string[]) => before.filter((t) => !after.some((x) => lower(x) === lower(t)));
+
+/** Both sides' labels together, minus the ones just taken off. */
+export function mergeLabels(a: string[], b: string[], removed: string[]): string[] {
+  const gone = new Set(removed.map(lower));
+  return cleanTags([...a, ...b]).filter((t) => !gone.has(lower(t)));
+}
+
+export const sameLabels = (a: string[], b: string[]) => a.length === b.length && a.every((t) => b.some((x) => lower(x) === lower(t)));
+
+/** Sets just the labels of a recipe in a cookbook (its sharer or the cookbook's owner). */
+export async function setCookbookLabels(bookIdValue: string, docId: string, tags: string[]): Promise<void> {
+  await me();
+  const { db, f } = await fb();
+  await f.updateDoc(f.doc(db, "cookbooks", bookIdValue, "recipes", docId), { "recipe.tags": tags });
+}
+
+/**
+ * After your recipe's labels change: the cookbook copies you shared of it get
+ * the same labels (theirs added, the ones you took off removed). Returns the
+ * labels both should have, so your recipe can pick up any it was missing.
+ */
+export async function syncLabelsToCookbooks(recipe: SavedRecipe, before: string[]): Promise<string[]> {
+  const u = await me();
+  const { db, f } = await fb();
+  const removed = removedLabels(before, recipe.tags ?? []);
+  const books = await myCookbooks();
+  const copies = (
+    await Promise.all(
+      books.map(async (b) => {
+        const d = await f.getDoc(f.doc(db, "cookbooks", b.id, "recipes", `${u.uid}_${recipe.id}`)).catch(() => null);
+        return d?.exists() ? { book: b.id, id: d.id, tags: ((d.data() as SharedRecipe).recipe.tags ?? []) as string[] } : null;
+      }),
+    )
+  ).filter((x): x is { book: string; id: string; tags: string[] } => !!x);
+  const merged = mergeLabels(recipe.tags ?? [], copies.flatMap((c) => c.tags), removed);
+  await Promise.all(copies.filter((c) => !sameLabels(c.tags, merged)).map((c) => setCookbookLabels(c.book, c.id, merged)));
+  return merged;
+}

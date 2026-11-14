@@ -24,6 +24,8 @@ import type { SavedRecipe, ScannedRecipe } from "../lib/schema";
 import { recipeToText, shareText } from "../lib/share";
 import { addToShopping, loadShopping } from "../lib/shopping";
 import { makeVariant } from "../lib/variants";
+import { mergeLabels, removedLabels } from "../lib/family";
+import { cleanTags } from "../lib/schema";
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -60,6 +62,11 @@ export default function CopyBackedRecipe(props: {
   version?: number;
   /** Sheets etc. drawn over the page. */
   children?: ReactNode;
+  /**
+   * Labels: this recipe's, and how to save them here (null if you can't change
+   * it here). Changes go to your copy too, so both keep the same labels.
+   */
+  labels?: { tags: string[]; save: ((tags: string[]) => Promise<void>) | null };
 }) {
   const { recipe, progressKey, findCopy } = props;
   const [myCopy, setMyCopy] = useState<SavedRecipe | null>(null);
@@ -89,6 +96,32 @@ export default function CopyBackedRecipe(props: {
   }, []);
 
   const run = (fn: () => Promise<void>) => () => fn().catch((e) => setError(errText(e)));
+
+  // Labels: the shared recipe's when you can change them, else your copy's.
+  const labels = props.labels;
+  const [shownTags, setShownTags] = useState<string[] | null>(null);
+  const baseTags = labels?.save ? labels.tags : (myCopy?.tags ?? labels?.tags ?? []);
+  const tagsNow = shownTags ?? baseTags;
+  const tagsKey = JSON.stringify([labels?.tags ?? [], myCopy?.tags ?? []]);
+  useEffect(() => setShownTags(null), [tagsKey]);
+  const canLabel = !!labels && (!!labels.save || !!myCopy);
+  async function changeLabels(next: string[]) {
+    const removed = removedLabels(tagsNow, next);
+    const clean = cleanTags(next);
+    setShownTags(clean);
+    try {
+      if (labels?.save) {
+        // Here and on your copy: everything either has, minus what you took off.
+        const merged = mergeLabels(clean, myCopy?.tags ?? [], removed);
+        await labels.save(merged);
+        if (myCopy) await updateCopy({ ...myCopy, tags: merged });
+      } else if (myCopy) {
+        await updateCopy({ ...myCopy, tags: clean });
+      }
+    } catch (e) {
+      setError(errText(e));
+    }
+  }
   /** Saves this recipe to your recipes (keeping your check-offs and size), and returns it. */
   async function saveCopy(extra: Partial<SavedRecipe> = {}): Promise<SavedRecipe> {
     const saved: SavedRecipe = { ...recipe, id: newId(), createdAt: Date.now(), photos: [], ...(props.copySource ? { source: props.copySource } : {}), ...extra };
@@ -228,7 +261,8 @@ export default function CopyBackedRecipe(props: {
         <TimerBar {...timers} />
         <RecipeView
           key={`${progressId}-${viewKey}-${props.version ?? 0}`}
-          recipe={recipe}
+          recipe={labels ? { ...recipe, tags: tagsNow } : recipe}
+          onTagsChange={canLabel ? changeLabels : undefined}
           recipeId={progressId}
           onStartCooking={feature("cookMode") ? () => (cookStart(progressId), setCooking(true)) : undefined}
           onMade={feature("pantry") ? madeIt : undefined}

@@ -42,8 +42,9 @@ function Screen() {
     case "import":
       return <ImportPage data={route.data} />;
     case "family":
-      if (route.book && route.recipe) return <SharedRecipePage bookId={route.book} docId={route.recipe} />;
-      return route.book ? <BookPage id={route.book} /> : <FamilyPage />;
+      // Keyed so going from one cookbook recipe to another starts fresh (no leftovers from the last).
+      if (route.book && route.recipe) return <SharedRecipePage key={`${route.book}/${route.recipe}`} bookId={route.book} docId={route.recipe} />;
+      return route.book ? <BookPage key={route.book} id={route.book} /> : <FamilyPage />;
     case "mix":
       return route.id ? <MixRecipePage key={route.id} id={route.id} /> : <MixPage />;
     case "join":
