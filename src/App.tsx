@@ -5,7 +5,7 @@ import DuplicatesPage from "./components/DuplicatesPage";
 import LockScreen from "./components/LockScreen";
 import AccountScreen from "./components/AccountScreen";
 import { cloudState, subscribeCloud } from "./lib/cloud";
-import { loadLock, shouldRelock } from "./lib/appLock";
+import { forgetUnlockedActivity, loadLock, lockOnLoad, noteUnlockedActivity, shouldRelock } from "./lib/appLock";
 import { useEffect, useState } from "react";
 import { applyTextSize, getTextSize } from "./lib/textSize";
 import { applyTheme, getTheme } from "./lib/theme";
@@ -94,7 +94,20 @@ const RELOAD_ON_SYNC = new Set(["library", "settings", "tips", "tonight", "budge
 export default function App() {
   const route = useRoute();
   const [synced, setSynced] = useState(0);
-  const [locked, setLocked] = useState(() => !!loadLock());
+  // Opening the app locks it; a refresh or pull-down while using it doesn't.
+  const [locked, setLocked] = useState(() => lockOnLoad());
+  // While unlocked and on screen, remember that (for this tab), so a refresh can tell.
+  useEffect(() => {
+    if (locked) return forgetUnlockedActivity();
+    const note = () => document.visibilityState === "visible" && noteUnlockedActivity();
+    note();
+    const t = window.setInterval(note, 10_000);
+    window.addEventListener("pagehide", note);
+    return () => {
+      window.clearInterval(t);
+      window.removeEventListener("pagehide", note);
+    };
+  }, [locked]);
   const [cloud, setCloud] = useState(cloudState());
   useEffect(() => subscribeCloud(setCloud), []);
   // An account is required (when the cloud is set up). The privacy policy is readable without one.
@@ -107,6 +120,7 @@ export default function App() {
       if (document.visibilityState === "hidden") {
         hiddenAt = Date.now();
         if (lock && lock.after === 0) setLocked(true);
+        else if (lock) noteUnlockedActivity(); // leaving: the "lock after" time counts from now
       } else if (shouldRelock(lock, hiddenAt, Date.now())) setLocked(true);
     };
     document.addEventListener("visibilitychange", on);
