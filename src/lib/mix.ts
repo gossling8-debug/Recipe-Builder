@@ -1,5 +1,6 @@
 import { fb, user } from "./cloud";
-import type { SavedRecipe, ScannedRecipe } from "./schema";
+import { cleanTags, type SavedRecipe, type ScannedRecipe } from "./schema";
+import { sameLabels } from "./family";
 
 /**
  * The Mix: recipes anyone using Cardamix can publish for everyone else (needs
@@ -125,6 +126,18 @@ export async function publishToMix(
   await batch.commit();
   if (mine?.legacy) await f.deleteDoc(f.doc(db, "mix", mine.id)).catch(() => {});
   return id;
+}
+
+/** If I published this recipe, its published copy gets these labels too (nothing else changes). */
+export async function syncLabelsToMix(recipeId: string, tags: string[]): Promise<void> {
+  const mine = await myMixIdFor(recipeId);
+  if (!mine) return;
+  const { db, f } = await fb();
+  const d = await f.getDoc(f.doc(db, "mix", mine.id));
+  if (!d.exists()) return;
+  const now = cleanTags(tags);
+  if (sameLabels(((d.data() as MixRecipe).recipe.tags ?? []) as string[], now)) return;
+  await f.updateDoc(f.doc(db, "mix", mine.id), { "recipe.tags": now });
 }
 
 /** Takes a recipe out of The Mix (yours, or any if you're an admin). */
