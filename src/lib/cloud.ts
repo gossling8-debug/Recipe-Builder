@@ -58,7 +58,10 @@ export function fb(): Promise<Fb> {
   fbPromise ??= (async () => {
     const [{ initializeApp }, a, f] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore")]);
     const app = initializeApp(firebaseConfig!);
-    const auth = a.getAuth(app);
+    // Remember the sign-in in localStorage first: Safari's IndexedDB can come back
+    // empty after a refresh, which signed people out. Sign-ins saved the old way
+    // (IndexedDB) are found and moved over automatically.
+    const auth = a.initializeAuth(app, { persistence: [a.browserLocalPersistence, a.indexedDBLocalPersistence, a.browserSessionPersistence] });
     const db = f.getFirestore(app);
     if (import.meta.env.VITE_FIREBASE_EMULATOR) {
       a.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
