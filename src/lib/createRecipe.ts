@@ -36,7 +36,7 @@ The standard (what judges score):
   - Equipment: only what most kitchens have — stovetop, oven, skillet, saucepan, pot, sheet pan, baking dish, mixing bowls, whisk, a blender or hand mixer, an instant-read thermometer. No sous vide, smoker, deep fryer, stand-mixer-only steps, blowtorch, piping or specialty chemicals.
   - Ingredients: from a regular supermarket. If something special truly makes the dish, offer a common substitute in chef_tips.
   - Skills: everyday techniques done well (searing, sautéing, roasting, braising, simple pan sauces, basic doughs). Avoid techniques that take practice to pull off (tempering chocolate, laminated dough, hand-pulled pasta, butchery, flambé, sugar work); if one is essential to the dish, explain it step by step with what to look for.
-  - Time: about 1 hour of hands-on work for most dishes (up to 2 for a special occasion); long unattended time like braising or resting is fine.
+  - Time: no more than 1 hour of hands-on work, for every dish including special occasions; long unattended time like braising, rising or resting is fine. Put total time in time and note the hands-on part, e.g. "2 hr (45 min hands-on)".
   - Steps: spell out anything a beginner might not know — what "medium-high" looks like, how to tell the oil is hot enough, how to know it's done — and say what to do if something goes wrong (sauce too thick, browning too fast).
 
 Craft:
