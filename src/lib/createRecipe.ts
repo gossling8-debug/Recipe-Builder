@@ -1,7 +1,7 @@
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import * as z from "zod/v4";
 import { describeApiError, makeClient, requestOptions, ScanError } from "./claude";
-import { getModel } from "./models";
+import { getModel, MODELS, type ModelOption } from "./models";
 import { recordUsage, type UsageEntry } from "./usage";
 import { RecipeSchema, sanitizeRecipe, type ScannedRecipe } from "./schema";
 
@@ -86,20 +86,39 @@ export interface CreatedRecipe {
   usage: UsageEntry;
 }
 
+/**
+ * Writing a chef-level recipe needs a capable model: the budget reader (Haiku) is
+ * fine for reading cards but not for this, so Create uses Balanced at least.
+ */
+export function createModel(chosen: ModelOption = getModel()): ModelOption {
+  return chosen.id.includes("haiku") ? (MODELS.find((x) => x.id.includes("sonnet")) ?? chosen) : chosen;
+}
+
+/** The answer was cut off (it ran out of room), so its JSON couldn't be read. */
+const cutOff = (err: unknown) => err instanceof Error && /parse structured output|Unexpected (EOF|end)|Unterminated/i.test(err.message);
+
 export async function createRecipe(apiKey: string, input: CreateInput): Promise<CreatedRecipe> {
   const client = await makeClient(apiKey);
-  const m = getModel();
-  let response;
-  try {
-    response = await client.beta.messages.parse({
+  const m = createModel();
+  const ask = (effort: "medium" | "low") =>
+    client.beta.messages.parse({
       ...requestOptions(m),
       max_tokens: 16000,
-      output_config: { effort: "high", format: betaZodOutputFormat(CreatedRecipeSchema) },
+      output_config: { effort, format: betaZodOutputFormat(CreatedRecipeSchema) },
       system: SYSTEM,
       messages: [{ role: "user", content: createPrompt(input) }],
     });
+  let response;
+  try {
+    try {
+      response = await ask("medium");
+    } catch (err) {
+      // Cut off: try once more with less thinking, so the whole recipe fits.
+      if (!cutOff(err)) throw err;
+      response = await ask("low");
+    }
   } catch (err) {
-    throw new ScanError(describeApiError(err));
+    throw new ScanError(cutOff(err) ? "The recipe came back incomplete. Please try again, or ask for something a little simpler." : describeApiError(err));
   }
   const usage = recordUsage("create", m.id, response.usage);
   if (response.stop_reason === "refusal") throw new ScanError("Claude couldn't create that recipe. Try asking a different way.");

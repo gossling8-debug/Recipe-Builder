@@ -483,10 +483,17 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
               )}
             </section>
             {error && <div className="callout error">{error}</div>}
-            <p className="muted small">
-              Using the {model.label.toLowerCase()} reader ({model.blurb.split(" — ")[0]}). Change it in{" "}
-              <a href={href({ name: "settings" })}>Settings</a>.
-            </p>
+            {mode === "create" ? (
+              <p className="muted small">
+                Recipes are created with Claude Sonnet 5.5 or better (more capable than the budget reader), so each uses a bit more of your
+                monthly AI than a scan.
+              </p>
+            ) : (
+              <p className="muted small">
+                Using the {model.label.toLowerCase()} reader ({model.blurb.split(" — ")[0]}). Change it in{" "}
+                <a href={href({ name: "settings" })}>Settings</a>.
+              </p>
+            )}
           </>
         )}
       </main>
