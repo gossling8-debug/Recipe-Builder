@@ -311,7 +311,7 @@ export default function Settings() {
                   .map((u, i) => (
                     <li key={i}>
                       <span>
-                        {{ scan: "Card scan", website: "Website", text: "Pasted text", substitutes: "Substitutes", nutrition: "Nutrition", receipt: "Receipt", pantryRecipe: "Pantry recipe", memory: "Memory page" }[u.kind]} ·{" "}
+                        {{ scan: "Card scan", website: "Website", text: "Pasted text", substitutes: "Substitutes", nutrition: "Nutrition", receipt: "Receipt", pantryRecipe: "Pantry recipe", memory: "Memory page", create: "Created recipe" }[u.kind]} ·{" "}
                         {MODELS.find((m) => m.id === u.model)?.label ?? u.model}
                       </span>
                       <span>{money(u.cost)}</span>

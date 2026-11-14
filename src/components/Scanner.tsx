@@ -1,3 +1,5 @@
+import { getPeople } from "../lib/autoPlan";
+import { ALLERGEN_GROUPS, isActive, loadAvoid } from "../lib/avoid";
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
@@ -19,12 +21,22 @@ import { user } from "../lib/cloud";
 import { AddToBooksPrompt, DuplicatePrompt, SaveToMinePrompt, type DuplicateMatch } from "./AfterAdd";
 
 const MAX_PHOTOS = 4;
-type Mode = "photo" | "url" | "text";
+type Mode = "photo" | "url" | "text" | "create";
 
 const MODES: { value: Mode; label: string }[] = [
   { value: "photo", label: "Photo" },
   { value: "url", label: "Website" },
   { value: "text", label: "Paste text" },
+  { value: "create", label: "Create" },
+];
+
+/** Ideas to start from on the Create tab. */
+const CREATE_IDEAS = [
+  "Red wine short ribs",
+  "Olive Garden Zuppa Toscana",
+  "Cheesecake Factory brown bread",
+  "Anniversary dinner for 2",
+  "Bakery-style cookies",
 ];
 
 /** Add a recipe from card photos, a web page, or pasted/typed text. */
@@ -77,6 +89,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
   const [showTags, setShowTags] = useState(false);
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
+  const [wish, setWish] = useState("");
   const [busy, setBusy] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState("");
@@ -150,12 +163,14 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
     }
   })();
 
-  const ready = mode === "photo" ? photos.length > 0 : mode === "url" ? !!cleanUrl : text.trim().length > 20;
+  const ready =
+    mode === "photo" ? photos.length > 0 : mode === "url" ? !!cleanUrl : mode === "create" ? wish.trim().length >= 3 : text.trim().length > 20;
 
   async function read() {
     setBusy(true);
     setError("");
     try {
+      if (mode === "create") return await create();
       const source: RecipeSource =
         mode === "photo"
           ? { kind: "photos", photos: photos.map(stripDataUrl) }
@@ -196,6 +211,32 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
       setError(e instanceof DOMException ? storageErrorMessage(e) : e instanceof Error ? e.message : String(e));
       setBusy(false);
     }
+  }
+
+  /** Create tab: Claude writes a new recipe from the request, then it's added like any other. */
+  async function create() {
+    const avoid = loadAvoid();
+    const labels = isActive(avoid) ? [...avoid.groups.map((g) => ALLERGEN_GROUPS[g]?.label ?? g), ...avoid.custom] : [];
+    const existing = await listRecipes().catch(() => [] as SavedRecipe[]);
+    const { createRecipe, createdNotes } = await import("../lib/createRecipe");
+    const r = await createRecipe(apiKey, { request: wish, people: getPeople(), avoid: labels, existingTitles: existing.map((x) => x.title) });
+    const saved: SavedRecipe = {
+      ...r.recipe,
+      notes: createdNotes(r),
+      tags: tags.length ? cleanTags(tags) : r.recipe.tags,
+      id: newId(),
+      createdAt: Date.now(),
+      photos: [],
+      importCost: r.usage.cost,
+    };
+    const into = book ?? (bookId ? await getCookbook(bookId) : null);
+    if (bookId && !into) throw new Error("Couldn't open that cookbook. Check your connection and try again.");
+    const { matches, mineTwin } = await findTwins(saved, into);
+    if (matches.length) {
+      setTwins({ recipe: saved, into, matches, mineTwin });
+      return;
+    }
+    await commit(saved, into, mineTwin);
   }
 
   const back = bookId ? href({ name: "family", book: bookId }) : href({ name: "library" });
@@ -258,11 +299,13 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
           <div className="working" role="status">
             <div className="spinner" aria-hidden />
             <p>
-              <strong>{mode === "url" ? "Reading the web page…" : "Reading your recipe…"}</strong>
+              <strong>{mode === "create" ? "Creating your recipe…" : mode === "url" ? "Reading the web page…" : "Reading your recipe…"}</strong>
             </p>
             <p className="muted">
-              Claude is reading it and matching each ingredient to the step where it's used. This usually takes 20–60
-              seconds. ({seconds}s)
+              {mode === "create"
+                ? "Claude is developing it like a chef would, then checking its ratios, times and temperatures. This usually takes 30–90 seconds."
+                : "Claude is reading it and matching each ingredient to the step where it's used. This usually takes 20–60 seconds."}{" "}
+              ({seconds}s)
             </p>
           </div>
         ) : (
@@ -359,6 +402,34 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
               </>
             )}
 
+            {mode === "create" && (
+              <>
+                <p className="muted">
+                  Describe a dish, an occasion, or a restaurant favorite to recreate. Claude develops a recipe
+                  the way a competition chef would — built on proven cooking science and written so any home cook can make it — sized for {getPeople()} {getPeople() === 1 ? "person" : "people"}.
+                </p>
+                <textarea
+                  className="text-input"
+                  rows={3}
+                  placeholder="e.g. Crispy-skin salmon with lemon butter sauce, or Zuppa Toscana like Olive Garden"
+                  value={wish}
+                  maxLength={300}
+                  onChange={(e) => setWish(e.target.value)}
+                />
+                <div className="tag-picker">
+                  {CREATE_IDEAS.map((idea) => (
+                    <button key={idea} type="button" className={wish === idea ? "tag on" : "tag"} onClick={() => setWish(wish === idea ? "" : idea)}>
+                      {idea}
+                    </button>
+                  ))}
+                </div>
+                <p className="muted small">
+                  New recipes are untested: rate them after you cook. Copycats are Claude's recreation, labeled "inspired by" — not
+                  the restaurant's own recipe.
+                </p>
+              </>
+            )}
+
             {mode === "text" && (
               <>
                 <p className="muted">
@@ -435,7 +506,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
       {!busy && ready && (
         <div className="fab-bar">
           <button className="btn primary big" onClick={read}>
-            Read recipe
+            {mode === "create" ? "Create recipe" : "Read recipe"}
           </button>
         </div>
       )}
