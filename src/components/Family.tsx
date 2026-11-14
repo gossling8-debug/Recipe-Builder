@@ -7,6 +7,7 @@ import { listRecipes } from "../lib/db";
 import { duplicatesOf } from "../lib/duplicates";
 import { CookbookCover, CookbookMemories } from "./CookbookExtras";
 import AddToCookbook from "./AddToCookbook";
+import { NewCookbookForm } from "./AfterAdd";
 import RecipeEditor from "./RecipeEditor";
 import CopyBackedRecipe from "./CopyBackedRecipe";
 import { feature } from "../lib/features";
@@ -573,6 +574,7 @@ export function ShareToFamily({ recipe }: { recipe: SavedRecipe }) {
   const [shared, setShared] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
   const on = signedIn(s);
 
   useEffect(() => {
@@ -585,7 +587,7 @@ export function ShareToFamily({ recipe }: { recipe: SavedRecipe }) {
       .catch(() => setBooks([]));
   }, [on, recipe.id]);
 
-  if (!on || !books || books.length === 0) return null;
+  if (!on || !books || (books.length === 0 && !feature("family"))) return null;
   const changed = (at: number) => (recipe.updatedAt ?? recipe.createdAt) > at;
 
   async function run(bookIdValue: string, fn: () => Promise<void>) {
@@ -654,6 +656,23 @@ export function ShareToFamily({ recipe }: { recipe: SavedRecipe }) {
           )}
         </p>
       ))}
+      {creating ? (
+        <NewCookbookForm
+          books={books}
+          createLabel="Create and add this recipe"
+          onCancel={() => setCreating(false)}
+          onCreated={async (b) => {
+            await shareToCookbook(b, recipe, applySwaps(recipe));
+            setBooks((bs) => [...(bs ?? []), b].sort((x, y) => x.name.localeCompare(y.name)));
+            setShared((x) => ({ ...x, [b.id]: Date.now() }));
+            setCreating(false);
+          }}
+        />
+      ) : (
+        <button className="btn" disabled={!!busy} onClick={() => setCreating(true)}>
+          <Icon name="plus" size={18} /> New cookbook with this recipe
+        </button>
+      )}
       <p className="muted small">Shares the recipe as you cook it (with your swaps). Photos and your notes stay private.</p>
       {error && <div className="callout error">{error}</div>}
     </section>

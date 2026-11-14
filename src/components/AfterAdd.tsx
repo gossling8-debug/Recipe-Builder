@@ -1,9 +1,62 @@
 import { useEffect, useState } from "react";
-import { myCookbooks, shareToCookbook, type Cookbook } from "../lib/family";
+import { createCookbook, myCookbooks, shareToCookbook, type Cookbook } from "../lib/family";
+import { cloudState } from "../lib/cloud";
 import type { SavedRecipe } from "../lib/schema";
 import Icon from "./Icon";
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** The name you go by in your other cookbooks, to fill in for a new one. */
+function nameInBooks(books: Cookbook[]): string {
+  const uid = cloudState().uid;
+  return (uid && books.map((b) => b.names[uid]).find(Boolean)) || "";
+}
+
+/**
+ * Make a new cookbook right where you are (on a recipe, or after adding one).
+ * onCreated gets the new cookbook; the caller decides what to put in it.
+ */
+export function NewCookbookForm(props: { books: Cookbook[]; onCreated: (book: Cookbook) => Promise<void> | void; onCancel: () => void; createLabel?: string }) {
+  const [name, setName] = useState("");
+  const known = nameInBooks(props.books);
+  const [myName, setMyName] = useState(known);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function create() {
+    setBusy(true);
+    setError("");
+    try {
+      const book = await createCookbook(name, myName);
+      await props.onCreated(book);
+    } catch (e) {
+      setError(errText(e));
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="new-book-form">
+      <label className="field">
+        <span>New cookbook name</span>
+        <input className="text-input" value={name} autoFocus placeholder="e.g. Weeknight Dinners" maxLength={60} onChange={(e) => setName(e.target.value)} />
+      </label>
+      {!known && (
+        <label className="field">
+          <span>Your name, as others will see it</span>
+          <input className="text-input" value={myName} placeholder="e.g. Mom" maxLength={40} onChange={(e) => setMyName(e.target.value)} />
+        </label>
+      )}
+      {error && <div className="callout error small">{error}</div>}
+      <div className="button-row">
+        <button className="btn primary" disabled={busy || !name.trim()} onClick={create}>
+          <Icon name="plus" size={18} /> {busy ? "Creating…" : props.createLabel ?? "Create cookbook"}
+        </button>
+        <button className="btn" disabled={busy} onClick={props.onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /**
  * After a new recipe is saved to your recipes: offers to add it to your family
@@ -14,6 +67,7 @@ export function AddToBooksPrompt({ recipe, onDone }: { recipe: SavedRecipe; onDo
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
   useEffect(() => {
     myCookbooks().then(
       (bs) => (bs.length ? setBooks(bs) : onDone(0)),
@@ -66,6 +120,22 @@ export function AddToBooksPrompt({ recipe, onDone }: { recipe: SavedRecipe; onDo
             </li>
           ))}
         </ul>
+        {creating ? (
+          <NewCookbookForm
+            books={books}
+            createLabel="Create and tick it"
+            onCancel={() => setCreating(false)}
+            onCreated={(b) => {
+              setBooks([...books, b]);
+              setPicked((s) => new Set(s).add(b.id));
+              setCreating(false);
+            }}
+          />
+        ) : (
+          <button className="link-btn small new-book-link" disabled={busy} onClick={() => setCreating(true)}>
+            <Icon name="plus" size={16} /> New cookbook
+          </button>
+        )}
         {error && <div className="callout error small">{error}</div>}
         <div className="button-row add-to-book-actions">
           <button className="btn primary" disabled={busy || picked.size === 0} onClick={add}>
