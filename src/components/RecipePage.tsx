@@ -22,6 +22,8 @@ import { activeSwaps, applySwaps } from "../lib/swaps";
 import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
 import { deleteRecipe, getRecipe, listRecipes, newId, saveRecipe } from "../lib/db";
 import { family, makeVariant } from "../lib/variants";
+import { sameLabels, syncLabelsToCookbooks } from "../lib/family";
+import { cloudState } from "../lib/cloud";
 import { duplicatesOf, markNotDuplicates, notDuplicates } from "../lib/duplicates";
 import { href, navigate } from "../lib/route";
 import { recipeToText, shareText } from "../lib/share";
@@ -34,6 +36,19 @@ import { feature } from "../lib/features";
 
 export default function RecipePage({ id }: { id: string }) {
   const [recipe, setRecipe] = useState<SavedRecipe | null | undefined>(undefined);
+  /** Same labels on the cookbook copies you shared, and any they had that this was missing. */
+  async function syncLabels(updated: SavedRecipe, before: string[]) {
+    if (!feature("family") || !cloudState().uid) return;
+    try {
+      const merged = await syncLabelsToCookbooks(updated, before);
+      if (sameLabels(merged, updated.tags ?? [])) return;
+      const latest = (await getRecipe(updated.id)) ?? updated;
+      await saveRecipe({ ...latest, tags: merged });
+      setRecipe((r) => (r && r.id === updated.id ? { ...r, tags: merged } : r));
+    } catch {
+      // Offline or not signed in: the cookbooks catch up the next time labels change.
+    }
+  }
   const [showPhotos, setShowPhotos] = useState(false);
   const [editing, setEditing] = useState(() => {
     try {
@@ -265,6 +280,7 @@ export default function RecipePage({ id }: { id: string }) {
             onDelete={remove}
             onSave={async (updated) => {
               await saveRecipe(updated);
+              void syncLabels(updated, recipe.tags ?? []);
               // Step and ingredient positions may have changed: keep only the chosen size.
               saveProgress(updated.id, { have: [], done: [], added: [], scale: loadProgress(updated.id).scale });
               setRecipe(updated);
@@ -332,6 +348,7 @@ export default function RecipePage({ id }: { id: string }) {
                 const updated = { ...recipe, tags: cleanTags(tags) };
                 setRecipe(updated);
                 await saveRecipe(updated);
+                void syncLabels(updated, recipe.tags ?? []);
               }}
               swaps={activeSwaps(recipe)}
               onUndoSwap={async (i) => {
