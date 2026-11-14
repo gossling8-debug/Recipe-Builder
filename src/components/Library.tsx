@@ -222,6 +222,7 @@ export default function Library() {
     <>
       <Header
         title=""
+        brand
         actions={
           <>
             {feature("weekPlanner") && (
