@@ -25,6 +25,7 @@ import { recipeToText, shareText } from "../lib/share";
 import { addToShopping, loadShopping } from "../lib/shopping";
 import { makeVariant } from "../lib/variants";
 import { mergeLabels, removedLabels } from "../lib/family";
+import { syncLabelsToMix } from "../lib/mix";
 import { cleanTags } from "../lib/schema";
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -114,9 +115,13 @@ export default function CopyBackedRecipe(props: {
         // Here and on your copy: everything either has, minus what you took off.
         const merged = mergeLabels(clean, myCopy?.tags ?? [], removed);
         await labels.save(merged);
-        if (myCopy) await updateCopy({ ...myCopy, tags: merged });
+        if (myCopy) {
+          await updateCopy({ ...myCopy, tags: merged });
+          void syncLabelsToMix(myCopy.id, merged).catch(() => {}); // your published copy too
+        }
       } else if (myCopy) {
         await updateCopy({ ...myCopy, tags: clean });
+        void syncLabelsToMix(myCopy.id, clean).catch(() => {});
       }
     } catch (e) {
       setError(errText(e));

@@ -1,5 +1,6 @@
 import { fb, user } from "./cloud";
 import { newId } from "./db";
+import { duplicateReason } from "./duplicates";
 import { cleanTags, type SavedRecipe, type ScannedRecipe } from "./schema";
 
 /**
@@ -340,23 +341,33 @@ export async function setCookbookLabels(bookIdValue: string, docId: string, tags
 }
 
 /**
- * After your recipe's labels change: the cookbook copies you shared of it get
- * the same labels (theirs added, the ones you took off removed). Returns the
- * labels both should have, so your recipe can pick up any it was missing.
+ * After your recipe's labels change: its copies in your cookbooks get the
+ * same labels (theirs added, the ones you took off removed). A copy is one you
+ * shared from this recipe, or — where you can change it (you shared it, or you
+ * own the cookbook) — the same recipe by title or web page, e.g. one someone
+ * else shared that you saved. Returns the labels your recipe should have, so it
+ * picks up any it was missing.
  */
 export async function syncLabelsToCookbooks(recipe: SavedRecipe, before: string[]): Promise<string[]> {
   const u = await me();
-  const { db, f } = await fb();
   const removed = removedLabels(before, recipe.tags ?? []);
   const books = await myCookbooks();
   const copies = (
     await Promise.all(
       books.map(async (b) => {
-        const d = await f.getDoc(f.doc(db, "cookbooks", b.id, "recipes", `${u.uid}_${recipe.id}`)).catch(() => null);
-        return d?.exists() ? { book: b.id, id: d.id, tags: ((d.data() as SharedRecipe).recipe.tags ?? []) as string[] } : null;
+        const rs = await bookRecipes(b.id).catch(() => [] as SharedRecipe[]);
+        return rs
+          .filter((r) => {
+            const mine = r.sharedBy === u.uid;
+            if (mine && (r.sourceId === recipe.id || r.id === `${u.uid}_${recipe.id}`)) return true;
+            if (!mine && b.owner !== u.uid) return false; // not yours to change
+            const why = duplicateReason({ ...r.recipe }, recipe);
+            return why === "same title" || why === "same web page";
+          })
+          .map((r) => ({ book: b.id, id: r.id, tags: (r.recipe.tags ?? []) as string[] }));
       }),
     )
-  ).filter((x): x is { book: string; id: string; tags: string[] } => !!x);
+  ).flat();
   const merged = mergeLabels(recipe.tags ?? [], copies.flatMap((c) => c.tags), removed);
   await Promise.all(copies.filter((c) => !sameLabels(c.tags, merged)).map((c) => setCookbookLabels(c.book, c.id, merged)));
   return merged;
