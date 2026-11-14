@@ -70,6 +70,16 @@ export async function createCookbook(name: string, myName: string): Promise<Cook
   return { id, ...book };
 }
 
+/** Rename a cookbook for everyone (its owner only). */
+export async function renameCookbook(id: string, name: string): Promise<string> {
+  await me();
+  const { db, f } = await fb();
+  const clean = name.trim().slice(0, 60);
+  if (!clean) throw new Error("Give the cookbook a name.");
+  await f.updateDoc(f.doc(db, "cookbooks", id), { name: clean });
+  return clean;
+}
+
 export async function getCookbook(id: string): Promise<Cookbook | null> {
   await me();
   const { db, f } = await fb();
