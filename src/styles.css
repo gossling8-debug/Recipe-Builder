@@ -1115,3 +1115,7 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .receipt-size .pack-row .pack-noun { grid-area: noun; }
 .new-book-form { border: 1px solid var(--line); border-radius: 12px; padding: 4px 12px 12px; margin: 8px 0; background: var(--surface); }
 .new-book-link { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 8px; align-self: flex-start; }
+/* Home header: logo + name */
+.brand { display: inline-flex; align-items: center; gap: 8px; padding: 0 6px; min-height: 44px; color: var(--text); text-decoration: none; flex-shrink: 0; }
+.brand img { width: 32px; height: 32px; border-radius: 8px; display: block; }
+.brand span { font-family: var(--serif); font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }

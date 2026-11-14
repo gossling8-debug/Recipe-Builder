@@ -12,15 +12,23 @@ export default function Header({
   back,
   actions,
   returnToPrevious = false,
+  brand = false,
 }: {
   title: string;
   back?: string;
   actions?: ReactNode;
   returnToPrevious?: boolean;
+  /** The home screen: the Cardamix logo and name on the left. */
+  brand?: boolean;
 }) {
   return (
     <header className={back && back !== "#/" ? "topbar with-home" : "topbar"}>
-      {back ? (
+      {brand ? (
+        <a className="brand" href="#/" aria-label="Cardamix home">
+          <img src="./logo.svg" alt="" width="32" height="32" />
+          <span>Cardamix</span>
+        </a>
+      ) : back ? (
         <a
           className="icon-btn"
           href={back}
