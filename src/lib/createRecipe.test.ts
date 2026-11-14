@@ -20,3 +20,14 @@ describe("create a recipe", () => {
     expect(createdNotes({ inspiredBy: null, whyItWorks: "", chefTips: [] })).toBe("Created by Claude. Untested: rate it after you cook it.");
   });
 });
+
+import { createModel } from "./createRecipe";
+import { MODELS } from "./models";
+describe("which model creates recipes", () => {
+  it("uses Balanced instead of the budget reader, and keeps a better choice", () => {
+    const by = (s: string) => MODELS.find((m) => m.id.includes(s))!;
+    expect(createModel(by("haiku")).id).toContain("sonnet");
+    expect(createModel(by("sonnet")).id).toContain("sonnet");
+    expect(createModel(by("opus")).id).toContain("opus");
+  });
+});
