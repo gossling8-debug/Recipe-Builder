@@ -32,11 +32,11 @@ const MODES: { value: Mode; label: string }[] = [
 
 /** Ideas to start from on the Create tab. */
 const CREATE_IDEAS = [
-  "Braised short ribs with red wine",
-  "Zuppa Toscana like Olive Garden",
-  "Brown bread like The Cheesecake Factory",
+  "Red wine short ribs",
+  "Olive Garden Zuppa Toscana",
+  "Cheesecake Factory brown bread",
   "Anniversary dinner for 2",
-  "Bakery-style chocolate chip cookies",
+  "Bakery-style cookies",
 ];
 
 /** Add a recipe from card photos, a web page, or pasted/typed text. */
@@ -406,7 +406,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
               <>
                 <p className="muted">
                   Describe a dish, an occasion, or a restaurant favorite to recreate. Claude develops a recipe
-                  the way a competition chef would, built on proven cooking science, sized for {getPeople()} {getPeople() === 1 ? "person" : "people"}.
+                  the way a competition chef would — built on proven cooking science and written so any home cook can make it — sized for {getPeople()} {getPeople() === 1 ? "person" : "people"}.
                 </p>
                 <textarea
                   className="text-input"
