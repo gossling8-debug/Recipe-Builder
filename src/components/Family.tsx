@@ -18,6 +18,7 @@ import { BookRecipeActions, HoldLink } from "./RecipeActions";
 import {
   bookRecipes,
   createCookbook,
+  renameCookbook,
   getCookbook,
   inviteLink,
   joinCookbook,
@@ -178,6 +179,7 @@ export function BookPage({ id }: { id: string }) {
 
   const myUid = book && s.uid;
   const owner = !!book && book.owner === s.uid;
+  const [renaming, setRenaming] = useState(false);
   const [tab, setTab] = useState<"recipes" | "memories">("recipes");
   const [adding, setAdding] = useState(false);
   const [memoryCount, setMemoryCount] = useState<number | null>(null);
@@ -248,9 +250,16 @@ export function BookPage({ id }: { id: string }) {
         returnToPrevious
         actions={
           book ? (
-            <button className="icon-btn" onClick={() => invite(book, showToast)} aria-label="Invite someone">
-              <Icon name="share" />
-            </button>
+            <>
+              {owner && (
+                <button className="icon-btn" onClick={() => setRenaming(true)} aria-label="Rename this cookbook">
+                  <Icon name="edit" />
+                </button>
+              )}
+              <button className="icon-btn" onClick={() => invite(book, showToast)} aria-label="Invite someone">
+                <Icon name="share" />
+              </button>
+            </>
           ) : null
         }
       />
@@ -334,6 +343,11 @@ export function BookPage({ id }: { id: string }) {
             </div>
             <details className="book-settings">
               <summary>Cookbook settings</summary>
+              {owner && (
+                <button className="btn" onClick={() => setRenaming(true)}>
+                  <Icon name="edit" size={18} /> Rename this cookbook
+                </button>
+              )}
               <p className="muted small">
                 {others.length
                   ? "Deleting removes this cookbook from your list only. Everyone else keeps it, with all its recipes and memories."
@@ -347,6 +361,19 @@ export function BookPage({ id }: { id: string }) {
         )}
         {error && <div className="callout error">{error}</div>}
       </main>
+      {renaming && book && (
+        <RenameSheet
+          current={book.name}
+          others={others.length}
+          onClose={() => setRenaming(false)}
+          onSave={async (name) => {
+            const saved = await renameCookbook(book.id, name);
+            setBook({ ...book, name: saved });
+            setRenaming(false);
+            showToast("Renamed for everyone");
+          }}
+        />
+      )}
       {menuFor && (
         <BookRecipeActions
           title={menuFor.recipe.title}
@@ -676,5 +703,51 @@ export function ShareToFamily({ recipe }: { recipe: SavedRecipe }) {
       <p className="muted small">Shares the recipe as you cook it (with your swaps). Photos and your notes stay private.</p>
       {error && <div className="callout error">{error}</div>}
     </section>
+  );
+}
+
+/** Rename a cookbook (the owner, for everyone). */
+function RenameSheet(props: { current: string; others: number; onClose: () => void; onSave: (name: string) => Promise<void> }) {
+  const [name, setName] = useState(props.current);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const same = name.trim() === props.current.trim();
+  return (
+    <div className="sheet-backdrop" onClick={props.onClose}>
+      <form
+        className="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Rename this cookbook"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setError("");
+          try {
+            await props.onSave(name);
+          } catch (err) {
+            setError(errText(err));
+            setBusy(false);
+          }
+        }}
+      >
+        <div className="sheet-title">Rename this cookbook</div>
+        <label className="field">
+          <span>Cookbook name</span>
+          <input className="text-input" value={name} autoFocus maxLength={60} onChange={(e) => setName(e.target.value)} />
+        </label>
+        {props.others > 0 && <p className="muted small">The new name shows for everyone in the cookbook.</p>}
+        {error && <div className="callout error small">{error}</div>}
+        <div className="button-row add-to-book-actions">
+          <button className="btn primary" type="submit" disabled={busy || !name.trim() || same}>
+            {busy ? "Saving…" : "Save"}
+          </button>
+          <button className="btn" type="button" disabled={busy} onClick={props.onClose}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
