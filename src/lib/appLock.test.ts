@@ -23,3 +23,20 @@ describe("app lock", () => {
     expect(waitAfter(20)).toBe(900);
   });
 });
+
+import { lockOnLoad, REFRESH_GRACE } from "./appLock";
+describe("locking as the app loads", () => {
+  const lock = { salt: "", hash: "", length: 4, after: 60_000 };
+  const now = 1_000_000;
+  it("locks when opened, not when refreshed while in use", () => {
+    expect(lockOnLoad(null, "navigate", null, now)).toBe(false);
+    expect(lockOnLoad(lock, "navigate", now - 1000, now)).toBe(true);
+    expect(lockOnLoad(lock, "reload", null, now)).toBe(true);
+    expect(lockOnLoad(lock, "reload", now - 5000, now)).toBe(false);
+  });
+  it("still locks a refresh after being away longer than the lock time", () => {
+    expect(lockOnLoad(lock, "reload", now - 61_000, now)).toBe(true);
+    expect(lockOnLoad({ ...lock, after: 0 }, "reload", now - 5000, now)).toBe(false);
+    expect(lockOnLoad({ ...lock, after: 0 }, "reload", now - REFRESH_GRACE - 1, now)).toBe(true);
+  });
+});

@@ -87,6 +87,60 @@ export function shouldRelock(lock: LockSettings | null, hiddenAt: number | null,
   return now - hiddenAt >= lock.after;
 }
 
+// ---------- refreshing isn't opening ----------
+/**
+ * When the app was last in use unlocked, in this browser tab only
+ * (sessionStorage: kept through a refresh, gone when the tab or app is closed).
+ */
+const ACTIVE_KEY = "recipe-builder.lockActiveAt";
+export function noteUnlockedActivity(now = Date.now()): void {
+  try {
+    sessionStorage.setItem(ACTIVE_KEY, String(now));
+  } catch {
+    /* fine: it just locks on the next load */
+  }
+}
+export function forgetUnlockedActivity(): void {
+  try {
+    sessionStorage.removeItem(ACTIVE_KEY);
+  } catch {
+    /* fine */
+  }
+}
+function unlockedActivityAt(): number | null {
+  try {
+    const v = Number(sessionStorage.getItem(ACTIVE_KEY));
+    return v > 0 ? v : null;
+  } catch {
+    return null;
+  }
+}
+function navigationType(): string {
+  try {
+    return (performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined)?.type ?? "navigate";
+  } catch {
+    return "navigate";
+  }
+}
+/** A refresh shortly after using the app counts as still using it. */
+export const REFRESH_GRACE = 30_000;
+
+/**
+ * Whether to lock as the app loads. Opening it locks. A refresh or pull-down
+ * doesn't, if the app was in use unlocked in this tab just before (within the
+ * "lock after" time, or 30 seconds for "Immediately").
+ */
+export function lockOnLoad(
+  lock: LockSettings | null = loadLock(),
+  navType: string = navigationType(),
+  activeAt: number | null = unlockedActivityAt(),
+  now = Date.now(),
+): boolean {
+  if (!lock) return false;
+  if (navType !== "reload" || activeAt === null) return true;
+  return now - activeAt > Math.max(lock.after, REFRESH_GRACE);
+}
+
 // ---------- Face ID (WebAuthn platform authenticator) ----------
 const b64url = (buf: ArrayBuffer) => b64(buf).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const unb64url = (s: string) => unb64(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4));
