@@ -121,8 +121,8 @@ export default function PlusPage({ done }: { done?: boolean }) {
             <li>
               <Icon name="check" size={16} />
               <span>
-                <strong>Much more AI</strong> — roughly 50 recipe adds and 20+ created recipes a month, plus nutrition, receipts and “Cook
-                with what I have”, and the Advanced reader for handwriting. Free includes 5 recipe adds and 3 created recipes.
+                <strong>Much more AI</strong> — about 50 recipe adds and 20+ created recipes a month (the free plan has 5 and 3), plus
+                nutrition, receipts and “Cook with what I have”, and the Advanced reader for handwriting.
               </span>
             </li>
             {plusFeatures.map((f) => (
