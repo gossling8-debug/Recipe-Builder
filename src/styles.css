@@ -1126,3 +1126,18 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .verify-email .button-row { margin-top: 10px; }
 .verify-note { margin: 8px 0 0; }
 .crash-screen { padding-top: 48px; }
+/* Owner dashboard */
+.owner section { margin-bottom: 20px; }
+.owner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin: 8px 0; }
+.owner-stat { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface); display: flex; flex-direction: column; gap: 2px; }
+.owner-stat strong { font-family: var(--serif); font-size: 24px; line-height: 1.1; }
+.owner-stat span { font-size: 13px; color: var(--muted); }
+.owner-list { list-style: none; padding: 0; margin: 8px 0; }
+.owner-list li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.owner-errors { list-style: none; padding: 0; margin: 8px 0 12px; }
+.owner-errors li { border-bottom: 1px solid var(--line); }
+.owner-error { display: flex; gap: 10px; width: 100%; text-align: left; background: none; border: 0; padding: 10px 0; color: inherit; font: inherit; cursor: pointer; }
+.owner-error-count { font-weight: 600; min-width: 32px; }
+.owner-error-msg { overflow-wrap: anywhere; }
+.owner-error-detail { padding: 0 0 10px 42px; display: flex; flex-direction: column; gap: 2px; }
+.owner-error-detail pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin: 6px 0 0; }

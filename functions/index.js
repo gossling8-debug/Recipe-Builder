@@ -6,6 +6,7 @@
  *  - checkout:      starts a Stripe Checkout for Plus (monthly or yearly).
  *  - billingPortal: opens Stripe's page to manage or cancel a subscription.
  *  - closeMyAccount / accountDeleted: cancel a deleted account's subscription and clear its records.
+ *  - ownerStats / ownerClearErrors: the owner dashboard (admins only; counts, no names or emails).
  *
  * Firestore (written only here; people can read their own):
  *   plans/{uid}     { plan, source ("stripe" | "comp" | "beta" | "none"), status, interval ("month" | "year"), renews, cancelsAt, checkedAt }
@@ -19,6 +20,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import Stripe from "stripe";
 import * as functionsV1 from "firebase-functions/v1";
+import { summarize } from "./lib/stats.js";
 import { ALLOWANCE, MAX_BODY_BYTES, addUsage, allowanceCheck, allowanceKey, allowedOrigin, checkRequest, costOf, freeCheck, isBeta, isComp, planFromSubscriptions } from "./lib/guard.js";
 
 initializeApp();
@@ -145,6 +147,58 @@ export const ai = onRequest({ ...opts, secrets: [ANTHROPIC_API_KEY, STRIPE_SECRE
   if (upstream.status === 401 || upstream.status === 403 || (upstream.status === 400 && /credit balance/i.test(text)))
     return fail(res, 503, "api_error", "AI is temporarily unavailable. Please try again later.");
   res.status(upstream.status).type("application/json").send(text);
+});
+
+// ---------- owner dashboard ----------
+async function requireAdmin(req) {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  if (!(await db.doc(`admins/${req.auth.uid}`).get()).exists) throw new HttpsError("permission-denied", "Only the app's owner can see this.");
+}
+
+/** Every account's sign-up time, last activity and whether its email is confirmed (up to 20,000). */
+async function allUsers() {
+  const out = [];
+  let page;
+  for (let i = 0; i < 20; i++) {
+    const r = await getAuth().listUsers(1000, page);
+    for (const u of r.users) {
+      const created = Date.parse(u.metadata.creationTime) || 0;
+      const last = Date.parse(u.metadata.lastRefreshTime || u.metadata.lastSignInTime || u.metadata.creationTime) || 0;
+      out.push({ created, lastActive: last, verified: !!u.emailVerified });
+    }
+    page = r.pageToken;
+    if (!page) break;
+  }
+  return out;
+}
+
+export const ownerStats = onCall({ ...opts, timeoutSeconds: 60 }, async (req) => {
+  await requireAdmin(req);
+  const [users, plans, usage, mix, cookbooks, errors] = await Promise.all([
+    allUsers(),
+    db.collection("plans").select("plan", "source", "interval").get(),
+    db.collection("aiUsage").select("month", "spent", "uses", "counts", "plan").get(),
+    db.collection("mix").select("reporters").get(),
+    db.collection("cookbooks").count().get(),
+    db.collection("errors").orderBy("at", "desc").limit(500).get(),
+  ]);
+  const data = (q) => q.docs.map((d) => d.data());
+  return summarize({ users, plans: data(plans), usage: data(usage), mix: data(mix), cookbooks: cookbooks.data().count, errors: data(errors) });
+});
+
+/** Delete every error report (after reading them). */
+export const ownerClearErrors = onCall({ ...opts, timeoutSeconds: 60 }, async (req) => {
+  await requireAdmin(req);
+  let removed = 0;
+  for (;;) {
+    const q = await db.collection("errors").limit(400).get();
+    if (q.empty) break;
+    const batch = db.batch();
+    q.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    removed += q.size;
+  }
+  return { removed };
 });
 
 // ---------- Stripe ----------

@@ -46,7 +46,7 @@ export function remember(p: MyPlan) {
   if (typeof window !== "undefined") window.dispatchEvent(new Event("features-changed"));
 }
 
-async function callable<T>(name: string, data?: unknown): Promise<T> {
+export async function callable<T>(name: string, data?: unknown): Promise<T> {
   const { app } = await fb();
   const f = await import("firebase/functions");
   const functions = f.getFunctions(app, "us-central1");
