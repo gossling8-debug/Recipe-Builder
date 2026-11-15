@@ -1,0 +1,80 @@
+/**
+ * The first-login tour: shown once per account (the flag syncs with the
+ * account, so a second phone doesn't show it again). Settings can start it
+ * again.
+ */
+const KEY = "recipe-builder.tourDone";
+
+// "Take the tour again" is for this phone only, so it's kept out of the synced flag.
+const AGAIN = "cardamix-tour-again";
+
+/** Seen (and not asked to replay here). */
+export function tourDone(): boolean {
+  try {
+    if (sessionStorage.getItem(AGAIN) === "1") return false;
+    return localStorage.getItem(KEY) === "1";
+  } catch {
+    return true; // storage blocked: don't show it on every visit
+  }
+}
+export function finishTour(): void {
+  try {
+    sessionStorage.removeItem(AGAIN);
+    localStorage.setItem(KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+/** "Take the tour again" (Settings): replays it on this phone. */
+export function restartTour(): void {
+  try {
+    sessionStorage.setItem(AGAIN, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+export interface TourStep {
+  /** The button to point at (skipped if it isn't on screen, e.g. a feature that's off). */
+  target: string;
+  title: string;
+  text: string;
+}
+
+export const TOUR_STEPS: TourStep[] = [
+  {
+    target: '.tabbar a[href="#/scan"]',
+    title: "Add a recipe",
+    text: "Snap a recipe card or cookbook page, paste a website link or text, or have one created for you.",
+  },
+  {
+    target: '.tabbar a[href="#/family"]',
+    title: "Cookbooks",
+    text: "Share recipes and family memories with the people you cook with. The Mix has recipes from other cooks.",
+  },
+  {
+    target: '.tabbar a[href="#/budget"]',
+    title: "Budget",
+    text: "Your grocery budget, receipts and a price tracker that shows where things are cheapest.",
+  },
+  {
+    target: '.tabbar a[href="#/tonight"]',
+    title: "Tonight",
+    text: "What's for dinner tonight, or an idea when you can't decide.",
+  },
+  {
+    target: '.topbar a[href="#/week"]',
+    title: "Your week",
+    text: "Plan the week's meals, or let Fill my week do it. The bag next to it is your shopping list.",
+  },
+  {
+    target: '.topbar a[href="#/settings"]',
+    title: "Settings",
+    text: "Turn features on or off, set foods to avoid, change the text size and look. You can take this tour again here.",
+  },
+];
+
+/** The steps whose button is on screen right now. */
+export function visibleSteps(steps: TourStep[], exists: (selector: string) => boolean): TourStep[] {
+  return steps.filter((s) => exists(s.target));
+}

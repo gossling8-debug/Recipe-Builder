@@ -1159,3 +1159,13 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .cook-week ~ .list-heading-all { display: block; }
 .cook-week-card .small { font-size: 13px; }
 .cook-week-card .row-stars { display: block; letter-spacing: 0; white-space: nowrap; }
+/* First-login tour */
+.tour { position: fixed; inset: 0; z-index: 800; }
+.tour-dim { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); }
+.tour-ring { position: fixed; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); outline: 2px solid var(--accent); transition: all 0.2s ease; pointer-events: none; }
+.tour-card { position: fixed; left: 16px; right: 16px; max-width: 420px; margin: 0 auto; background: var(--surface); color: var(--text); border-radius: 16px; padding: 14px 16px 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); }
+.tour-card h2 { margin: 0 0 4px; font-family: var(--serif); font-size: 22px; }
+.tour-card p { margin: 0 0 10px; }
+.tour-count { margin: 0 0 2px !important; }
+.tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tour-nav { display: flex; gap: 8px; }

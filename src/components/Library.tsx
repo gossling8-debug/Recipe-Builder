@@ -29,6 +29,8 @@ import Welcome from "./Welcome";
 import { welcomeDone } from "../lib/welcome";
 import Icon from "./Icon";
 import CookThisWeek from "./CookThisWeek";
+import Tour from "./Tour";
+import { tourDone } from "../lib/tour";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 import { href } from "../lib/route";
 import { aiReady } from "../lib/settings";
@@ -49,6 +51,7 @@ export default function Library() {
   useEffect(() => subscribeCloud(setCloud), []);
   const familyOn = cloud.status !== "off" && cloud.status !== "signed-out";
   const [showWelcome, setShowWelcome] = useState(() => !welcomeDone());
+  const [tourClosed, setTourClosed] = useState(false);
   // A new phone downloads its recipes on the first sync — only then do we know the box is really empty.
   const [syncedOnce, setSyncedOnce] = useState(false);
   useEffect(() => {
@@ -218,6 +221,8 @@ export default function Library() {
   // First open on a phone with no recipes (and nobody signed in): quick setup.
   if (showWelcome && !welcomeDone() && recipes && recipes.length === 0 && (cloud.status === "off" || syncedOnce))
     return <Welcome onDone={() => setShowWelcome(false)} />;
+  // The tour, once per account: after setup, and only once this phone has synced (so it knows if it was already seen).
+  const tourReady = !tourDone() && recipes !== null && (cloud.status === "off" || syncedOnce);
 
   return (
     <>
@@ -448,6 +453,7 @@ export default function Library() {
           </a>
         )}
       </main>
+      {tourReady && !tourClosed && <Tour onDone={() => setTourClosed(true)} />}
       {menuFor && (
         <RecipeActions
           recipe={menuFor}
