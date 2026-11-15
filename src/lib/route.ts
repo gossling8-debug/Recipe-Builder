@@ -14,6 +14,7 @@ export type Route =
   | { name: "receipt" }
   | { name: "history" }
   | { name: "privacy" }
+  | { name: "terms" }
   | { name: "duplicates" }
   | { name: "plus"; done?: boolean }
   | { name: "print"; id: string }
@@ -39,6 +40,7 @@ export function parseRoute(hash: string): Route {
   if (path === "receipt") return { name: "receipt" };
   if (path === "history") return { name: "history" };
   if (path === "privacy") return { name: "privacy" };
+  if (path === "terms") return { name: "terms" };
   if (path === "duplicates") return { name: "duplicates" };
   if (path === "plus" || path === "plus/done") return { name: "plus", done: path === "plus/done" || undefined };
   const mixM = path.match(/^mix(?:\/([^/]+))?$/);

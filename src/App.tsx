@@ -1,5 +1,6 @@
 import TipsPage from "./components/TipsPage";
 import PrivacyPage from "./components/PrivacyPage";
+import TermsPage from "./components/TermsPage";
 import PlusPage from "./components/PlusPage";
 import DuplicatesPage from "./components/DuplicatesPage";
 import LockScreen from "./components/LockScreen";
@@ -53,6 +54,8 @@ function Screen() {
       return <TipsPage />;
     case "privacy":
       return <PrivacyPage />;
+    case "terms":
+      return <TermsPage />;
     case "duplicates":
       return <DuplicatesPage />;
     case "plus":
@@ -110,8 +113,8 @@ export default function App() {
   }, [locked]);
   const [cloud, setCloud] = useState(cloudState());
   useEffect(() => subscribeCloud(setCloud), []);
-  // An account is required (when the cloud is set up). The privacy policy is readable without one.
-  const needsAccount = cloud.status !== "off" && !cloud.uid && route.name !== "privacy";
+  // An account is required (when the cloud is set up). The privacy policy and terms are readable without one.
+  const needsAccount = cloud.status !== "off" && !cloud.uid && route.name !== "privacy" && route.name !== "terms";
   // Lock again after time away. With "Immediately", lock as the app is hidden so the app switcher shows the lock.
   useEffect(() => {
     let hiddenAt: number | null = null;

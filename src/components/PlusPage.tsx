@@ -107,7 +107,10 @@ export default function PlusPage({ done }: { done?: boolean }) {
                 {busy ? "Opening checkout…" : "Upgrade to Plus"}
               </button>
             </div>
-            <p className="muted small">Secure checkout by Stripe. Cancel any time from this page.</p>
+            <p className="muted small">
+              Secure checkout by Stripe. Renews automatically until you cancel — cancel any time from this page. By upgrading you agree to
+              the <a href={href({ name: "terms" })}>Terms of service</a>, including the refund policy.
+            </p>
           </section>
         )}
         {error && <div className="callout error small">{error}</div>}

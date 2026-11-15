@@ -107,8 +107,8 @@ export default function AccountScreen({ cloud }: { cloud: CloudState }) {
       </form>
       {(message || cloud.message) && <div className="callout small">{message || cloud.message}</div>}
       <p className="muted small account-fine-print">
-        Free. Your account keeps your recipes, photos and lists safe if you lose or change your phone.{" "}
-        <a href={href({ name: "privacy" })}>Privacy policy</a>
+        Free. Your account keeps your recipes, photos and lists safe if you lose or change your phone. By creating an account you agree
+        to the <a href={href({ name: "terms" })}>Terms of service</a>. <a href={href({ name: "privacy" })}>Privacy policy</a>
       </p>
     </main>
   );
