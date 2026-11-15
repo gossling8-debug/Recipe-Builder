@@ -66,7 +66,7 @@ If something is unreadable, give your best reading and add a short warning.`;
 export const keepByDefault = (item: { is_food: boolean }, onList: boolean) => onList || item.is_food;
 
 export async function readReceipt(apiKey: string, images: string[], knownNames: string[]): Promise<Receipt> {
-  const client = await makeClient(apiKey);
+  const client = await makeClient(apiKey, "receipt");
   const m = getModel();
   const content = [
     ...images.flatMap((p) => {

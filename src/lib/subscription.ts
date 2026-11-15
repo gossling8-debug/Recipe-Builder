@@ -9,6 +9,8 @@ export interface MyPlan {
   plan: "free" | "plus";
   source?: "stripe" | "comp" | "beta" | "none";
   status?: string;
+  /** Plus billed monthly or yearly. */
+  interval?: "month" | "year" | null;
   renews?: number | null;
   cancelsAt?: number | null;
 }
@@ -17,6 +19,8 @@ export interface AiUsage {
   spent: number;
   limit: number;
   uses: number;
+  /** This month's counted requests by kind: scan (recipe adds), create… */
+  counts?: Record<string, number>;
 }
 
 const KEY = "recipe-builder.myPlan";
@@ -65,7 +69,7 @@ const friendly = (e: unknown) => {
 export async function refreshMyPlan(): Promise<MyPlan> {
   if (!(await user())) return myPlan();
   const p = await callable<MyPlan>("refreshPlan");
-  remember({ plan: p.plan, source: p.source, status: p.status, renews: p.renews, cancelsAt: p.cancelsAt });
+  remember({ plan: p.plan, source: p.source, status: p.status, interval: p.interval ?? null, renews: p.renews, cancelsAt: p.cancelsAt });
   return myPlan();
 }
 
@@ -109,4 +113,12 @@ export async function loadAiUsage(): Promise<AiUsage | null> {
 }
 
 /** Monthly AI allowance in dollars — kept in step with functions/lib/guard.js. */
-export const ALLOWANCE = { free: 0.25, plus: 2.5 };
+export const ALLOWANCE = { free: 0.4, plus: 2.5, plus_yearly: 2.25 };
+/** Free accounts each month — kept in step with functions/lib/guard.js. */
+export const FREE_LIMITS = { scan: 5, create: 3 };
+/** The allowance that applies to you: free, Plus monthly or Plus yearly. */
+export const allowanceFor = (p: MyPlan = myPlan()) => (p.plan === "plus" ? (p.interval === "year" ? ALLOWANCE.plus_yearly : ALLOWANCE.plus) : ALLOWANCE.free);
+/** How many free recipe adds / created recipes are left this month (usage from loadAiUsage). */
+export function freeLeft(kind: "scan" | "create", usage: AiUsage | null): number {
+  return Math.max(0, FREE_LIMITS[kind] - (usage?.counts?.[kind] ?? 0));
+}

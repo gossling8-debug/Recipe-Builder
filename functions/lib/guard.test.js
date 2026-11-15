@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addUsage, allowanceCheck, allowedOrigin, checkRequest, costOf, isBeta, isComp, monthKey, planFromSubscriptions } from "./guard.js";
+import { addUsage, allowanceCheck, allowanceKey, allowedOrigin, checkRequest, costOf, freeCheck, FREE_LIMITS, isBeta, isComp, monthKey, planFromSubscriptions } from "./guard.js";
 
 const ok = { model: "claude-sonnet-5-5", max_tokens: 6000, messages: [{ role: "user", content: "hi" }] };
 const NOV = Date.UTC(2026, 10, 12, 10, 0);
@@ -28,7 +28,9 @@ describe("monthly allowance", () => {
   });
   it("free gets a small taste, Plus much more", () => {
     expect(allowanceCheck("free", { month: "2026-11", spent: 0.1 }, NOV)).toBeNull();
-    expect(allowanceCheck("free", { month: "2026-11", spent: 0.25 }, NOV)?.type).toBe("allowance_exceeded");
+    expect(allowanceCheck("free", { month: "2026-11", spent: 0.4 }, NOV)?.type).toBe("allowance_exceeded");
+    expect(allowanceCheck("plus_yearly", { month: "2026-11", spent: 2.25 }, NOV)?.message).toMatch(/resets/);
+    expect(allowanceCheck("plus_yearly", { month: "2026-11", spent: 2.2 }, NOV)).toBeNull();
     expect(allowanceCheck("plus", { month: "2026-11", spent: 0.25 }, NOV)).toBeNull();
     expect(allowanceCheck("plus", { month: "2026-11", spent: 2.5 }, NOV)?.message).toMatch(/resets/);
   });
@@ -69,5 +71,48 @@ describe("plans", () => {
     expect(allowedOrigin("https://cardamix.com")).toBe("https://cardamix.com");
     expect(allowedOrigin("https://www.cardamix.com")).toBe("https://www.cardamix.com");
     expect(allowedOrigin("https://evil.example")).toBe("https://cardamix.com");
+  });
+});
+
+describe("free accounts and plan allowances", () => {
+  const NOV2 = Date.UTC(2026, 10, 15);
+  it("picks the allowance by plan and billing interval", () => {
+    expect(allowanceKey("free", null)).toBe("free");
+    expect(allowanceKey("plus", "month")).toBe("plus");
+    expect(allowanceKey("plus", null)).toBe("plus");
+    expect(allowanceKey("plus", "year")).toBe("plus_yearly");
+  });
+  it("lets free accounts add 5 recipes and create 3 a month, then stops", () => {
+    expect(FREE_LIMITS).toEqual({ scan: 5, create: 3 });
+    let u = null;
+    for (let i = 0; i < 5; i++) {
+      expect(freeCheck("scan", "claude-haiku-5-5", u, NOV2)).toBeNull();
+      u = addUsage(u, 0.003, NOV2 + i * 61_000, "scan");
+    }
+    expect(freeCheck("scan", "claude-haiku-5-5", u, NOV2)).toMatchObject({ type: "free_limit", status: 429 });
+    expect(freeCheck("scan", "claude-haiku-5-5", u, NOV2).message).toMatch(/5 free recipe adds/);
+    for (let i = 0; i < 3; i++) {
+      expect(freeCheck("create", "claude-sonnet-5-5", u, NOV2)).toBeNull();
+      u = addUsage(u, 0.08, NOV2 + (10 + i) * 61_000, "create");
+    }
+    expect(freeCheck("create", "claude-sonnet-5-5", u, NOV2).message).toMatch(/3 free created recipes/);
+    // The automatic retry of the last one (cut off) still goes through; the dollar backstop limits it.
+    expect(freeCheck("create", "claude-sonnet-5-5", u, NOV2, true)).toBeNull();
+    // A new month starts over.
+    expect(freeCheck("create", "claude-sonnet-5-5", u, Date.UTC(2026, 11, 1))).toBeNull();
+  });
+  it("free scans must use the budget model; other AI is Plus only", () => {
+    expect(freeCheck("scan", "claude-sonnet-5-5", null, NOV2)?.status).toBe(400);
+    expect(freeCheck("nutrition", "claude-haiku-5-5", null, NOV2)).toMatchObject({ type: "plus_feature", status: 403 });
+    expect(freeCheck("other", "claude-haiku-5-5", null, NOV2)?.type).toBe("plus_feature");
+  });
+  it("retries aren't counted (no kind), and counts start over each month", () => {
+    const u = addUsage({ month: "2026-11", spent: 0, uses: 1, counts: { create: 1 } }, 0.05, NOV2, null);
+    expect(u.counts).toEqual({ create: 1 });
+    expect(addUsage({ month: "2026-10", counts: { scan: 5 } }, 0.01, NOV2, "scan").counts).toEqual({ scan: 1 });
+  });
+  it("records whether Plus is monthly or yearly", () => {
+    expect(planFromSubscriptions([{ status: "active", items: { data: [{ price: { recurring: { interval: "year" } } }] } }]).interval).toBe("year");
+    expect(planFromSubscriptions([{ status: "active", plan: { interval: "month" } }]).interval).toBe("month");
   });
 });

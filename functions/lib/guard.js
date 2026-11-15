@@ -10,8 +10,42 @@ export const APP_MODELS = {
   "claude-haiku-5-5": { inPerM: 0.1, outPerM: 0.5 },
 };
 
-/** Monthly AI allowance, in dollars of Anthropic list price. */
-export const ALLOWANCE = { free: 0.25, plus: 2.5 };
+/**
+ * Monthly AI allowance, in dollars of Anthropic list price. Yearly Plus is a
+ * little lower (it's cheaper per month). Free is limited by counts (below);
+ * its dollar amount is only a backstop.
+ */
+export const ALLOWANCE = { free: 0.4, plus: 2.5, plus_yearly: 2.25 };
+/** Free accounts each month: recipe adds (photo, website, text) and created recipes. */
+export const FREE_LIMITS = { scan: 5, create: 3 };
+/** Free accounts read recipes with the budget model. */
+export const FREE_SCAN_MODEL = "claude-haiku-5-5";
+
+/** Which allowance applies: free, Plus monthly, or Plus yearly. */
+export const allowanceKey = (plan, interval) => (plan === "plus" ? (interval === "year" ? "plus_yearly" : "plus") : "free");
+
+const NOUN = { scan: ["recipe add", "recipe adds"], create: ["created recipe", "created recipes"] };
+/**
+ * What a free account may do: only add recipes (with the budget model) and
+ * create recipes, up to the monthly counts. null if allowed, else an error.
+ */
+export function freeCheck(kind, model, usage, now = Date.now(), retry = false) {
+  if (!(kind in FREE_LIMITS))
+    return { status: 403, type: "plus_feature", message: "That's a Plus feature. Upgrade to Plus to use it." };
+  if (kind === "scan" && model !== FREE_SCAN_MODEL)
+    return { status: 400, type: "invalid_request_error", message: "Free accounts read recipes with the Budget reader. Reload the app and try again." };
+  // An automatic retry of a request that was just counted isn't a new one (the dollar backstop still applies).
+  if (retry) return null;
+  const used = usage?.month === monthKey(now) ? usage.counts?.[kind] ?? 0 : 0;
+  const limit = FREE_LIMITS[kind];
+  if (used >= limit)
+    return {
+      status: 429,
+      type: "free_limit",
+      message: `You've used this month's ${limit} free ${NOUN[kind][1]}. Upgrade to Plus for many more, or wait until the 1st.`,
+    };
+  return null;
+}
 /** Requests per minute per person, to stop runaway loops. */
 export const PER_MINUTE = 12;
 export const MAX_TOKENS = 16000;
@@ -59,7 +93,7 @@ export function allowanceCheck(plan, usage, now = Date.now()) {
       status: 429,
       type: "allowance_exceeded",
       message:
-        plan === "plus"
+        plan.startsWith("plus")
           ? "You've used this month's AI allowance. It resets on the 1st."
           : "You've used this month's free AI. Upgrade to Plus for much more, or wait until the 1st.",
     };
@@ -69,15 +103,18 @@ export function allowanceCheck(plan, usage, now = Date.now()) {
   return null;
 }
 
-/** The usage doc after one request that cost `cost` dollars. */
-export function addUsage(usage, cost, now = Date.now()) {
+/** The usage doc after one request that cost `cost` dollars; `kind` (scan, create…) is counted when given. */
+export function addUsage(usage, cost, now = Date.now(), kind = null) {
   const month = monthKey(now);
   const minute = Math.floor(now / 60_000);
   const sameMonth = usage?.month === month;
+  const counts = { ...(sameMonth ? usage.counts ?? {} : {}) };
+  if (kind) counts[kind] = (counts[kind] ?? 0) + 1;
   return {
     month,
     spent: (sameMonth ? usage.spent ?? 0 : 0) + cost,
     uses: (sameMonth ? usage.uses ?? 0 : 0) + 1,
+    counts,
     minute,
     minuteCount: (usage?.minute === minute ? usage.minuteCount ?? 0 : 0) + 1,
   };
@@ -87,7 +124,7 @@ export function addUsage(usage, cost, now = Date.now()) {
 export function planFromSubscriptions(subs) {
   const live = (subs ?? []).find((s) => ["active", "trialing", "past_due"].includes(s.status));
   return live
-    ? { plan: "plus", source: "stripe", status: live.status, renews: live.cancel_at_period_end ? null : (live.current_period_end ?? live.items?.data?.[0]?.current_period_end ?? null) * 1000 || null, cancelsAt: live.cancel_at_period_end ? (live.cancel_at ?? null) * 1000 || null : null }
+    ? { plan: "plus", source: "stripe", status: live.status, interval: live.items?.data?.[0]?.price?.recurring?.interval ?? live.plan?.interval ?? null, renews: live.cancel_at_period_end ? null : (live.current_period_end ?? live.items?.data?.[0]?.current_period_end ?? null) * 1000 || null, cancelsAt: live.cancel_at_period_end ? (live.cancel_at ?? null) * 1000 || null : null }
     : { plan: "free", source: "stripe", status: subs?.[0]?.status ?? "none", renews: null, cancelsAt: null };
 }
 

@@ -95,13 +95,13 @@ export default function PlusPage({ done }: { done?: boolean }) {
             <p>Every feature, and far more AI each month.</p>
             <div className="segmented plus-interval" role="radiogroup" aria-label="Billing">
               <button role="radio" aria-checked={interval === "yearly"} className={interval === "yearly" ? "chip active" : "chip"} onClick={() => setInterval("yearly")}>
-                Yearly · $29.99
+                Yearly · $34.99
               </button>
               <button role="radio" aria-checked={interval === "monthly"} className={interval === "monthly" ? "chip active" : "chip"} onClick={() => setInterval("monthly")}>
-                Monthly · $3.99
+                Monthly · $4.49
               </button>
             </div>
-            <p className="muted small">{interval === "yearly" ? "$2.50 a month, billed yearly — save 37%." : "Billed monthly. Cancel any time."}</p>
+            <p className="muted small">{interval === "yearly" ? "$2.92 a month, billed yearly — save 35%." : "Billed monthly. Cancel any time."}</p>
             <div className="button-row">
               <button className="btn primary" disabled={busy || checking} onClick={run(() => upgrade(interval))}>
                 {busy ? "Opening checkout…" : "Upgrade to Plus"}
@@ -121,8 +121,8 @@ export default function PlusPage({ done }: { done?: boolean }) {
             <li>
               <Icon name="check" size={16} />
               <span>
-                <strong>About 10× more AI</strong> — roughly 50 recipe card scans a month, plus nutrition, receipts and “Cook with what I
-                have”. Free includes about 5.
+                <strong>Much more AI</strong> — roughly 50 recipe adds and 20+ created recipes a month, plus nutrition, receipts and “Cook
+                with what I have”, and the Balanced reader for handwriting. Free includes 5 recipe adds and 3 created recipes.
               </span>
             </li>
             {plusFeatures.map((f) => (

@@ -1,3 +1,5 @@
+import { myPlan } from "./subscription";
+
 /**
  * Which Claude model reads recipes. The cook picks in Settings; cheaper
  * models cost far less per scan but read messy handwriting less reliably.
@@ -66,7 +68,10 @@ export function getModel(): ModelOption {
   return chosen && allowed.includes(chosen) ? chosen : (allowed.find((m) => m.id === "claude-sonnet-5-5") ?? allowed[0]);
 }
 
-/** Models you can pick: all of them with your own key, otherwise the ones the app pays for. */
+/**
+ * Models you can pick: all of them with your own key; otherwise the ones the
+ * app pays for — Balanced and Budget with Plus, Budget on the free plan.
+ */
 export function availableModels(): ModelOption[] {
   let own = false;
   try {
@@ -74,7 +79,9 @@ export function availableModels(): ModelOption[] {
   } catch {
     /* blocked */
   }
-  return own ? MODELS : MODELS.filter((m) => m.id !== "claude-opus-5-5");
+  if (own) return MODELS;
+  if (myPlan().plan !== "plus") return MODELS.filter((m) => m.id === "claude-haiku-5-5");
+  return MODELS.filter((m) => m.id !== "claude-opus-5-5");
 }
 
 export function setModel(id: string): void {

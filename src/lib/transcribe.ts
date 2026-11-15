@@ -6,7 +6,7 @@ import { recordUsage } from "./usage";
 export async function transcribePage(apiKey: string, photo: string): Promise<string> {
   const m = photo.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/);
   if (!m) throw new ScanError("That photo can't be read.");
-  const client = await makeClient(apiKey);
+  const client = await makeClient(apiKey, "memory");
   const model = getModel();
   let response;
   try {
