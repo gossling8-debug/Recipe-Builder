@@ -14,6 +14,8 @@ import { ALLERGEN_GROUPS, loadAvoid, saveAvoid, type AvoidList } from "../lib/av
 import { availableModels, costOf, getModel, MODELS, setModel } from "../lib/models";
 import { allowanceFor } from "../lib/subscription";
 import { amAdmin } from "../lib/mix";
+import { restartTour } from "../lib/tour";
+import { navigate } from "../lib/route";
 import AiAllowance from "./AiAllowance";
 import { loadUsage, money } from "../lib/usage";
 import { exportBackup, importBackup } from "../lib/backup";
@@ -340,7 +342,16 @@ export default function Settings() {
         </details>
 
         <p className="small settings-footer">
-          <a href={href({ name: "privacy" })}>Privacy policy</a> · <a href={href({ name: "terms" })}>Terms of service</a>
+          <button
+            className="link-btn small"
+            onClick={() => {
+              restartTour();
+              navigate({ name: "library" });
+            }}
+          >
+            Take the tour again
+          </button>{" "}
+          · <a href={href({ name: "privacy" })}>Privacy policy</a> · <a href={href({ name: "terms" })}>Terms of service</a>
           {admin && (
             <>
               {" "}
