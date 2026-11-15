@@ -10,7 +10,7 @@ import { freshness } from "./shelfLife";
 
 /**
  * "Cook with what I have": Claude invents a new recipe from what's in the
- * pantry, using up what's about to go off first and never anything past its
+ * pantry, using up what's about to go bad first and never anything past its
  * date or on the avoid list.
  */
 export const PantryRecipeSchema = z.object({
