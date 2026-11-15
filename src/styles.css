@@ -1125,3 +1125,4 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .free-counts { padding-left: 18px; margin: 6px 0; }
 .verify-email .button-row { margin-top: 10px; }
 .verify-note { margin: 8px 0 0; }
+.crash-screen { padding-top: 48px; }

@@ -6,4 +6,6 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "./",
   plugins: [react()],
+  // Which build an error report came from (UTC date and time of the build).
+  define: { __APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16)) },
 });
