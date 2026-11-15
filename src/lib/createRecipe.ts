@@ -53,6 +53,11 @@ Copycats (when asked to recreate a restaurant or brand dish):
 
 Format:
 - Size it for the servings asked, and put that in servings, e.g. "Serves 4". Put total time and oven temperature in time.
+- Every ingredient must be something the cook can buy and use as is — specific enough to put straight on a shopping list:
+  - Name the product as it's sold at a grocery store (e.g. "chocolate sandwich cookies", "heavy cream", "boneless skinless chicken thighs", "pure pumpkin purée (not pumpkin pie filling)"). Mention a common brand in preparation only when it helps someone find it ("such as Oreo").
+  - Give the amount to buy or count out, then the prepared amount if it changes: e.g. quantity "11", unit null, name "chocolate sandwich cookies", preparation "such as Oreo, about ⅓ of a 14.3-oz package, finely crushed (about 1 cup crumbs)". Never list an in-between product such as "cookie crumbs", "cooked rice" or "lemon zest" without saying what to buy to make it.
+  - For packaged foods, say the package size when it helps (e.g. "1 (15-oz) can", "1 (8-oz) block cream cheese").
+  - One choice per ingredient: no "X or Y" alternatives in the ingredient line. If a substitute is worth knowing, put it in chef_tips.
 - Write clear steps, one main action each. Each step is a list of segments whose texts, joined in order, read as the step. Whenever a step adds or uses an ingredient, put the words naming it in their own segment with that ingredient's ingredient_index and the amount used in that step (e.g. "2 cups"; "half of the 1 cup" and then "remaining" if it's divided).
 - notes: null (the tips go in chef_tips). tags: 1–3 categories like "Dinner", "Dessert", "Baking", "Copycat".
 - Never use anything the cook avoids, even as a garnish; use a good substitute instead and mention it in chef_tips.
