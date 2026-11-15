@@ -1119,3 +1119,7 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .brand { display: inline-flex; align-items: center; gap: 8px; padding: 0 6px; min-height: 44px; color: var(--text); text-decoration: none; flex-shrink: 0; }
 .brand img { width: 32px; height: 32px; border-radius: 8px; display: block; }
 .brand span { font-family: var(--serif); font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }
+.free-left { margin: 8px 0; }
+.free-out .btn { margin: 10px 0 6px; display: inline-flex; }
+.free-out .muted { display: block; }
+.free-counts { padding-left: 18px; margin: 6px 0; }

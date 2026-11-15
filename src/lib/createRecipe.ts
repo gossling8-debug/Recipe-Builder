@@ -98,16 +98,20 @@ export function createModel(chosen: ModelOption = getModel()): ModelOption {
 const cutOff = (err: unknown) => err instanceof Error && /parse structured output|Unexpected (EOF|end)|Unterminated/i.test(err.message);
 
 export async function createRecipe(apiKey: string, input: CreateInput): Promise<CreatedRecipe> {
-  const client = await makeClient(apiKey);
+  const client = await makeClient(apiKey, "create");
   const m = createModel();
   const ask = (effort: "medium" | "low") =>
-    client.beta.messages.parse({
-      ...requestOptions(m),
-      max_tokens: 16000,
-      output_config: { effort, format: betaZodOutputFormat(CreatedRecipeSchema) },
-      system: SYSTEM,
-      messages: [{ role: "user", content: createPrompt(input) }],
-    });
+    client.beta.messages.parse(
+      {
+        ...requestOptions(m),
+        max_tokens: 16000,
+        output_config: { effort, format: betaZodOutputFormat(CreatedRecipeSchema) },
+        system: SYSTEM,
+        messages: [{ role: "user", content: createPrompt(input) }],
+      },
+      // The automatic retry isn't counted as another created recipe (app AI only; never sent to Anthropic directly).
+      effort === "low" && !apiKey ? { headers: { "x-cardamix-retry": "1" } } : undefined,
+    );
   let response;
   try {
     try {

@@ -12,7 +12,7 @@ import { getApiKey, ownKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
 import { ALLERGEN_GROUPS, loadAvoid, saveAvoid, type AvoidList } from "../lib/avoid";
 import { availableModels, costOf, getModel, MODELS, setModel } from "../lib/models";
-import { ALLOWANCE } from "../lib/subscription";
+import { allowanceFor } from "../lib/subscription";
 import AiAllowance from "./AiAllowance";
 import { loadUsage, money } from "../lib/usage";
 import { exportBackup, importBackup } from "../lib/backup";
@@ -256,7 +256,7 @@ export default function Settings() {
                   <span className="model-head">
                     <strong>{m.label}</strong>
                     <span className="model-cost">
-                      {ownKey() ? (mine ? `your average ${money(mine.avg)}` : `≈ ${money(typical)} per card`) : `≈ ${Math.round(ALLOWANCE[hasPlus() ? "plus" : "free"] / typical)} scans a month`}
+                      {ownKey() ? (mine ? `your average ${money(mine.avg)}` : `≈ ${money(typical)} per card`) : hasPlus() ? `≈ ${Math.round(allowanceFor() / typical)} scans a month` : "5 free recipe adds a month"}
                     </span>
                   </span>
                   <span className="muted small">{m.blurb}</span>
@@ -264,6 +264,11 @@ export default function Settings() {
               );
             })}
           </div>
+          {!hasPlus() && !ownKey() && (
+            <p className="muted small">
+              The free plan reads recipes with Budget. <a href={href({ name: "plus" })}>Plus</a> adds Balanced, best for messy handwriting.
+            </p>
+          )}
         </section>
 
         <details className="advanced">

@@ -8,8 +8,8 @@
  *  - closeMyAccount / accountDeleted: cancel a deleted account's subscription and clear its records.
  *
  * Firestore (written only here; people can read their own):
- *   plans/{uid}     { plan, source ("stripe" | "comp" | "beta" | "none"), status, renews, cancelsAt, checkedAt }
- *   aiUsage/{uid}   { month, spent, uses, limit, minute, minuteCount }
+ *   plans/{uid}     { plan, source ("stripe" | "comp" | "beta" | "none"), status, interval ("month" | "year"), renews, cancelsAt, checkedAt }
+ *   aiUsage/{uid}   { month, spent, uses, counts: { scan, create, … }, limit, plan, minute, minuteCount }
  *   customers/{uid} { stripeId }   (not readable by the app)
  */
 import { onRequest, onCall, HttpsError } from "firebase-functions/v2/https";
@@ -19,7 +19,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import Stripe from "stripe";
 import * as functionsV1 from "firebase-functions/v1";
-import { ALLOWANCE, MAX_BODY_BYTES, addUsage, allowanceCheck, allowedOrigin, checkRequest, costOf, isBeta, isComp, planFromSubscriptions } from "./lib/guard.js";
+import { ALLOWANCE, MAX_BODY_BYTES, addUsage, allowanceCheck, allowanceKey, allowedOrigin, checkRequest, costOf, freeCheck, isBeta, isComp, planFromSubscriptions } from "./lib/guard.js";
 
 initializeApp();
 const db = getFirestore();
@@ -29,8 +29,9 @@ const PLUS_EMAILS = defineSecret("PLUS_EMAILS");
 
 const ANTHROPIC_BASE = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com"; // tests point this at a fake
 const PRICES = {
-  monthly: { lookup: "cardamix_plus_monthly", amount: 399, interval: "month" },
-  yearly: { lookup: "cardamix_plus_yearly", amount: 2999, interval: "year" },
+  // Stripe prices can't be changed, so a new price gets a new lookup key.
+  monthly: { lookup: "cardamix_plus_monthly_449", amount: 449, interval: "month" },
+  yearly: { lookup: "cardamix_plus_yearly_3499", amount: 3499, interval: "year" },
 };
 const DAY = 86_400_000;
 // invoker "public": anyone may *call* these (each one checks the sign-in itself).
@@ -98,9 +99,14 @@ export const ai = onRequest({ ...opts, secrets: [ANTHROPIC_API_KEY, STRIPE_SECRE
   const problem = checkRequest(req.body);
   if (problem) return fail(res, 400, "invalid_request_error", problem);
 
-  const plan = (await currentPlan(user.uid, user.email)).plan;
+  const planDoc = await currentPlan(user.uid, user.email);
+  const plan = allowanceKey(planDoc.plan, planDoc.interval);
+  // What the app says this request is for (scan, create, nutrition…), and whether it's an automatic retry.
+  const kind = String(req.get("x-cardamix-kind") || "").toLowerCase().slice(0, 20) || "other";
+  const retry = req.get("x-cardamix-retry") === "1";
   const usageRef = db.doc(`aiUsage/${user.uid}`);
-  const blocked = allowanceCheck(plan, (await usageRef.get()).data());
+  const usageNow = (await usageRef.get()).data();
+  const blocked = (plan === "free" ? freeCheck(kind, req.body.model, usageNow, Date.now(), retry) : null) ?? allowanceCheck(plan, usageNow);
   if (blocked) return fail(res, blocked.status, blocked.type, blocked.message);
 
   // Pass it on with the app's key. Only Anthropic's own headers go through.
@@ -129,7 +135,7 @@ export const ai = onRequest({ ...opts, secrets: [ANTHROPIC_API_KEY, STRIPE_SECRE
     const cost = costOf(req.body.model, parsed.usage);
     await db.runTransaction(async (tx) => {
       const now = (await tx.get(usageRef)).data();
-      tx.set(usageRef, { ...addUsage(now, cost), limit: ALLOWANCE[plan] ?? ALLOWANCE.free, plan });
+      tx.set(usageRef, { ...addUsage(now, cost, Date.now(), retry ? null : kind), limit: ALLOWANCE[plan] ?? ALLOWANCE.free, plan });
     });
   }
   // Anthropic's own errors about the app's key or credit shouldn't blame the person.

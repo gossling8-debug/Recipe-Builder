@@ -1,4 +1,7 @@
 import { getPeople } from "../lib/autoPlan";
+import { hasPlus } from "../lib/features";
+import { FREE_LIMITS, freeLeft, loadAiUsage, type AiUsage } from "../lib/subscription";
+import { ownKey } from "../lib/settings";
 import { ALLERGEN_GROUPS, isActive, loadAvoid } from "../lib/avoid";
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
@@ -90,6 +93,15 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
   const [wish, setWish] = useState("");
+  // Free plan: how many recipe adds and created recipes are left this month.
+  const counted = !ownKey() && !hasPlus();
+  const [usage, setUsage] = useState<AiUsage | null | undefined>(counted ? undefined : null);
+  useEffect(() => {
+    if (counted) loadAiUsage().then(setUsage, () => setUsage(null));
+  }, [counted]);
+  const kindNow = mode === "create" ? "create" : "scan";
+  const left = counted && usage !== undefined ? freeLeft(kindNow, usage) : null;
+  const outOfFree = left === 0;
   const [busy, setBusy] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState("");
@@ -483,6 +495,26 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
               )}
             </section>
             {error && <div className="callout error">{error}</div>}
+            {left !== null &&
+              (outOfFree ? (
+                <div className="callout small free-out">
+                  <strong>
+                    You've used this month's {FREE_LIMITS[kindNow]} free {kindNow === "create" ? "created recipes" : "recipe adds"}.
+                  </strong>{" "}
+                  {kindNow === "create"
+                    ? "Plus creates 20+ recipes a month, along with about 50 recipe adds."
+                    : "Plus adds about 50 recipes a month, with the Balanced reader for handwriting."}{" "}
+                  <a className="btn primary" href={href({ name: "plus" })}>
+                    See Plus
+                  </a>
+                  <span className="muted"> Or wait until the 1st, when your free ones come back.</span>
+                </div>
+              ) : (
+                <p className="small free-left">
+                  Free plan: <strong>{left}</strong> of {FREE_LIMITS[kindNow]} {kindNow === "create" ? "created recipes" : "recipe adds"} left
+                  this month. <a href={href({ name: "plus" })}>Get more with Plus</a>
+                </p>
+              ))}
             {mode === "create" ? (
               <p className="muted small">
                 Recipes are created with Claude Sonnet 5.5 or better (more capable than the budget reader), so each uses a bit more of your
@@ -510,7 +542,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
           </div>
         </div>
       )}
-      {!busy && ready && (
+      {!busy && ready && !outOfFree && (
         <div className="fab-bar">
           <button className="btn primary big" onClick={read}>
             {mode === "create" ? "Create recipe" : "Read recipe"}

@@ -3,9 +3,9 @@ import { hasPlus } from "../lib/features";
 import { costOf, getModel } from "../lib/models";
 import { href } from "../lib/route";
 import { ownKey } from "../lib/settings";
-import { ALLOWANCE, loadAiUsage, type AiUsage } from "../lib/subscription";
+import { allowanceFor, FREE_LIMITS, freeLeft, loadAiUsage, type AiUsage } from "../lib/subscription";
 
-/** Settings: how much of this month's AI is used. */
+/** Settings: this month's AI — counts on the free plan, a meter with Plus. */
 export default function AiAllowance() {
   const [usage, setUsage] = useState<AiUsage | null | undefined>(undefined);
   useEffect(() => {
@@ -13,8 +13,33 @@ export default function AiAllowance() {
   }, []);
   if (ownKey()) return null; // billed to their own key instead
 
-  const plus = hasPlus();
-  const limit = usage?.limit ?? ALLOWANCE[plus ? "plus" : "free"];
+  if (!hasPlus()) {
+    const scans = freeLeft("scan", usage ?? null);
+    const creates = freeLeft("create", usage ?? null);
+    return (
+      <section>
+        <h3>Free AI this month</h3>
+        {usage === undefined ? (
+          <p className="small">Checking…</p>
+        ) : (
+          <ul className="free-counts small">
+            <li>
+              <strong>{scans}</strong> of {FREE_LIMITS.scan} recipe adds left <span className="muted">(photo, website or text)</span>
+            </li>
+            <li>
+              <strong>{creates}</strong> of {FREE_LIMITS.create} created recipes left
+            </li>
+          </ul>
+        )}
+        <p className="muted small">
+          Resets on the 1st. <a href={href({ name: "plus" })}>Plus</a> adds about 50 recipe adds and 20+ created recipes a month, plus
+          nutrition, receipts and more.
+        </p>
+      </section>
+    );
+  }
+
+  const limit = usage?.limit ?? allowanceFor();
   const spent = usage?.spent ?? 0;
   const pct = Math.min(100, Math.round((spent / limit) * 100));
   // Typical card scan: ~3,500 tokens in, ~4,000 out.
@@ -29,9 +54,7 @@ export default function AiAllowance() {
       <p className="small">
         {usage === undefined ? "Checking…" : `${pct}% used · about ${scansLeft} recipe card ${scansLeft === 1 ? "scan" : "scans"} left (${getModel().label})`}
       </p>
-      <p className="muted small">
-        Resets on the 1st. {plus ? "Plus includes about 10× the free amount." : <>Free includes a small amount to try it. <a href={href({ name: "plus" })}>Plus</a> has about 10× more.</>}
-      </p>
+      <p className="muted small">Resets on the 1st. Shared by scans, created recipes, nutrition, receipts and the other AI features.</p>
     </section>
   );
 }

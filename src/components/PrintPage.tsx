@@ -5,6 +5,7 @@ import { getRecipe } from "../lib/db";
 import { loadProgress } from "../lib/progress";
 import { ingredientText, scaleAmount, stepAmount } from "../lib/quantity";
 import { href } from "../lib/route";
+import { feature } from "../lib/features";
 import { applySwaps } from "../lib/swaps";
 import { convertRecipe, getUnits } from "../lib/units";
 import type { Ingredient, SavedRecipe } from "../lib/schema";
@@ -110,6 +111,19 @@ export default function PrintPage({ id }: { id: string }) {
     const last = groups[groups.length - 1];
     if (last && last.section === ing.section) last.items.push(ing);
     else groups.push({ section: ing.section, items: [ing] });
+  }
+
+  if (!feature("print")) {
+    return (
+      <>
+        <Header title="Print" back={href({ name: "recipe", id })} />
+        <main className="page">
+          <div className="callout">
+            <strong>Printing and saving as PDF are part of Plus.</strong> <a href={href({ name: "plus" })}>See Plus</a>
+          </div>
+        </main>
+      </>
+    );
   }
 
   return (

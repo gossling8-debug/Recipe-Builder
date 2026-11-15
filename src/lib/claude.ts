@@ -32,13 +32,25 @@ export class ScanError extends Error {}
  * Anthropic. Otherwise they go through the app's AI relay, signed with your
  * account, which uses the app's key within your monthly allowance.
  */
-export async function makeClient(apiKey: string): Promise<Anthropic> {
+/**
+ * kind tells the app's AI server what the request is for ("scan", "create",
+ * "nutrition"…), so it can count free accounts' recipe adds and created
+ * recipes. It isn't sent with your own key (that goes straight to Anthropic).
+ */
+export async function makeClient(apiKey: string, kind = "other"): Promise<Anthropic> {
   // The SDK refuses browser use unless told this is intentional.
   if (apiKey) return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
   const { user } = await import("./cloud");
   const u = await user();
   if (!u) throw new ScanError("Sign in to use AI features.");
-  return new Anthropic({ apiKey: null, authToken: await u.getIdToken(), baseURL: AI_URL, dangerouslyAllowBrowser: true, maxRetries: 1 });
+  return new Anthropic({
+    apiKey: null,
+    authToken: await u.getIdToken(),
+    baseURL: AI_URL,
+    dangerouslyAllowBrowser: true,
+    maxRetries: 1,
+    defaultHeaders: { "x-cardamix-kind": kind },
+  });
 }
 
 export type RecipeSource =
@@ -60,7 +72,7 @@ export function requestOptions(m: ModelOption) {
 }
 
 export async function importRecipe(apiKey: string, source: RecipeSource): Promise<ImportResult> {
-  const client = await makeClient(apiKey);
+  const client = await makeClient(apiKey, "scan");
   const m = getModel();
 
   let content: Anthropic.Beta.BetaContentBlockParam[];
