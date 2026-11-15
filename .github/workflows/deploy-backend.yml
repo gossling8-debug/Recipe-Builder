@@ -57,11 +57,16 @@ jobs:
         # deploy. Each function still checks the person's sign-in itself.
         run: |
           gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS" --quiet
-          for s in ai refreshplan checkout billingportal closemyaccount; do
+          for s in ai refreshplan checkout billingportal closemyaccount deletemydata mixvote ownerstats ownerclearerrors; do
             gcloud run services add-iam-policy-binding "$s" --region us-central1 --project "$PROJECT" \
               --member=allUsers --role=roles/run.invoker --quiet --format=none
             echo "$s: callable by the app"
           done
+      - name: Tidy older data (only changes what still needs it; safe to run again)
+        working-directory: functions
+        env:
+          GCLOUD_PROJECT: ${{ env.PROJECT }}
+        run: node scripts/migrate.js
       - name: Remove old secret versions (keeps Secret Manager free)
         run: npx --yes $FIREBASE_TOOLS functions:secrets:prune --project "$PROJECT" --non-interactive --force
       - if: always()

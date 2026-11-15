@@ -13,10 +13,14 @@ import { sameLabels } from "./family";
  * one is kept in mixOwners/{id}, readable only by that person. So a recipe
  * published anonymously can't be traced back, or linked to the cook's others.
  *
+ * Ratings and reports are private too: they go through the server, which keeps
+ * each person's in mixVotes (readable only by them and admins) and puts just
+ * the totals on the recipe.
+ *
  * Firestore (see firestore.rules):
- *   mix/{id}                 { recipe, sourceUrl, byName, anonymous, at, updatedAt, ratings{uid: 1–5}, reporters{uid: true} }
+ *   mix/{id}                 { recipe, sourceUrl, byName, anonymous, at, updatedAt, ratingSum, ratingCount, reportCount }
  *   mixOwners/{id}           { uid, recipeId }   (only its owner can read it)
- *   mix/{id}/reports/{uid}   { reason, at }   (read by admins only)
+ *   mixVotes/{id}_{uid}      { mixId, uid, stars, reportedAt, reason, at }   (written by the server; only that person and admins read it)
  *   admins/{uid}             (created by hand in the Firebase console; can take any recipe down)
  */
 export interface MixRecipe {
@@ -24,14 +28,14 @@ export interface MixRecipe {
   recipe: ScannedRecipe;
   /** Set when the recipe came from a web page: the Mix links there instead of reposting it. */
   sourceUrl: string | null;
-  /** Only on recipes published before ids were made anonymous. */
-  by?: string;
   byName: string;
   anonymous?: boolean;
   at: number;
   updatedAt: number;
-  ratings: Record<string, number>;
-  reporters: Record<string, boolean>;
+  /** Totals only: who rated or reported isn't public. */
+  ratingSum: number;
+  ratingCount: number;
+  reportCount: number;
 }
 
 /** Hidden from the list once this many different people report it (an admin can take it down for good). */
@@ -121,7 +125,7 @@ export async function publishToMix(
   // New (or moving an older one, which had my account id on it, to a random id).
   const id = randomId();
   const batch = f.writeBatch(db);
-  batch.set(f.doc(db, "mix", id), { ...content, at: now, ratings: {}, reporters: {} });
+  batch.set(f.doc(db, "mix", id), { ...content, at: now, ratingSum: 0, ratingCount: 0, reportCount: 0 });
   batch.set(f.doc(db, "mixOwners", id), { uid: u.uid, recipeId: source.id });
   await batch.commit();
   if (mine?.legacy) await f.deleteDoc(f.doc(db, "mix", mine.id)).catch(() => {});
@@ -160,8 +164,17 @@ export async function publishedInfo(recipeId: string): Promise<{ id: string; at:
 }
 
 const toMix = (d: { id: string; data: () => unknown }): MixRecipe => {
-  const x = d.data() as Omit<MixRecipe, "id">;
-  return { ...x, id: d.id, ratings: x.ratings ?? {}, reporters: x.reporters ?? {} };
+  const x = d.data() as Partial<MixRecipe> & { ratings?: Record<string, number>; reporters?: Record<string, boolean> };
+  // Recipes not yet moved to totals (the server deploy moves them) still count.
+  const old = Object.values(x.ratings ?? {});
+  const { ratings: _r, reporters: _p, ...rest } = x;
+  return {
+    ...(rest as Omit<MixRecipe, "id" | "ratingSum" | "ratingCount" | "reportCount">),
+    id: d.id,
+    ratingSum: x.ratingSum ?? old.reduce((a, b) => a + b, 0),
+    ratingCount: x.ratingCount ?? old.length,
+    reportCount: x.reportCount ?? Object.keys(x.reporters ?? {}).length,
+  };
 };
 
 /** The newest published recipes (newest first). */
@@ -179,18 +192,33 @@ export async function getMix(id: string): Promise<MixRecipe | null> {
   return d.exists() ? toMix(d) : null;
 }
 
-/** Sets (1–5) or clears (null) my rating. You can't rate your own recipe. */
-export async function rateMix(id: string, stars: number | null): Promise<void> {
-  const u = await me();
-  const { db, f } = await fb();
-  await f.updateDoc(f.doc(db, "mix", id), { [`ratings.${u.uid}`]: stars === null ? f.deleteField() : Math.round(stars) });
+export interface MyVote {
+  stars: number | null;
+  reported: boolean;
+}
+async function vote(data: { id: string; stars?: number | null; report?: string }): Promise<MyVote> {
+  await me();
+  const { callable } = await import("./subscription");
+  try {
+    return await callable<MyVote>("mixVote", data);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(/internal|network|unavailable|deadline/i.test(msg) ? "Couldn't reach Cardamix. Check your connection and try again." : msg);
+  }
 }
 
-export async function reportMix(id: string, reason: string): Promise<void> {
+/** Sets (1–5) or clears (null) my rating. You can't rate your own recipe; your email needs to be confirmed. */
+export const rateMix = (id: string, stars: number | null) => vote({ id, stars: stars === null ? null : Math.round(stars) });
+
+export const reportMix = (id: string, reason: string) => vote({ id, report: reason.slice(0, 200) });
+
+/** My rating of a Mix recipe, and whether I reported it. */
+export async function myVote(id: string): Promise<MyVote> {
   const u = await me();
   const { db, f } = await fb();
-  await f.setDoc(f.doc(db, "mix", id, "reports", u.uid), { reason: reason.slice(0, 200), at: Date.now() });
-  await f.updateDoc(f.doc(db, "mix", id), { [`reporters.${u.uid}`]: true });
+  const d = await f.getDoc(f.doc(db, "mixVotes", `${id}_${u.uid}`)).catch(() => null);
+  const v = d?.exists() ? (d.data() as { stars?: number | null; reportedAt?: number | null }) : null;
+  return { stars: v?.stars ?? null, reported: !!v?.reportedAt };
 }
 
 /** Whether I can take down any recipe (an admins/{uid} document exists). */
@@ -203,19 +231,6 @@ export async function amAdmin(): Promise<boolean> {
 }
 
 export function mixRating(m: MixRecipe): { average: number; count: number } | null {
-  const v = Object.values(m.ratings);
-  return v.length ? { average: v.reduce((a, b) => a + b, 0) / v.length, count: v.length } : null;
+  return m.ratingCount > 0 ? { average: m.ratingSum / m.ratingCount, count: m.ratingCount } : null;
 }
-export const reportCount = (m: MixRecipe) => Object.keys(m.reporters).length;
-
-/** Account deletion: my published recipes (and the private records of which are mine). */
-export async function deleteMyMix(uid: string): Promise<void> {
-  const { db, f } = await fb();
-  const owned = await f.getDocs(f.query(f.collection(db, "mixOwners"), f.where("uid", "==", uid)));
-  for (const d of owned.docs) {
-    await f.deleteDoc(f.doc(db, "mix", d.id)).catch(() => {});
-    await f.deleteDoc(d.ref);
-  }
-  const old = await f.getDocs(f.query(f.collection(db, "mix"), f.where("by", "==", uid)));
-  for (const d of old.docs) await f.deleteDoc(d.ref);
-}
+export const reportCount = (m: MixRecipe) => m.reportCount;

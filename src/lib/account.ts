@@ -1,5 +1,4 @@
 import { fb, pauseSync, user } from "./cloud";
-import { myCookbooks, type Cookbook } from "./family";
 import { forgetSyncedAccount } from "./stateSync";
 import { cloudState, syncNow } from "./cloud";
 import { eraseThisPhone } from "./appLock";
@@ -68,7 +67,7 @@ export async function verifyPassword(password: string): Promise<void> {
 export async function deleteAccount(password: string): Promise<void> {
   const u = await user();
   if (!u || !u.email) throw new Error("You're not signed in.");
-  const { db, a, f } = await fb();
+  const { a } = await fb();
   try {
     await a.reauthenticateWithCredential(u, a.EmailAuthProvider.credential(u.email, password));
   } catch (e) {
@@ -82,47 +81,10 @@ export async function deleteAccount(password: string): Promise<void> {
 
   pauseSync(true);
   try {
-    // Stop any subscription first — if that fails, nothing is deleted.
-    const { closeMyAccount } = await import("./subscription");
-    await closeMyAccount();
-
-    // Recipes published to The Mix
-    const { deleteMyMix } = await import("./mix");
-    await deleteMyMix(u.uid);
-
-    // Family cookbooks
-    const books: Cookbook[] = await myCookbooks();
-    for (const book of books) {
-      const recipes = f.collection(db, "cookbooks", book.id, "recipes");
-      const memories = f.collection(db, "cookbooks", book.id, "memories");
-      const rest = book.members.filter((m) => m !== u.uid);
-      if (rest.length === 0) {
-        for (const sub of [recipes, memories, f.collection(db, "cookbooks", book.id, "memoryPhotos"), f.collection(db, "cookbooks", book.id, "meta"), f.collection(db, "cookbooks", book.id, "ratings")])
-          for (const d of (await f.getDocs(sub)).docs) await f.deleteDoc(d.ref);
-        await f.deleteDoc(f.doc(db, "cookbooks", book.id));
-      } else {
-        for (const d of (await f.getDocs(f.query(recipes, f.where("sharedBy", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
-        for (const d of (await f.getDocs(f.query(memories, f.where("by", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
-        for (const d of (await f.getDocs(f.query(f.collection(db, "cookbooks", book.id, "memoryPhotos"), f.where("by", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
-        for (const d of (await f.getDocs(f.query(f.collection(db, "cookbooks", book.id, "ratings"), f.where("by", "==", u.uid)))).docs) await f.deleteDoc(d.ref);
-        // Others keep the cookbook; if this person owned it, the next member takes over.
-        await f.updateDoc(f.doc(db, "cookbooks", book.id), {
-          members: rest,
-          [`names.${u.uid}`]: f.deleteField(),
-          ...(book.owner === u.uid ? { owner: rest[0] } : {}),
-        });
-      }
-    }
-
-    // Everything under users/{uid}
-    for (const name of ["recipes", "photos", "state"]) {
-      const docs = (await f.getDocs(f.collection(db, "users", u.uid, name))).docs;
-      for (let i = 0; i < docs.length; i += 400) {
-        const batch = f.writeBatch(db);
-        docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
-        await batch.commit();
-      }
-    }
+    // The server stops any subscription (if that fails, nothing is deleted), then removes
+    // everything the account left: recipes, cookbook additions, Mix recipes, ratings and reports.
+    const { callable } = await import("./subscription");
+    await callable("deleteMyData");
 
     await a.deleteUser(u);
     forgetSyncedAccount();
