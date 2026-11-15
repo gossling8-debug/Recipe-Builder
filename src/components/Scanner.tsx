@@ -2,6 +2,7 @@ import { getPeople } from "../lib/autoPlan";
 import { hasPlus } from "../lib/features";
 import { FREE_LIMITS, freeLeft, loadAiUsage, type AiUsage } from "../lib/subscription";
 import { ownKey } from "../lib/settings";
+import VerifyEmail from "./VerifyEmail";
 import { ALLERGEN_GROUPS, isActive, loadAvoid } from "../lib/avoid";
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
@@ -20,7 +21,7 @@ import type { RecipeSource } from "../lib/claude";
 import type { SavedRecipe } from "../lib/schema";
 import { bookRecipes, getCookbook, shareToCookbook, type Cookbook } from "../lib/family";
 import { duplicatesOf } from "../lib/duplicates";
-import { user } from "../lib/cloud";
+import { cloudState, subscribeCloud, user } from "../lib/cloud";
 import { AddToBooksPrompt, DuplicatePrompt, SaveToMinePrompt, type DuplicateMatch } from "./AfterAdd";
 
 const MAX_PHOTOS = 4;
@@ -102,6 +103,10 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
   const kindNow = mode === "create" ? "create" : "scan";
   const left = counted && usage !== undefined ? freeLeft(kindNow, usage) : null;
   const outOfFree = left === 0;
+  // Free plan: AI needs a confirmed email address.
+  const [cloud, setCloud] = useState(cloudState());
+  useEffect(() => subscribeCloud(setCloud), []);
+  const needsVerify = counted && cloud.emailVerified === false;
   const [busy, setBusy] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState("");
@@ -495,7 +500,8 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
               )}
             </section>
             {error && <div className="callout error">{error}</div>}
-            {left !== null &&
+            {needsVerify && <VerifyEmail />}
+            {!needsVerify && left !== null &&
               (outOfFree ? (
                 <div className="callout small free-out">
                   <strong>
@@ -542,7 +548,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
           </div>
         </div>
       )}
-      {!busy && ready && !outOfFree && (
+      {!busy && ready && !outOfFree && !needsVerify && (
         <div className="fab-bar">
           <button className="btn primary big" onClick={read}>
             {mode === "create" ? "Create recipe" : "Read recipe"}
