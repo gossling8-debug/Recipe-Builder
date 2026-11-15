@@ -1,7 +1,7 @@
 import Header from "./Header";
 import { href } from "../lib/route";
 
-export const PRIVACY_UPDATED = "November 12, 2026";
+export const PRIVACY_UPDATED = "November 15, 2026";
 const CONTACT = "https://github.com/gossling8-debug/Recipe-Builder/issues";
 
 /** Plain-language privacy policy. Keep it in step with what the app actually does. */
@@ -28,9 +28,11 @@ export default function PrivacyPage() {
 
         <h3>When you use AI features</h3>
         <p>
-          Reading a recipe card, importing a web page or pasted text, nutrition estimates, substitutes, receipt import and “Cook with what
-          I have” send what's needed for that task to Anthropic's Claude service. That can include photos, screenshots or video frames you
-          choose, recipe text, a web address, pantry items and foods you avoid. It passes through Cardamix's server, which checks that
+          Reading a recipe card, importing a web page or pasted text, nutrition estimates, substitutes, receipt import, “Cook with what
+          I have”, “Create a recipe” and typing out a cookbook memory page send what's needed for that task to Anthropic's Claude service.
+          That can include photos, screenshots or video frames you choose, recipe text, a web address, what you ask to have created, pantry
+          items, how many people you cook for, foods you avoid, and — for the two features that create recipes — the names of your saved
+          recipes, so it doesn't suggest one you already have. It passes through Cardamix's server, which checks that
           you're signed in and records how much AI you've used this month (amounts only, not what you sent); the content isn't stored
           there. If you add your own Anthropic API key, requests go straight from your device to Anthropic instead. Anthropic handles
           this under{" "}
