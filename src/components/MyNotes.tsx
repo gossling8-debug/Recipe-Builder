@@ -6,6 +6,7 @@ import { compressPhoto } from "../lib/image";
 import { addLeftover, eatByLabel, useLeftovers } from "../lib/leftovers";
 import { href } from "../lib/route";
 import Icon from "./Icon";
+import DishPhotoButtons, { photoAskSkipped, skipPhotoAsk } from "./DishPhotoButtons";
 import { agoText, clearMade, lastMade, madeDays, madeToday, markMade, removeMadeDay } from "../lib/made";
 import type { SavedRecipe } from "../lib/schema";
 
@@ -30,6 +31,7 @@ export default function MyNotes({
   const [otherServings, setOtherServings] = useState("");
   const [changingServings, setChangingServings] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [askSkipped, setAskSkipped] = useState(() => photoAskSkipped(recipe.id));
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
   // The recipe page lets go of "keep the screen on" while the camera is open.
@@ -139,6 +141,36 @@ export default function MyNotes({
           </div>
         );
       })()}
+      {today && !recipe.dishPhoto && !askSkipped && (
+        // Just made it: ask for a photo of how it turned out (and a rating, if it has none).
+        <div className="plan-card turned-out">
+          <p className="small">
+            <strong>How did it turn out?</strong> Add a photo: it becomes this recipe's picture in your list.
+          </p>
+          {!hideRating && !recipe.rating && (
+            <div className="rating-row" role="group" aria-label="Rate it">
+              <span className="small muted">Rate it</span>
+              <span className="stars">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button key={n} className="star-pick" aria-label={`${n} ${n === 1 ? "star" : "stars"}`} onClick={() => onSaved({ ...recipe, rating: n })}>
+                    <Icon name="star" size={24} />
+                  </button>
+                ))}
+              </span>
+            </div>
+          )}
+          <DishPhotoButtons primary onPhoto={(p) => onSaved({ ...recipe, dishPhoto: p })} />
+          <button
+            className="link-btn small"
+            onClick={() => {
+              skipPhotoAsk(recipe.id);
+              setAskSkipped(true);
+            }}
+          >
+            Not now
+          </button>
+        </div>
+      )}
       {!changingServings && !(today && askServings && recipe.myServings === undefined) && (
         // Always reachable, not just right after making it.
         <p className="small made-line">
@@ -247,14 +279,7 @@ export default function MyNotes({
             </button>
           </span>
         ) : (
-          <div className="button-row dish-photo-btns">
-            <button className="btn" onClick={() => openPicker(cameraInput.current)}>
-              <Icon name="camera" size={18} /> Take a photo of your dish
-            </button>
-            <button className="btn" onClick={() => openPicker(libraryInput.current)}>
-              <Icon name="image" size={18} /> Choose from photos
-            </button>
-          </div>
+          <DishPhotoButtons onPhoto={(p) => onSaved({ ...recipe, dishPhoto: p })} />
         )}
         {photoError && <div className="callout error small">{photoError}</div>}
       </div>

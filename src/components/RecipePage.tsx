@@ -447,6 +447,16 @@ export default function RecipePage({ id }: { id: string }) {
           timers={timers}
           plannedMinutes={getPlan(recipe.id)?.minutes}
           onMade={feature("pantry") ? madeIt : undefined}
+          onPhoto={
+            feature("notes") && !recipe.dishPhoto
+              ? async (dishPhoto) => {
+                  const latest = (await getRecipe(recipe.id)) ?? recipe;
+                  const updated = { ...latest, dishPhoto };
+                  setRecipe(updated);
+                  await saveRecipe(updated);
+                }
+              : undefined
+          }
           onLog={async (minutes) => {
             const scale = loadProgress(recipe.id).scale;
             const updated = { ...recipe, cookLog: [...(recipe.cookLog ?? []), { at: Date.now(), minutes, scale }] };
