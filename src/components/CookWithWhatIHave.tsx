@@ -11,7 +11,7 @@ import Icon from "./Icon";
 
 const IDEAS = ["Quick dinner", "Soup", "Something healthy", "Breakfast", "Use the oven"];
 
-/** Pantry: Claude invents a new recipe from what's on hand, using up what's about to go off. */
+/** Pantry: Claude invents a new recipe from what's on hand, using up what's about to go bad. */
 export default function CookWithWhatIHave() {
   const [request, setRequest] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,7 +56,7 @@ export default function CookWithWhatIHave() {
     <section className="cook-with">
       <h3 className="list-heading">Cook with what I have</h3>
       <p className="muted small">
-        Claude creates a brand-new recipe from your pantry, using up what's about to go off first and skipping anything you avoid.
+        Claude creates a brand-new recipe from your pantry, using up what's about to go bad first and skipping anything you avoid.
       </p>
       {!aiReady() ? (
         <p className="small">

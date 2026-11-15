@@ -70,7 +70,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     target: '.topbar a[href="#/pantry"]',
     title: "Pantry",
-    text: "What you have at home. Can make now shows the recipes you have everything for, and you're reminded to use things before they go off.",
+    text: "What you have at home. Can make now shows the recipes you have everything for, and you're reminded to use things before they go bad.",
   },
   {
     target: '.topbar a[href="#/shopping"]',
