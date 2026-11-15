@@ -4,6 +4,7 @@ import { costOf, getModel } from "../lib/models";
 import { href } from "../lib/route";
 import { ownKey } from "../lib/settings";
 import { allowanceFor, FREE_LIMITS, freeLeft, loadAiUsage, type AiUsage } from "../lib/subscription";
+import VerifyEmail from "./VerifyEmail";
 
 /** Settings: this month's AI — counts on the free plan, a meter with Plus. */
 export default function AiAllowance() {
@@ -19,6 +20,7 @@ export default function AiAllowance() {
     return (
       <section>
         <h3>Free AI this month</h3>
+        <VerifyEmail compact />
         {usage === undefined ? (
           <p className="small">Checking…</p>
         ) : (

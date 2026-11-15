@@ -29,6 +29,8 @@ export interface CloudState {
   message?: string;
   /** False until Firebase has said whether someone is signed in on this device. */
   authKnown?: boolean;
+  /** Whether the account's email address has been confirmed (the free plan's AI needs it). */
+  emailVerified?: boolean;
 }
 
 let state: CloudState = { status: firebaseConfig ? "signed-out" : "off" };
@@ -106,7 +108,7 @@ export async function startCloud(): Promise<void> {
   const { auth, a } = loaded;
   a.onAuthStateChanged(auth, async (u) => {
     if (u) {
-      set({ status: "syncing", email: u.email ?? undefined, uid: u.uid, message: undefined, authKnown: true });
+      set({ status: "syncing", email: u.email ?? undefined, uid: u.uid, message: undefined, authKnown: true, emailVerified: u.emailVerified });
       const previous = lastAccount();
       if (previous && previous !== u.uid) {
         // This phone holds another account's data: show this account's instead.
@@ -196,10 +198,40 @@ function friendly(err: unknown): string {
 export async function createAccount(email: string, password: string): Promise<void> {
   const { auth, a } = await fb();
   try {
-    await a.createUserWithEmailAndPassword(auth, email.trim(), password);
+    const cred = await a.createUserWithEmailAndPassword(auth, email.trim(), password);
+    // Confirm the address (the free plan's AI needs it). Not fatal if it fails: Settings can resend.
+    await a.sendEmailVerification(cred.user, { url: verifyReturnUrl() }).catch(() => {});
   } catch (e) {
     throw new Error(friendly(e));
   }
+}
+
+/** Where the verification link brings people back to. */
+const verifyReturnUrl = () => `${location.origin}${location.pathname}`;
+
+/** Sends (again) the email with the link that confirms the address. */
+export async function sendVerificationEmail(): Promise<void> {
+  const { auth, a } = await fb();
+  if (!auth.currentUser) throw new Error("Sign in first.");
+  try {
+    await a.sendEmailVerification(auth.currentUser, { url: verifyReturnUrl() });
+  } catch (e) {
+    throw new Error(friendly(e));
+  }
+}
+
+/**
+ * After tapping the link in the email: checks with Firebase whether the address
+ * is confirmed now, and refreshes the sign-in so the app's AI server sees it.
+ */
+export async function checkEmailVerified(): Promise<boolean> {
+  const { auth } = await fb();
+  const u = auth.currentUser;
+  if (!u) return false;
+  await u.reload();
+  if (u.emailVerified) await u.getIdToken(true);
+  set({ emailVerified: u.emailVerified });
+  return u.emailVerified;
 }
 
 export async function signIn(email: string, password: string): Promise<void> {

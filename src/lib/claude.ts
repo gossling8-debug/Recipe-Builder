@@ -128,7 +128,7 @@ export async function importRecipe(apiKey: string, source: RecipeSource): Promis
 export function describeApiError(err: unknown): string {
   // Messages from the app's AI relay (allowance used up, sign in again…) are written for people already.
   const relay = !getApiKey() && err instanceof Anthropic.APIError ? (err.error as { error?: { message?: string } } | undefined)?.error?.message : undefined;
-  if (relay && err instanceof Anthropic.APIError && [401, 413, 429, 503].includes(err.status ?? 0)) return relay;
+  if (relay && err instanceof Anthropic.APIError && [401, 403, 413, 429, 503].includes(err.status ?? 0)) return relay;
   if (!getApiKey() && err instanceof Anthropic.APIError && (err.status ?? 0) >= 500) return "AI is having trouble right now. Try again in a minute.";
   // Can't reach the app's AI server: if the phone is online, it's the server, not their connection.
   if (!getApiKey() && err instanceof Anthropic.APIConnectionError)

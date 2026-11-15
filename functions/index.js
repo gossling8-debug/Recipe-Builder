@@ -104,6 +104,9 @@ export const ai = onRequest({ ...opts, secrets: [ANTHROPIC_API_KEY, STRIPE_SECRE
   // What the app says this request is for (scan, create, nutrition…), and whether it's an automatic retry.
   const kind = String(req.get("x-cardamix-kind") || "").toLowerCase().slice(0, 20) || "other";
   const retry = req.get("x-cardamix-retry") === "1";
+  // Free AI needs a confirmed email address, so throwaway accounts can't farm it.
+  if (plan === "free" && !user.email_verified)
+    return fail(res, 403, "email_not_verified", "Confirm your email address to use AI on the free plan: tap the link we emailed you, or send a new one in Settings.");
   const usageRef = db.doc(`aiUsage/${user.uid}`);
   const usageNow = (await usageRef.get()).data();
   const blocked = (plan === "free" ? freeCheck(kind, req.body.model, usageNow, Date.now(), retry) : null) ?? allowanceCheck(plan, usageNow);
