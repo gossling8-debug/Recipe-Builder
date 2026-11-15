@@ -1141,3 +1141,7 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .owner-error-msg { overflow-wrap: anywhere; }
 .owner-error-detail { padding: 0 0 10px 42px; display: flex; flex-direction: column; gap: 2px; }
 .owner-error-detail pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin: 6px 0 0; }
+.turned-out .dish-photo-btns { margin: 8px 0 4px; }
+.cook-photo { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 12px; }
+.cook-photo p:has(> svg) { display: flex; align-items: flex-start; gap: 6px; }
+.cook-photo p > svg { flex: none; margin-top: 3px; }

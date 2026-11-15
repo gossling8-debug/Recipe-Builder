@@ -1,6 +1,7 @@
 import { feature } from "../lib/features";
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
+import DishPhotoButtons from "./DishPhotoButtons";
 import { IngredientMention } from "./RecipeView";
 import { TimerBar, type useTimers } from "./Timers";
 import { scaleNote, stepAmount } from "../lib/quantity";
@@ -24,6 +25,7 @@ export default function CookMode({
   onLog,
   plannedMinutes,
   onMade,
+  onPhoto,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
@@ -35,6 +37,8 @@ export default function CookMode({
   plannedMinutes?: number;
   /** Called once when the cook taps Finish (updates the pantry). */
   onMade?: () => void;
+  /** On the "All done" screen: save a photo of the dish (only offered when the recipe has none). */
+  onPhoto?: (dataUrl: string) => Promise<void>;
 }) {
   const [units] = useUnits();
   const recipe = convertRecipe(original, units);
@@ -94,6 +98,9 @@ export default function CookMode({
     else if (cmd === "back") go(at - 1);
   }, reader.current);
   const [finishing, setFinishing] = useState(false);
+  const [photoAdded, setPhotoAdded] = useState(false);
+  // Decided when cooking starts: once a photo is saved, the recipe has one and onPhoto goes away.
+  const [offerPhoto] = useState(() => !!onPhoto);
   const [minutes, setMinutes] = useState(0);
   const next = () => {
     update((p) => ({ ...p, done: p.done.includes(at) ? p.done : [...p.done, at] }));
@@ -150,6 +157,26 @@ export default function CookMode({
             </p>
           )}
           <p className="muted small">Next time you plan this recipe, your real times are used.</p>
+          {offerPhoto && (
+            <div className="cook-photo">
+              {photoAdded ? (
+                <p className="small">
+                  <Icon name="check" size={16} /> Photo added. It's now this recipe's picture in your list.
+                </p>
+              ) : (
+                <>
+                  <h2>Snap a photo?</h2>
+                  <p className="muted small">It becomes this recipe's picture in your list.</p>
+                  <DishPhotoButtons
+                    onPhoto={async (p) => {
+                      await onPhoto?.(p);
+                      setPhotoAdded(true);
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          )}
         </main>
         <footer className="cook-nav">
           <button
