@@ -28,6 +28,7 @@ import { addToShopping, removeFromShopping } from "../lib/shopping";
 import Welcome from "./Welcome";
 import { welcomeDone } from "../lib/welcome";
 import Icon from "./Icon";
+import CookThisWeek from "./CookThisWeek";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 import { href } from "../lib/route";
 import { aiReady } from "../lib/settings";
@@ -396,12 +397,16 @@ export default function Library() {
             </label>
           </div>
         )}
+        {activeFilter === "all" && !q && feature("notes") && <CookThisWeek recipes={all} />}
         {favorites.length > 0 && (
           <>
             <h2 className="list-heading">Favorites</h2>
             <ul className="recipe-list">{favorites.map(row)}</ul>
             {rest.length > 0 && <h2 className="list-heading">All recipes</h2>}
           </>
+        )}
+        {rest.length > 0 && !pinFavorites && activeFilter === "all" && !q && feature("notes") && all.length > 3 && (
+          <h2 className="list-heading list-heading-all">All recipes</h2>
         )}
         {rest.length > 0 && <ul className="recipe-list">{rest.map(row)}</ul>}
         {all.length > 0 && shown.length === 0 && <p className="muted">No matches.</p>}
