@@ -43,7 +43,8 @@ service cloud.firestore {
         && request.resource.data.app is string && request.resource.data.app.size() <= 40
         && request.resource.data.device is string && request.resource.data.device.size() <= 200
         && request.resource.data.at is int
-        && request.resource.data.expireAt is timestamp;
+        && request.resource.data.expireAt is timestamp
+        && request.resource.data.expireAt <= request.time + duration.value(31, 'd');
     }
     function mixOwnerDoc(id) { return /databases/$(database)/documents/mixOwners/$(id); }
     function ownsMix(id) {

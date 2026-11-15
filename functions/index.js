@@ -21,7 +21,11 @@ import { getFirestore } from "firebase-admin/firestore";
 import Stripe from "stripe";
 import * as functionsV1 from "firebase-functions/v1";
 import { summarize } from "./lib/stats.js";
-import { ALLOWANCE, MAX_BODY_BYTES, addUsage, allowanceCheck, allowanceKey, allowedOrigin, checkRequest, costOf, freeCheck, isBeta, isComp, planFromSubscriptions } from "./lib/guard.js";
+import { randomUUID } from "node:crypto";
+import {
+  ALLOWANCE, MAX_BODY_BYTES, allowanceCheck, allowanceKey, allowedBeta, allowedOrigin, checkRequest, costOf, estimateCost, freeCheck,
+  isBeta, isComp, planFromSubscriptions, plusEmailOk, reserveUsage, retryAllowed, settleUsage,
+} from "./lib/guard.js";
 
 initializeApp();
 const db = getFirestore();
@@ -45,32 +49,43 @@ const stripe = () => new Stripe(STRIPE_SECRET_KEY.value());
 const hasStripe = () => !!STRIPE_SECRET_KEY.value()?.startsWith("sk_");
 
 // ---------- plan ----------
-async function computePlan(uid, email) {
-  if (isComp(email, PLUS_EMAILS.value())) return { plan: "plus", source: "comp", status: "comp", renews: null, cancelsAt: null };
+async function computePlan(uid, email, verified) {
+  // Gifted and testing-period Plus need a confirmed email (accounts made before VERIFY_PLUS_FROM keep it),
+  // so throwaway accounts can't each get Plus's AI.
+  let emailOk = !!verified;
+  if (!emailOk) {
+    const created = Date.parse((await getAuth().getUser(uid)).metadata.creationTime) || 0;
+    emailOk = plusEmailOk(false, created);
+  }
+  if (emailOk && isComp(email, PLUS_EMAILS.value())) return { plan: "plus", source: "comp", status: "comp", renews: null, cancelsAt: null };
   // Testing period ("*"): everyone gets Plus — unless they're already paying, which Stripe shows below.
   const beta = isBeta(PLUS_EMAILS.value());
   const cust = (await db.doc(`customers/${uid}`).get()).data();
-  const free = beta ? { plan: "plus", source: "beta", status: "beta", renews: null, cancelsAt: null } : { plan: "free", source: "none", status: "none", renews: null, cancelsAt: null };
+  const free =
+    beta && emailOk
+      ? { plan: "plus", source: "beta", status: "beta", renews: null, cancelsAt: null }
+      : { plan: "free", source: "none", status: "none", renews: null, cancelsAt: null, ...(!emailOk && (beta || isComp(email, PLUS_EMAILS.value())) ? { needsVerify: true } : {}) };
   if (!cust?.stripeId || !hasStripe()) return free;
   const subs = await stripe().subscriptions.list({ customer: cust.stripeId, status: "all", limit: 10 });
   const fromStripe = planFromSubscriptions(subs.data);
   return fromStripe.plan === "plus" ? fromStripe : free;
 }
-async function savePlan(uid, email) {
-  const p = { ...(await computePlan(uid, email)), checkedAt: Date.now() };
+async function savePlan(uid, email, verified) {
+  const p = { ...(await computePlan(uid, email, verified)), checkedAt: Date.now() };
   await db.doc(`plans/${uid}`).set(p);
   return p;
 }
 /** The saved plan, re-checked with Stripe if it's more than a day old. */
-async function currentPlan(uid, email) {
+async function currentPlan(uid, email, verified) {
   const saved = (await db.doc(`plans/${uid}`).get()).data();
-  if (saved && Date.now() - (saved.checkedAt ?? 0) < DAY) return saved;
-  return savePlan(uid, email);
+  // Re-check right away once a waiting email is confirmed.
+  if (saved && Date.now() - (saved.checkedAt ?? 0) < DAY && !(saved.needsVerify && verified)) return saved;
+  return savePlan(uid, email, verified);
 }
 
 export const refreshPlan = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY, PLUS_EMAILS] }, async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
-  return savePlan(req.auth.uid, req.auth.token.email);
+  return savePlan(req.auth.uid, req.auth.token.email, req.auth.token.email_verified);
 });
 
 // ---------- AI relay ----------
@@ -101,22 +116,45 @@ export const ai = onRequest({ ...opts, secrets: [ANTHROPIC_API_KEY, STRIPE_SECRE
   const problem = checkRequest(req.body);
   if (problem) return fail(res, 400, "invalid_request_error", problem);
 
-  const planDoc = await currentPlan(user.uid, user.email);
+  const planDoc = await currentPlan(user.uid, user.email, user.email_verified);
   const plan = allowanceKey(planDoc.plan, planDoc.interval);
   // What the app says this request is for (scan, create, nutrition…), and whether it's an automatic retry.
-  const kind = String(req.get("x-cardamix-kind") || "").toLowerCase().slice(0, 20) || "other";
+  const kind = String(req.get("x-cardamix-kind") || "").toLowerCase().replace(/[^a-z]/g, "").slice(0, 20) || "other";
   const retry = req.get("x-cardamix-retry") === "1";
   // Free AI needs a confirmed email address, so throwaway accounts can't farm it.
   if (plan === "free" && !user.email_verified)
     return fail(res, 403, "email_not_verified", "Confirm your email address to use AI on the free plan: tap the link we emailed you, or send a new one in Settings.");
+  // Only the beta features the app uses.
+  const beta = allowedBeta(req.get("anthropic-beta"));
+  if (beta === false) return fail(res, 400, "invalid_request_error", "That isn't allowed.");
+
+  // Check and reserve in one step, so requests sent at once can't all slip under the limits:
+  // the worst-case cost, the count and the per-minute count are taken now and settled after.
   const usageRef = db.doc(`aiUsage/${user.uid}`);
-  const usageNow = (await usageRef.get()).data();
-  const blocked = (plan === "free" ? freeCheck(kind, req.body.model, usageNow, Date.now(), retry) : null) ?? allowanceCheck(plan, usageNow);
+  const id = randomUUID();
+  const limit = ALLOWANCE[plan] ?? ALLOWANCE.free;
+  let counted = null; // the kind counted for this request (null for an allowed retry)
+  const blocked = await db.runTransaction(async (tx) => {
+    const now = Date.now();
+    const usage = (await tx.get(usageRef)).data();
+    const retryOf = retry ? retryAllowed(usage, kind, now) : null;
+    const no = (plan === "free" ? freeCheck(kind, req.body.model, usage, now, !!retryOf) : null) ?? allowanceCheck(plan, usage, now);
+    if (no) return no;
+    counted = retryOf ? null : kind;
+    tx.set(usageRef, { ...reserveUsage(usage, id, estimateCost(req.body), now, counted, retryOf), limit, plan });
+    return null;
+  });
   if (blocked) return fail(res, blocked.status, blocked.type, blocked.message);
+  /** Adds the real cost; a request that failed gets its count back. */
+  const settle = (cost, failed) =>
+    db.runTransaction(async (tx) => {
+      const usage = (await tx.get(usageRef)).data();
+      tx.set(usageRef, { ...settleUsage(usage, id, cost, Date.now(), failed ? counted : null), limit, plan });
+    });
 
   // Pass it on with the app's key. Only Anthropic's own headers go through.
-  const headers = { "content-type": "application/json", "x-api-key": ANTHROPIC_API_KEY.value(), "anthropic-version": req.get("anthropic-version") || "2023-06-01" };
-  if (req.get("anthropic-beta")) headers["anthropic-beta"] = req.get("anthropic-beta");
+  const headers = { "content-type": "application/json", "x-api-key": ANTHROPIC_API_KEY.value(), "anthropic-version": "2023-06-01" };
+  if (beta) headers["anthropic-beta"] = beta;
   let upstream;
   try {
     upstream = await fetch(`${ANTHROPIC_BASE}/v1/messages${req.url.includes("beta=true") ? "?beta=true" : ""}`, {
@@ -125,6 +163,7 @@ export const ai = onRequest({ ...opts, secrets: [ANTHROPIC_API_KEY, STRIPE_SECRE
       body: JSON.stringify(req.body),
     });
   } catch {
+    await settle(0, true).catch(() => {});
     return fail(res, 502, "api_error", "Couldn't reach Claude. Try again in a minute.");
   }
   const text = await upstream.text();
@@ -136,13 +175,8 @@ export const ai = onRequest({ ...opts, secrets: [ANTHROPIC_API_KEY, STRIPE_SECRE
   } catch {
     /* not JSON */
   }
-  if (upstream.ok && parsed?.usage) {
-    const cost = costOf(req.body.model, parsed.usage);
-    await db.runTransaction(async (tx) => {
-      const now = (await tx.get(usageRef)).data();
-      tx.set(usageRef, { ...addUsage(now, cost, Date.now(), retry ? null : kind), limit: ALLOWANCE[plan] ?? ALLOWANCE.free, plan });
-    });
-  }
+  const cost = upstream.ok && parsed?.usage ? costOf(req.body.model, parsed.usage) : 0;
+  await settle(cost, !(upstream.ok && parsed?.usage));
   // Anthropic's own errors about the app's key or credit shouldn't blame the person.
   if (upstream.status === 401 || upstream.status === 403 || (upstream.status === 400 && /credit balance/i.test(text)))
     return fail(res, 503, "api_error", "AI is temporarily unavailable. Please try again later.");
@@ -271,20 +305,21 @@ export const billingPortal = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY] }, a
 });
 
 // ---------- account deleted ----------
-async function closeAccount(uid) {
+async function closeAccount(uid, forgetUsage) {
   const cust = (await db.doc(`customers/${uid}`).get()).data();
   if (cust?.stripeId && hasStripe()) {
     const s = stripe();
     const subs = await s.subscriptions.list({ customer: cust.stripeId, status: "all", limit: 10 });
     for (const sub of subs.data) if (!["canceled", "incomplete_expired"].includes(sub.status)) await s.subscriptions.cancel(sub.id);
   }
-  await Promise.all([`customers/${uid}`, `plans/${uid}`, `aiUsage/${uid}`].map((p) => db.doc(p).delete()));
+  // AI usage is only forgotten once the account is really gone; otherwise calling this would reset the month's counts.
+  await Promise.all([`customers/${uid}`, `plans/${uid}`, ...(forgetUsage ? [`aiUsage/${uid}`] : [])].map((p) => db.doc(p).delete()));
 }
 
 /** Called by the app just before it deletes the account. */
 export const closeMyAccount = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY] }, async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
-  await closeAccount(req.auth.uid);
+  await closeAccount(req.auth.uid, false);
   return { ok: true };
 });
 
@@ -293,4 +328,4 @@ export const closeMyAccount = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY] }, 
 export const accountDeleted = functionsV1
   .runWith({ secrets: ["STRIPE_SECRET_KEY"] })
   .auth.user()
-  .onDelete((user) => closeAccount(user.uid)); // backup, in case the app couldn't call closeMyAccount
+  .onDelete((user) => closeAccount(user.uid, true)); // also a backup, in case the app couldn't call closeMyAccount

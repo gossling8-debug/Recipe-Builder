@@ -229,7 +229,11 @@ export async function checkEmailVerified(): Promise<boolean> {
   const u = auth.currentUser;
   if (!u) return false;
   await u.reload();
-  if (u.emailVerified) await u.getIdToken(true);
+  if (u.emailVerified) {
+    await u.getIdToken(true);
+    // Testing-period or gifted Plus waits for a confirmed email: ask the server again.
+    void import("./subscription").then((m) => m.refreshMyPlan()).catch(() => {});
+  }
   set({ emailVerified: u.emailVerified });
   return u.emailVerified;
 }
