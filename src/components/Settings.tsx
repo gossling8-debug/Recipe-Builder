@@ -13,6 +13,7 @@ import { href } from "../lib/route";
 import { ALLERGEN_GROUPS, loadAvoid, saveAvoid, type AvoidList } from "../lib/avoid";
 import { availableModels, costOf, getModel, MODELS, setModel } from "../lib/models";
 import { allowanceFor } from "../lib/subscription";
+import { amAdmin } from "../lib/mix";
 import AiAllowance from "./AiAllowance";
 import { loadUsage, money } from "../lib/usage";
 import { exportBackup, importBackup } from "../lib/backup";
@@ -26,6 +27,11 @@ export default function Settings() {
     return () => window.removeEventListener("features-changed", on);
   }, []);
   const [signedIn, setSignedIn] = useState(() => !!cloudState().uid);
+  // The owner dashboard link shows only for admins (admins/{uid}).
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    if (signedIn) amAdmin().then(setAdmin, () => {});
+  }, [signedIn]);
   useEffect(() => subscribeCloud((c) => setSignedIn(!!c.uid)), []);
   const [key, setKey] = useState(getApiKey());
   const [saved, setSaved] = useState(false);
@@ -335,6 +341,12 @@ export default function Settings() {
 
         <p className="small settings-footer">
           <a href={href({ name: "privacy" })}>Privacy policy</a> · <a href={href({ name: "terms" })}>Terms of service</a>
+          {admin && (
+            <>
+              {" "}
+              · <a href={href({ name: "owner" })}>Owner dashboard</a>
+            </>
+          )}
         </p>
       </main>
     </>

@@ -16,6 +16,7 @@ export type Route =
   | { name: "privacy" }
   | { name: "terms" }
   | { name: "duplicates" }
+  | { name: "owner" }
   | { name: "plus"; done?: boolean }
   | { name: "print"; id: string }
   | { name: "meal"; day?: string; ids?: string[] }
@@ -42,6 +43,7 @@ export function parseRoute(hash: string): Route {
   if (path === "privacy") return { name: "privacy" };
   if (path === "terms") return { name: "terms" };
   if (path === "duplicates") return { name: "duplicates" };
+  if (path === "owner") return { name: "owner" };
   if (path === "plus" || path === "plus/done") return { name: "plus", done: path === "plus/done" || undefined };
   const mixM = path.match(/^mix(?:\/([^/]+))?$/);
   if (mixM) return mixM[1] ? { name: "mix", id: decodeURIComponent(mixM[1]) } : { name: "mix" };

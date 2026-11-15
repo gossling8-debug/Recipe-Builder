@@ -33,6 +33,7 @@ const ReceiptPage = lazyScreen(() => import("./components/ReceiptPage"));
 const TonightPage = lazyScreen(() => import("./components/TonightPage"));
 const BudgetPage = lazyScreen(() => import("./components/BudgetPage"));
 const PricesPage = lazyScreen(() => import("./components/PricesPage"));
+const OwnerPage = lazyScreen(() => import("./components/OwnerPage"));
 const BookPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.BookPage })));
 const FamilyPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.FamilyPage })));
 const JoinPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.JoinPage })));
@@ -65,6 +66,8 @@ function Screen() {
       return <TermsPage />;
     case "duplicates":
       return <DuplicatesPage />;
+    case "owner":
+      return <OwnerPage />;
     case "plus":
       return <PlusPage key={String(route.done)} done={route.done} />;
     case "prices":
