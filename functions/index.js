@@ -7,20 +7,26 @@
  *  - billingPortal: opens Stripe's page to manage or cancel a subscription.
  *  - closeMyAccount / accountDeleted: cancel a deleted account's subscription and clear its records.
  *  - ownerStats / ownerClearErrors: the owner dashboard (admins only; counts, no names or emails).
+ *  - mixVote:       rates or reports a Mix recipe, privately (only totals are public).
+ *  - deleteMyData / accountDeleted: remove everything an account left, server-side.
+ *  - mixDeleted:    clears the private votes on a Mix recipe once it's taken down.
  *
  * Firestore (written only here; people can read their own):
  *   plans/{uid}     { plan, source ("stripe" | "comp" | "beta" | "none"), status, interval ("month" | "year"), renews, cancelsAt, checkedAt }
  *   aiUsage/{uid}   { month, spent, uses, counts: { scan, create, … }, limit, plan, minute, minuteCount }
  *   customers/{uid} { stripeId }   (not readable by the app)
+ *   mixVotes/{mixId}_{uid} { mixId, uid, stars, reportedAt, reason, at }   (readable by that person and admins)
  */
 import { onRequest, onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import Stripe from "stripe";
 import * as functionsV1 from "firebase-functions/v1";
 import { summarize } from "./lib/stats.js";
+import { deleteUserData, deleteVotesOn } from "./lib/cleanup.js";
+import { nextVote, parseVote, voteDelta } from "./lib/mixVotes.js";
 import { randomUUID } from "node:crypto";
 import {
   ALLOWANCE, MAX_BODY_BYTES, allowanceCheck, allowanceKey, allowedBeta, allowedOrigin, checkRequest, costOf, estimateCost, freeCheck,
@@ -212,7 +218,7 @@ export const ownerStats = onCall({ ...opts, timeoutSeconds: 60 }, async (req) =>
     allUsers(),
     db.collection("plans").select("plan", "source", "interval").get(),
     db.collection("aiUsage").select("month", "spent", "uses", "counts", "plan").get(),
-    db.collection("mix").select("reporters").get(),
+    db.collection("mix").select("reportCount", "reporters").get(),
     db.collection("cookbooks").count().get(),
     db.collection("errors").orderBy("at", "desc").limit(500).get(),
   ]);
@@ -233,6 +239,45 @@ export const ownerClearErrors = onCall({ ...opts, timeoutSeconds: 60 }, async (r
     removed += q.size;
   }
   return { removed };
+});
+
+// ---------- The Mix: private ratings and reports ----------
+export const mixVote = onCall(opts, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  // A confirmed email, so throwaway accounts can't pile up ratings or hide recipes with reports.
+  if (!req.auth.token.email_verified)
+    throw new HttpsError("failed-precondition", "Confirm your email first (tap the link we sent you), then you can rate and report recipes in The Mix.");
+  const id = typeof req.data?.id === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(req.data.id) ? req.data.id : null;
+  let change;
+  try {
+    change = parseVote(req.data);
+  } catch {
+    throw new HttpsError("invalid-argument", "That isn't a rating or a report.");
+  }
+  if (!id) throw new HttpsError("invalid-argument", "Which recipe?");
+  const uid = req.auth.uid;
+  const mixRef = db.doc(`mix/${id}`);
+  const voteRef = db.doc(`mixVotes/${id}_${uid}`);
+  return db.runTransaction(async (t) => {
+    const [m, v, o] = await Promise.all([t.get(mixRef), t.get(voteRef), t.get(db.doc(`mixOwners/${id}`))]);
+    if (!m.exists) throw new HttpsError("not-found", "That recipe isn't in The Mix any more.");
+    if (o.data()?.uid === uid || m.data().by === uid) throw new HttpsError("permission-denied", "You can't rate or report your own recipe.");
+    const before = v.exists ? v.data() : null;
+    const { vote, already } = nextVote(before, change, id, uid, Date.now());
+    if (!already) {
+      const d = voteDelta(before, vote);
+      t.update(mixRef, { ratingSum: FieldValue.increment(d.ratingSum), ratingCount: FieldValue.increment(d.ratingCount), reportCount: FieldValue.increment(d.reportCount) });
+      if (vote) t.set(voteRef, vote);
+      else if (before) t.delete(voteRef);
+    }
+    return { stars: vote?.stars ?? null, reported: !!vote?.reportedAt };
+  });
+});
+
+// A recipe taken out of The Mix (by its cook or an admin): the votes on it go too.
+export const mixDeleted = functionsV1.firestore.document("mix/{id}").onDelete(async (snap, ctx) => {
+  await db.recursiveDelete(snap.ref); // anything left under it (older report notes)
+  await deleteVotesOn(db, ctx.params.id);
 });
 
 // ---------- Stripe ----------
@@ -316,16 +361,34 @@ async function closeAccount(uid, forgetUsage) {
   await Promise.all([`customers/${uid}`, `plans/${uid}`, ...(forgetUsage ? [`aiUsage/${uid}`] : [])].map((p) => db.doc(p).delete()));
 }
 
-/** Called by the app just before it deletes the account. */
+/** Called by older versions of the app just before they delete the account. */
 export const closeMyAccount = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY] }, async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   await closeAccount(req.auth.uid, false);
   return { ok: true };
 });
 
+/**
+ * Called by the app just before it deletes the account (after asking for the
+ * password again): stops any subscription, then removes everything the
+ * account left — its recipes, cookbook additions, Mix recipes and votes.
+ */
+export const deleteMyData = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY], timeoutSeconds: 300 }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  // Only right after the password was entered again, so a stolen sign-in can't wipe an account.
+  if (Date.now() / 1000 - (req.auth.token.auth_time ?? 0) > 10 * 60) throw new HttpsError("unauthenticated", "Enter your password again first.");
+  await closeAccount(req.auth.uid, false);
+  await deleteUserData(db, req.auth.uid);
+  return { ok: true };
+});
+
 // When someone deletes their account, stop their subscription right away and
-// remove what the server kept about them. (Stripe keeps its own payment records.)
+// remove everything they left. (Stripe keeps its own payment records.)
+// Also a backup, in case the app couldn't finish (or the account was deleted another way).
 export const accountDeleted = functionsV1
-  .runWith({ secrets: ["STRIPE_SECRET_KEY"] })
+  .runWith({ secrets: ["STRIPE_SECRET_KEY"], timeoutSeconds: 300 })
   .auth.user()
-  .onDelete((user) => closeAccount(user.uid, true)); // also a backup, in case the app couldn't call closeMyAccount
+  .onDelete(async (user) => {
+    await closeAccount(user.uid, true);
+    await deleteUserData(db, user.uid);
+  });

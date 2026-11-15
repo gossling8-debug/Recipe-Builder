@@ -13,7 +13,7 @@ const PRICE = { month: 4.49, year: 34.99 };
  * @param {{ created: number, lastActive: number, verified: boolean }[]} i.users   from Firebase Auth
  * @param {{ plan?: string, source?: string, interval?: string }[]} i.plans        plans/{uid}
  * @param {{ month?: string, spent?: number, uses?: number, counts?: Record<string, number>, plan?: string }[]} i.usage  aiUsage/{uid}
- * @param {{ reporters?: Record<string, boolean> }[]} i.mix                         mix/{id}
+ * @param {{ reportCount?: number, reporters?: Record<string, boolean> }[]} i.mix                       mix/{id}
  * @param {number} i.cookbooks
  * @param {{ message?: string, screen?: string, app?: string, device?: string, stack?: string, at?: number }[]} i.errors  newest first
  * @param {number} [i.now]
@@ -62,7 +62,7 @@ export function summarize({ users, plans, usage, mix, cookbooks, errors, now = D
     topSpends: spent.slice(0, 5).map(round),
   };
 
-  const reports = mix.map((m) => Object.keys(m.reporters ?? {}).length);
+  const reports = mix.map((m) => m.reportCount ?? Object.keys(m.reporters ?? {}).length);
   const content = {
     mixRecipes: mix.length,
     mixReported: reports.filter((n) => n > 0).length,

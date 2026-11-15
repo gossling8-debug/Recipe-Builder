@@ -25,6 +25,7 @@ import {
   reportMix,
   unpublish,
   myMixIds,
+  myVote,
   ANONYMOUS_NAME,
   type MixRecipe,
 } from "../lib/mix";
@@ -95,7 +96,7 @@ export function MixPage() {
     // Reported by several people: hidden until an admin looks (still shown to its cook and admins).
     .filter((m) => reportCount(m) < HIDE_AFTER_REPORTS || mineIds.has(m.id) || admin)
     .filter((m) => !q || found.get(m.id)?.match)
-    .sort((a, b) => (order === "rating" ? avg(b) - avg(a) || Object.keys(b.ratings).length - Object.keys(a.ratings).length || b.at - a.at : b.at - a.at));
+    .sort((a, b) => (order === "rating" ? avg(b) - avg(a) || b.ratingCount - a.ratingCount || b.at - a.at : b.at - a.at));
 
   return (
     <>
@@ -163,28 +164,32 @@ export function MixRecipePage({ id }: { id: string }) {
   const [admin, setAdmin] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [mine, setMine] = useState(false);
+  // My own rating and report (private: only I can read them).
+  const [mineVote, setMineVote] = useState<{ stars: number | null; reported: boolean }>({ stars: null, reported: false });
   const [toast, showToast] = useToast();
   useEffect(() => {
     if (!on) return;
     getMix(id).then(setM, (e) => setError(errText(e)));
     amAdmin().then(setAdmin, () => {});
     myMixIds().then((ids) => setMine(ids.has(id)), () => {});
+    myVote(id).then(setMineVote, () => {});
   }, [on, id]);
   const run = (fn: () => Promise<void>) => () => fn().catch((e) => setError(errText(e)));
-  const myStars = m && s.uid ? m.ratings[s.uid] ?? 0 : 0;
+  const myStars = mineVote.stars ?? 0;
   const rate = (n: number) =>
     run(async () => {
       if (!m || !s.uid) return;
+      setError("");
       const stars = myStars === n ? null : n;
-      const ratings = { ...m.ratings };
-      if (stars) ratings[s.uid] = stars;
-      else delete ratings[s.uid];
-      const before = m;
-      setM({ ...m, ratings });
+      const before = { m, vote: mineVote };
+      // Shown right away; put back if it doesn't go through.
+      setM({ ...m, ratingSum: m.ratingSum - myStars + (stars ?? 0), ratingCount: m.ratingCount - (myStars ? 1 : 0) + (stars ? 1 : 0) });
+      setMineVote({ ...mineVote, stars });
       try {
         await rateMix(m.id, stars);
       } catch (e) {
-        setM(before);
+        setM(before.m);
+        setMineVote(before.vote);
         throw e;
       }
     });
@@ -249,11 +254,12 @@ export function MixRecipePage({ id }: { id: string }) {
       onClose={() => setReporting(false)}
       onReport={async (reason) => {
         await reportMix(m.id, reason);
-        setM({ ...m, reporters: { ...m.reporters, [s.uid ?? ""]: true } });
+        if (!mineVote.reported) setM({ ...m, reportCount: m.reportCount + 1 });
+        setMineVote({ ...mineVote, reported: true });
         setReporting(false);
         showToast("Thanks — it's been reported");
       }}
-      already={!!s.uid && !!m.reporters[s.uid]}
+      already={mineVote.reported}
     />
   );
 

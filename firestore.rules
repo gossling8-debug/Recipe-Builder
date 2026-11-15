@@ -23,9 +23,10 @@ service cloud.firestore {
     // recipe has a random id and no account id on it; who published it is kept
     // in mixOwners/{id}, which only that person (and these rules) can read — so
     // an anonymous recipe can't be traced to its cook, or linked to their others.
-    // Anyone signed in can rate (not their own) and report, each touching only
-    // their own entry. Admins (admins/{uid}, created by hand) can take any down.
-    // (Recipes published before this change carry "by" = the cook's id; they keep working.)
+    // Ratings and reports go through the server (mixVote), which keeps each
+    // person's vote private (mixVotes) and puts only totals on the recipe.
+    // Admins (admins/{uid}, created by hand) can take any recipe down.
+    // (Recipes published before ids were random carried "by" = the cook's id; the deploy moves them.)
     function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(uid())); }
     match /admins/{a} {
       allow get: if signedIn() && uid() == a;
@@ -73,42 +74,34 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if signedIn()
         && getAfter(mixOwnerDoc(id)).data.uid == uid()
-        && request.resource.data.keys().hasOnly(['recipe', 'sourceUrl', 'byName', 'anonymous', 'at', 'updatedAt', 'ratings', 'reporters'])
-        && request.resource.data.ratings.size() == 0 && request.resource.data.reporters.size() == 0
+        && request.resource.data.keys().hasOnly(['recipe', 'sourceUrl', 'byName', 'anonymous', 'at', 'updatedAt', 'ratingSum', 'ratingCount', 'reportCount'])
+        && request.resource.data.ratingSum == 0 && request.resource.data.ratingCount == 0 && request.resource.data.reportCount == 0
         && request.resource.data.at is int
         && okMixContent(request.resource.data);
-      allow update: if signedIn() && request.resource.data.at == resource.data.at
-        && request.resource.data.get('by', '') == resource.data.get('by', '') && (
-        // The publisher changes the recipe, its link, their name or whether it's anonymous.
-        (ownsMix(id)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipe', 'sourceUrl', 'byName', 'anonymous', 'updatedAt'])
-          && okMixContent(request.resource.data))
-        // Anyone else sets or clears their own rating (1–5).
-        || (!ownsMix(id)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings'])
-          && request.resource.data.ratings.diff(resource.data.ratings).affectedKeys().hasOnly([uid()])
-          && (!(uid() in request.resource.data.ratings)
-            || (request.resource.data.ratings[uid()] is int && request.resource.data.ratings[uid()] >= 1 && request.resource.data.ratings[uid()] <= 5)))
-        // Anyone else reports it (once).
-        || (!ownsMix(id)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reporters'])
-          && request.resource.data.reporters.diff(resource.data.reporters).affectedKeys().hasOnly([uid()])
-          && request.resource.data.reporters[uid()] == true)
-      );
+      // The publisher changes the recipe, its link, their name or whether it's anonymous.
+      allow update: if signedIn() && ownsMix(id)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipe', 'sourceUrl', 'byName', 'anonymous', 'updatedAt'])
+        && okMixContent(request.resource.data);
       allow delete: if signedIn() && (ownsMix(id) || isAdmin());
 
+      // Older report notes (the deploy moves them into mixVotes).
       match /reports/{r} {
-        allow create: if signedIn() && r == uid()
-          && request.resource.data.keys().hasOnly(['reason', 'at'])
-          && request.resource.data.reason is string && request.resource.data.reason.size() <= 200;
         allow read, delete: if isAdmin();
       }
+    }
+    // Each person's rating and report of a Mix recipe: written only by the server;
+    // only that person (and admins) can read it.
+    match /mixVotes/{v} {
+      allow get: if signedIn() && (resource == null || resource.data.uid == uid() || isAdmin());
+      allow list: if signedIn() && (resource.data.uid == uid() || isAdmin());
     }
 
     // Family cookbooks. The cookbook's id is the invite code: it's random and
     // only shared by its members, so knowing it is what lets someone join.
     function book(b) { return get(/databases/$(database)/documents/cookbooks/$(b)).data; }
     function isMember(b) { return signedIn() && uid() in book(b).members; }
+    // The name a member goes by in this cookbook (so nobody can post under someone else's).
+    function myName(b) { return book(b).names.get(uid(), ''); }
 
     match /cookbooks/{b} {
       allow get: if signedIn();
@@ -161,6 +154,8 @@ service cloud.firestore {
       match /memories/{mem} {
         allow read: if isMember(b);
         allow create: if isMember(b) && request.resource.data.by == uid()
+          && mem.matches(uid() + '_.+')
+          && request.resource.data.byName == myName(b)
           && request.resource.data.keys().hasOnly(['text', 'photo', 'photoCount', 'by', 'byName', 'at', 'recipeId', 'recipeTitle'])
           && (!('photoCount' in request.resource.data) || (request.resource.data.photoCount is int && request.resource.data.photoCount <= 10))
           && request.resource.data.text is string && request.resource.data.text.size() <= 2000
@@ -186,17 +181,27 @@ service cloud.firestore {
           && rid == request.resource.data.recipeId + '_' + uid()
           && request.resource.data.keys().hasOnly(['recipeId', 'by', 'byName', 'stars', 'at'])
           && request.resource.data.stars is int && request.resource.data.stars >= 1 && request.resource.data.stars <= 5
-          && request.resource.data.byName is string && request.resource.data.byName.size() <= 60;
+          && request.resource.data.byName == myName(b);
         allow delete: if isMember(b) && (resource.data.by == uid() || book(b).owner == uid());
       }
 
       // Recipes shared into the cookbook: members read them; each person
       // adds their own; the sharer or the cookbook's owner edits or removes one
       // (the owner changes only the recipe itself, never who shared it).
+      // A recipe's id starts with its sharer's account id, so nobody can take someone else's id first.
+      // Names on it are the sharer's or editor's own in this cookbook (or left as they were).
+      function namesOk(b) {
+        let d = request.resource.data;
+        let was = resource == null ? {} : resource.data;
+        return (d.sharedByName == myName(b) || d.sharedByName == was.get('sharedByName', null))
+          && (d.get('editedBy', null) == null || d.get('editedBy', null) == uid() || d.get('editedBy', null) == was.get('editedBy', null))
+          && (d.get('editedByName', null) == null || d.get('editedByName', null) == myName(b) || d.get('editedByName', null) == was.get('editedByName', null));
+      }
       match /recipes/{r} {
         allow read: if isMember(b);
-        allow create: if isMember(b) && request.resource.data.sharedBy == uid();
-        allow update: if isMember(b) && request.resource.data.sharedBy == resource.data.sharedBy
+        allow create: if isMember(b) && request.resource.data.sharedBy == uid()
+          && r.matches(uid() + '_.+') && request.resource.data.sharedByName == myName(b) && namesOk(b);
+        allow update: if isMember(b) && request.resource.data.sharedBy == resource.data.sharedBy && namesOk(b)
           && (resource.data.sharedBy == uid()
             || (book(b).owner == uid()
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipe', 'editedBy', 'editedByName', 'editedAt'])));

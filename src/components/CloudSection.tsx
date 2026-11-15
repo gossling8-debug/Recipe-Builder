@@ -87,8 +87,9 @@ export default function CloudSection() {
           }}
         >
           <p className="small">
-            This deletes your account and everything backed up with it: recipes, photos, lists and settings, cookbooks you
-            made, and recipes you shared with others — and clears this phone. A Plus subscription is cancelled too. <strong>Export a backup first</strong> (below)
+            This deletes your account and everything it stored: recipes, photos, lists and settings; what you added to
+            cookbooks (and cookbooks only you are in); recipes you published to The Mix, and your ratings and reports there —
+            and clears this phone. A Plus subscription is cancelled too. <strong>Export a backup first</strong> (below)
             if you want a copy.
           </p>
           <input

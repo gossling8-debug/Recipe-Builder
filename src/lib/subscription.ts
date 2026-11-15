@@ -54,8 +54,14 @@ export async function callable<T>(name: string, data?: unknown): Promise<T> {
     f.connectFunctionsEmulator(functions, "127.0.0.1", 5001);
     (functions as unknown as { _emu?: boolean })._emu = true;
   }
-  const res = await f.httpsCallable<unknown, T>(functions, name, { timeout: 30_000 })(data);
-  return res.data;
+  try {
+    const res = await f.httpsCallable<unknown, T>(functions, name, { timeout: 30_000 })(data);
+    return res.data;
+  } catch (e) {
+    // Firebase adds the HTTP status to the server's message ("… [400]"); people only need the message.
+    if (e instanceof Error) e.message = e.message.replace(/\s*\[\d{3}\]$/, "");
+    throw e;
+  }
 }
 
 const friendly = (e: unknown) => {

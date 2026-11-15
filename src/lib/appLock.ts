@@ -233,7 +233,8 @@ export async function eraseThisPhone(keep: string[] = []): Promise<void> {
   try {
     // Twice: removing synced items notes the removal in the sync bookkeeping, which the second pass clears.
     for (let pass = 0; pass < 2; pass++)
-      for (const k of Object.keys(localStorage)) if (k.startsWith("recipe-builder.") && !keep.includes(k)) localStorage.removeItem(k);
+      for (const k of Object.keys(localStorage))
+        if ((k.startsWith("recipe-builder.") || k.startsWith("cardamix-")) && !keep.includes(k)) localStorage.removeItem(k);
   } catch {
     /* ignore */
   }
