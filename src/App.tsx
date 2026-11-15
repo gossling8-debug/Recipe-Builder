@@ -1,37 +1,44 @@
-import TipsPage from "./components/TipsPage";
-import PrivacyPage from "./components/PrivacyPage";
-import TermsPage from "./components/TermsPage";
-import PlusPage from "./components/PlusPage";
-import DuplicatesPage from "./components/DuplicatesPage";
 import LockScreen from "./components/LockScreen";
 import AccountScreen from "./components/AccountScreen";
 import { cloudState, subscribeCloud } from "./lib/cloud";
 import { forgetUnlockedActivity, loadLock, lockOnLoad, noteUnlockedActivity, shouldRelock } from "./lib/appLock";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { lazyScreen, preloadScreens } from "./lib/lazyScreen";
 import { applyTextSize, getTextSize } from "./lib/textSize";
 import { applyTheme, getTheme } from "./lib/theme";
 import { useRoute } from "./lib/route";
 import { requestPersistentStorage } from "./lib/db";
 import Library from "./components/Library";
-import Scanner from "./components/Scanner";
-import Settings from "./components/Settings";
-import RecipePage from "./components/RecipePage";
-import ShoppingList from "./components/ShoppingList";
 import PlanWatcher from "./components/PlanWatcher";
-import PantryPage from "./components/PantryPage";
 import { startCloud } from "./lib/cloud";
-import ImportPage from "./components/ImportPage";
-import WeekPage from "./components/WeekPage";
-import BigMealPage from "./components/BigMealPage";
-import PrintPage from "./components/PrintPage";
-import HistoryPage from "./components/HistoryPage";
-import ReceiptPage from "./components/ReceiptPage";
-import TonightPage from "./components/TonightPage";
-import BudgetPage from "./components/BudgetPage";
-import PricesPage from "./components/PricesPage";
 import TabBar from "./components/TabBar";
-import { BookPage, FamilyPage, JoinPage, SharedRecipePage } from "./components/Family";
-import { MixPage, MixRecipePage } from "./components/Mix";
+
+// Loaded when first opened (and fetched in the background soon after start).
+const TipsPage = lazyScreen(() => import("./components/TipsPage"));
+const PrivacyPage = lazyScreen(() => import("./components/PrivacyPage"));
+const TermsPage = lazyScreen(() => import("./components/TermsPage"));
+const PlusPage = lazyScreen(() => import("./components/PlusPage"));
+const DuplicatesPage = lazyScreen(() => import("./components/DuplicatesPage"));
+const Scanner = lazyScreen(() => import("./components/Scanner"));
+const Settings = lazyScreen(() => import("./components/Settings"));
+const RecipePage = lazyScreen(() => import("./components/RecipePage"));
+const ShoppingList = lazyScreen(() => import("./components/ShoppingList"));
+const PantryPage = lazyScreen(() => import("./components/PantryPage"));
+const ImportPage = lazyScreen(() => import("./components/ImportPage"));
+const WeekPage = lazyScreen(() => import("./components/WeekPage"));
+const BigMealPage = lazyScreen(() => import("./components/BigMealPage"));
+const PrintPage = lazyScreen(() => import("./components/PrintPage"));
+const HistoryPage = lazyScreen(() => import("./components/HistoryPage"));
+const ReceiptPage = lazyScreen(() => import("./components/ReceiptPage"));
+const TonightPage = lazyScreen(() => import("./components/TonightPage"));
+const BudgetPage = lazyScreen(() => import("./components/BudgetPage"));
+const PricesPage = lazyScreen(() => import("./components/PricesPage"));
+const BookPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.BookPage })));
+const FamilyPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.FamilyPage })));
+const JoinPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.JoinPage })));
+const SharedRecipePage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.SharedRecipePage })));
+const MixPage = lazyScreen(() => import("./components/Mix").then((m) => ({ default: m.MixPage })));
+const MixRecipePage = lazyScreen(() => import("./components/Mix").then((m) => ({ default: m.MixRecipePage })));
 
 function Screen() {
   const route = useRoute();
@@ -131,6 +138,7 @@ export default function App() {
   }, []);
   useEffect(() => {
     requestPersistentStorage().catch(() => {});
+    preloadScreens();
     startCloud().catch(() => {});
     const on = () => {
       applyTextSize(getTextSize());
@@ -148,7 +156,9 @@ export default function App() {
       ) : (
         <>
           <PlanWatcher />
-          <Screen key={RELOAD_ON_SYNC.has(route.name) ? synced : -1} />
+          <Suspense fallback={<main className="page" aria-busy="true" />}>
+            <Screen key={RELOAD_ON_SYNC.has(route.name) ? synced : -1} />
+          </Suspense>
           {!NO_TAB_BAR.has(route.name) && <TabBar current={route.name} />}
         </>
       )}
