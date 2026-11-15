@@ -87,8 +87,8 @@ export interface CreatedRecipe {
 }
 
 /**
- * Writing a chef-level recipe needs a capable model: the budget reader (Haiku) is
- * fine for reading cards but not for this, so Create uses Balanced at least.
+ * Writing a chef-level recipe needs a capable model: the Standard reader (Haiku)
+ * is fine for reading cards but not for this, so Create uses Advanced at least.
  */
 export function createModel(chosen: ModelOption = getModel()): ModelOption {
   return chosen.id.includes("haiku") ? (MODELS.find((x) => x.id.includes("sonnet")) ?? chosen) : chosen;

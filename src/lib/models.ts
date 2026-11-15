@@ -22,8 +22,8 @@ export interface ModelOption {
 export const MODELS: ModelOption[] = [
   {
     id: "claude-opus-5-5",
-    label: "Best",
-    blurb: "Claude Opus 5.5 — most reliable on faded or messy handwriting.",
+    label: "Expert",
+    blurb: "Claude Opus 5.5 — the most capable; most reliable on faded or messy handwriting.",
     inPerM: 4,
     outPerM: 20,
     effort: "medium",
@@ -32,8 +32,8 @@ export const MODELS: ModelOption[] = [
   },
   {
     id: "claude-sonnet-5-5",
-    label: "Balanced",
-    blurb: "Claude Sonnet 5.5 — about half the cost; very good on most cards.",
+    label: "Advanced",
+    blurb: "Claude Sonnet 5.5 — very good on handwriting and most cards.",
     inPerM: 2,
     outPerM: 10,
     effort: "medium",
@@ -42,8 +42,8 @@ export const MODELS: ModelOption[] = [
   },
   {
     id: "claude-haiku-5-5",
-    label: "Budget",
-    blurb: "Claude Haiku 5.5 — a small fraction of the cost; great for printed cards and websites, may misread hard handwriting.",
+    label: "Standard",
+    blurb: "Claude Haiku 5.5 — great for printed cards and websites; may misread hard handwriting. Uses the least AI.",
     inPerM: 0.1,
     outPerM: 0.5,
     effort: "high",
@@ -63,14 +63,14 @@ export function getModel(): ModelOption {
     /* blocked */
   }
   const chosen = MODELS.find((m) => m.id === id);
-  // The app pays for Balanced and Budget; Best needs your own key.
+  // The app pays for Advanced and Standard; Expert needs your own key.
   const allowed = availableModels();
   return chosen && allowed.includes(chosen) ? chosen : (allowed.find((m) => m.id === "claude-sonnet-5-5") ?? allowed[0]);
 }
 
 /**
  * Models you can pick: all of them with your own key; otherwise the ones the
- * app pays for — Balanced and Budget with Plus, Budget on the free plan.
+ * app pays for — Advanced and Standard with Plus, Standard on the free plan.
  */
 export function availableModels(): ModelOption[] {
   let own = false;

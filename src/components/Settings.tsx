@@ -266,7 +266,7 @@ export default function Settings() {
           </div>
           {!hasPlus() && !ownKey() && (
             <p className="muted small">
-              The free plan reads recipes with Budget. <a href={href({ name: "plus" })}>Plus</a> adds Balanced, best for messy handwriting.
+              The free plan reads recipes with Standard. <a href={href({ name: "plus" })}>Plus</a> adds Advanced, better for messy handwriting.
             </p>
           )}
         </section>
@@ -277,7 +277,7 @@ export default function Settings() {
           <h3>Your own Anthropic key</h3>
           <p className="muted small">
             Optional, for advanced users. With your own key, AI is billed to your Anthropic account instead of using your monthly
-            allowance, and the Best model is available. Create one at console.anthropic.com → API Keys. It's stored only on this
+            allowance, and the Expert model is available. Create one at console.anthropic.com → API Keys. It's stored only on this
             phone. Leave it empty to use Cardamix's AI.
           </p>
           <input

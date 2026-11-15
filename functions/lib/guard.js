@@ -33,7 +33,7 @@ export function freeCheck(kind, model, usage, now = Date.now(), retry = false) {
   if (!(kind in FREE_LIMITS))
     return { status: 403, type: "plus_feature", message: "That's a Plus feature. Upgrade to Plus to use it." };
   if (kind === "scan" && model !== FREE_SCAN_MODEL)
-    return { status: 400, type: "invalid_request_error", message: "Free accounts read recipes with the Budget reader. Reload the app and try again." };
+    return { status: 400, type: "invalid_request_error", message: "Free accounts read recipes with the Standard reader. Reload the app and try again." };
   // An automatic retry of a request that was just counted isn't a new one (the dollar backstop still applies).
   if (retry) return null;
   const used = usage?.month === monthKey(now) ? usage.counts?.[kind] ?? 0 : 0;
