@@ -1145,3 +1145,17 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .cook-photo { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 12px; }
 .cook-photo p:has(> svg) { display: flex; align-items: flex-start; gap: 6px; }
 .cook-photo p > svg { flex: none; margin-top: 3px; }
+/* Cook this week (home) */
+.cook-week { margin: 4px 0 8px; }
+.cook-week > p { margin: -4px 0 8px; }
+.cook-week-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cook-week-card { position: relative; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.cook-week-card a { display: flex; flex-direction: column; gap: 2px; padding: 0 0 8px; color: inherit; text-decoration: none; }
+.cook-week-card img, .cook-week-card .thumb-placeholder { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 0; margin-bottom: 4px; }
+.cook-week-card .recipe-card-title { padding: 0 8px; font-size: 14px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cook-week-card .small { padding: 0 8px; }
+.cook-week-hide { position: absolute; top: 3px; right: 3px; width: 26px; height: 26px; min-width: 0; min-height: 0; padding: 0; border-radius: 50%; background: color-mix(in srgb, var(--surface) 85%, transparent); }
+.list-heading-all { display: none; }
+.cook-week ~ .list-heading-all { display: block; }
+.cook-week-card .small { font-size: 13px; }
+.cook-week-card .row-stars { display: block; letter-spacing: 0; white-space: nowrap; }
