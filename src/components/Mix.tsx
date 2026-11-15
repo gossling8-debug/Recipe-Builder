@@ -469,6 +469,10 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
               <span className="muted small">Shown as “by …” on your recipes in The Mix. It's remembered for next time.</span>
             </label>
           )}
+          <p className="muted small">
+            By publishing you agree to the <a href={href({ name: "terms" })}>rules for The Mix</a>: recipes only, nothing offensive, no spam,
+            and only what you have the right to share.
+          </p>
           <div className="button-row">
             <button className="btn primary" disabled={busy || (!anonymous && !name.trim()) || !title.trim()} onClick={publish}>
               {busy ? "Publishing…" : at !== null ? "Update" : "Publish"}

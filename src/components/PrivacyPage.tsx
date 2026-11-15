@@ -15,7 +15,8 @@ export default function PrivacyPage() {
 
         <p>
           Cardamix is built to keep your recipes yours. There are no ads, no tracking or analytics, and your information is never
-          sold or shared for marketing. This page explains what is stored, where, and who can see it.
+          sold or shared for marketing. This page explains what is stored, where, and who can see it. See also the{" "}
+          <a href={href({ name: "terms" })}>terms of service</a>.
         </p>
 
         <h3>On your phone</h3>

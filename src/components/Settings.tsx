@@ -329,7 +329,7 @@ export default function Settings() {
         </details>
 
         <p className="small settings-footer">
-          <a href={href({ name: "privacy" })}>Privacy policy</a>
+          <a href={href({ name: "privacy" })}>Privacy policy</a> · <a href={href({ name: "terms" })}>Terms of service</a>
         </p>
       </main>
     </>
