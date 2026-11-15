@@ -30,11 +30,12 @@ const NOUN = { scan: ["recipe add", "recipe adds"], create: ["created recipe", "
  * create recipes, up to the monthly counts. null if allowed, else an error.
  */
 export function freeCheck(kind, model, usage, now = Date.now(), retry = false) {
-  if (!(kind in FREE_LIMITS))
+  if (!Object.hasOwn(FREE_LIMITS, kind))
     return { status: 403, type: "plus_feature", message: "That's a Plus feature. Upgrade to Plus to use it." };
   if (kind === "scan" && model !== FREE_SCAN_MODEL)
     return { status: 400, type: "invalid_request_error", message: "Free accounts read recipes with the Standard reader. Reload the app and try again." };
-  // An automatic retry of a request that was just counted isn't a new one (the dollar backstop still applies).
+  // An automatic retry of a created recipe that was just counted isn't a new one (see retryAllowed;
+  // the dollar backstop still applies).
   if (retry) return null;
   const used = usage?.month === monthKey(now) ? usage.counts?.[kind] ?? 0 : 0;
   const limit = FREE_LIMITS[kind];
@@ -69,6 +70,9 @@ export function checkRequest(body) {
     if (!(t.max_content_tokens >= 1 && t.max_content_tokens <= 30000)) return "web_fetch max_content_tokens must be 30000 or less.";
   }
   if (body.mcp_servers || body.container || body.fallbacks) return "Not allowed.";
+  if (Object.keys(body).some((k) => !BODY_KEYS.has(k))) return "Not allowed.";
+  if (body.output_config !== undefined && (typeof body.output_config !== "object" || Object.keys(body.output_config ?? {}).some((k) => !OUTPUT_KEYS.has(k))))
+    return "Not allowed.";
   return null;
 }
 
@@ -86,7 +90,8 @@ export function costOf(model, usage) {
  */
 export function allowanceCheck(plan, usage, now = Date.now()) {
   const month = monthKey(now);
-  const spent = usage?.month === month ? usage.spent ?? 0 : 0;
+  // Requests still running count too, so many sent at once can't all slip under the limit.
+  const spent = (usage?.month === month ? usage.spent ?? 0 : 0) + pendingTotal(usage, now);
   const limit = ALLOWANCE[plan] ?? ALLOWANCE.free;
   if (spent >= limit)
     return {
@@ -119,6 +124,95 @@ export function addUsage(usage, cost, now = Date.now(), kind = null) {
     minuteCount: (usage?.minute === minute ? usage.minuteCount ?? 0 : 0) + 1,
   };
 }
+
+// ---------- reserving before the request, settling after ----------
+/**
+ * A request is reserved before it goes to Claude (its worst-case cost, its
+ * count and the per-minute count), inside the same transaction as the
+ * checks, then settled with the real cost when the answer comes back. A
+ * reservation left behind by a crash stops counting after 10 minutes.
+ */
+export const PENDING_TTL = 10 * 60_000;
+const fresh = (usage, now) => Object.entries(usage?.pending ?? {}).filter(([, v]) => v && now - (v.at ?? 0) < PENDING_TTL);
+export const pendingTotal = (usage, now = Date.now()) => fresh(usage, now).reduce((t, [, v]) => t + (v.cost ?? 0), 0);
+
+/** The usage doc with request `id` reserved: worst-case `cost`, and `kind` counted (null for a retry). */
+export function reserveUsage(usage, id, cost, now = Date.now(), kind = null, retryOf = null) {
+  const next = addUsage(usage, 0, now, kind);
+  next.pending = { ...Object.fromEntries(fresh(usage, now)), [id]: { cost, at: now } };
+  // Remember the last created recipe, so one automatic retry of it isn't counted again.
+  next.lastCreate = kind === "create" ? now : usage?.lastCreate ?? null;
+  next.retriedFor = retryOf ?? usage?.retriedFor ?? null;
+  return next;
+}
+
+/** The usage doc once request `id` is done: its real cost added; its count and use given back if it failed. */
+export function settleUsage(usage, id, cost, now = Date.now(), refundKind = null) {
+  const month = monthKey(now);
+  const sameMonth = usage?.month === month;
+  const counts = { ...(sameMonth ? usage.counts ?? {} : {}) };
+  if (refundKind && counts[refundKind]) counts[refundKind] -= 1;
+  const pending = Object.fromEntries(fresh(usage, now).filter(([k]) => k !== id));
+  return {
+    ...usage,
+    month,
+    spent: (sameMonth ? usage.spent ?? 0 : 0) + cost,
+    uses: Math.max(0, (sameMonth ? usage.uses ?? 0 : 0) - (refundKind ? 1 : 0)),
+    counts,
+    pending,
+  };
+}
+
+/**
+ * The app retries a created recipe once, automatically, when the answer was
+ * cut off. Only that is free of the count: a create counted in the last 10
+ * minutes that hasn't been retried yet. Returns the create it retries, or null.
+ */
+export function retryAllowed(usage, kind, now = Date.now()) {
+  const last = usage?.lastCreate;
+  return kind === "create" && last && now - last < PENDING_TTL && usage.retriedFor !== last ? last : null;
+}
+
+/**
+ * Worst-case cost of a request before it's sent: its text (about 4
+ * characters a token), its photos (up to about 1,600 tokens each), what
+ * web_fetch may read, and every output token it may use.
+ */
+export function estimateCost(body) {
+  const m = APP_MODELS[body?.model];
+  if (!m) return 0;
+  let tokens = 0;
+  const text = (t) => (tokens += Math.ceil(String(t ?? "").length / 4));
+  const block = (b) => {
+    if (typeof b === "string") return text(b);
+    if (b?.type === "image") return (tokens += 1600);
+    if (b?.type === "document") return (tokens += 3000);
+    text(b?.text ?? "");
+  };
+  const content = (c) => (Array.isArray(c) ? c.forEach(block) : block(c));
+  content(body.system);
+  for (const msg of body.messages ?? []) content(msg?.content);
+  for (const t of body.tools ?? []) tokens += (t.max_uses ?? 1) * (t.max_content_tokens ?? 0);
+  if (body.output_config?.format) text(JSON.stringify(body.output_config.format));
+  return (tokens * m.inPerM + (body.max_tokens ?? 0) * m.outPerM) / 1_000_000;
+}
+
+// ---------- what may be passed on ----------
+/** Request fields the app sends. Anything else is refused. */
+const BODY_KEYS = new Set(["model", "max_tokens", "messages", "system", "output_config", "tools"]);
+const OUTPUT_KEYS = new Set(["effort", "format"]);
+/** Beta features the app uses. */
+const BETA = /^structured-outputs-\d{4}-\d{2}-\d{2}$/;
+/** The anthropic-beta header to pass on (null for none), or false if it asks for anything else. */
+export function allowedBeta(header) {
+  if (!header) return null;
+  const parts = String(header).split(",").map((x) => x.trim()).filter(Boolean);
+  return parts.length > 0 && parts.length <= 2 && parts.every((x) => BETA.test(x)) ? parts.join(",") : false;
+}
+
+/** Accounts made from this time on need a confirmed email for testing-period or gifted Plus (older ones are kept as they are). */
+export const VERIFY_PLUS_FROM = Date.UTC(2026, 10, 15, 17, 0);
+export const plusEmailOk = (verified, createdAt) => !!verified || (createdAt > 0 && createdAt < VERIFY_PLUS_FROM);
 
 /** Plus if a subscription is active (past_due keeps access while Stripe retries the card). */
 export function planFromSubscriptions(subs) {

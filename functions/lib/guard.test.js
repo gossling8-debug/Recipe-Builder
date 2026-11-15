@@ -116,3 +116,92 @@ describe("free accounts and plan allowances", () => {
     expect(planFromSubscriptions([{ status: "active", plan: { interval: "month" } }]).interval).toBe("month");
   });
 });
+
+import { allowedBeta, estimateCost, pendingTotal, plusEmailOk, reserveUsage, retryAllowed, settleUsage, VERIFY_PLUS_FROM, PENDING_TTL } from "./guard.js";
+
+describe("reserving before a request and settling after", () => {
+  const T = Date.UTC(2026, 10, 20, 12, 0);
+  it("counts a reserved request against the allowance and the free count right away", () => {
+    let u = { month: "2026-11", spent: 0.3, uses: 0, counts: { scan: 4 } };
+    u = reserveUsage(u, "a", 0.12, T, "scan");
+    expect(u.counts.scan).toBe(5);
+    expect(pendingTotal(u, T)).toBeCloseTo(0.12); // $0.30 spent + $0.12 running > the $0.40 backstop
+    // A second request sent at the same moment: the count is used up, and the pending cost tips the backstop.
+    expect(freeCheck("scan", "claude-haiku-5-5", u, T)).toMatchObject({ type: "free_limit" });
+    expect(allowanceCheck("free", u, T)).toMatchObject({ type: "allowance_exceeded" });
+  });
+  it("settles with the real cost and drops the reservation", () => {
+    let u = reserveUsage({ month: "2026-11", spent: 0.1, uses: 1, counts: {} }, "a", 0.5, T, "create");
+    u = settleUsage(u, "a", 0.04, T + 5000);
+    expect(u.spent).toBeCloseTo(0.14);
+    expect(pendingTotal(u, T + 5000)).toBe(0);
+    expect(u.counts.create).toBe(1);
+  });
+  it("gives the count back when the request failed", () => {
+    let u = reserveUsage({ month: "2026-11", spent: 0, uses: 0, counts: { scan: 2 } }, "a", 0.01, T, "scan");
+    u = settleUsage(u, "a", 0, T, "scan");
+    expect(u.counts.scan).toBe(2);
+    expect(u.uses).toBe(0);
+  });
+  it("forgets a reservation left behind by a crash after 10 minutes", () => {
+    const u = reserveUsage({ month: "2026-11", spent: 0, counts: {} }, "a", 1, T, "scan");
+    expect(pendingTotal(u, T + PENDING_TTL - 1000)).toBe(1);
+    expect(pendingTotal(u, T + PENDING_TTL + 1000)).toBe(0);
+  });
+  it("runs out the per-minute limit with requests sent at once", () => {
+    let u = { month: "2026-11", spent: 0, counts: {} };
+    for (let i = 0; i < 12; i++) u = reserveUsage(u, `r${i}`, 0, T, "nutrition");
+    expect(allowanceCheck("plus", u, T)).toMatchObject({ type: "rate_limited" });
+  });
+});
+
+describe("the automatic retry of a created recipe", () => {
+  const T = Date.UTC(2026, 10, 20, 12, 0);
+  it("is free once, just after a counted create", () => {
+    const u = reserveUsage({ month: "2026-11", counts: {} }, "a", 0, T, "create");
+    const of = retryAllowed(u, "create", T + 30_000);
+    expect(of).toBe(T);
+    const after = reserveUsage(u, "b", 0, T + 30_000, null, of);
+    expect(retryAllowed(after, "create", T + 40_000)).toBeNull(); // only once
+  });
+  it("isn't free for anything else, or long after", () => {
+    const u = reserveUsage({ month: "2026-11", counts: {} }, "a", 0, T, "create");
+    expect(retryAllowed(u, "scan", T + 1000)).toBeNull();
+    expect(retryAllowed(u, "create", T + PENDING_TTL + 1000)).toBeNull();
+    expect(retryAllowed({ month: "2026-11", counts: {} }, "create", T)).toBeNull(); // no create to retry
+  });
+});
+
+describe("what the relay passes on", () => {
+  it("allows only the beta features the app uses", () => {
+    expect(allowedBeta(undefined)).toBeNull();
+    expect(allowedBeta("structured-outputs-2025-12-15")).toBe("structured-outputs-2025-12-15");
+    expect(allowedBeta("structured-outputs-2025-12-15,context-1m-2025-08-07")).toBe(false);
+    expect(allowedBeta("anything-else")).toBe(false);
+  });
+  it("refuses request fields the app doesn't send", () => {
+    expect(checkRequest({ ...ok, output_config: { effort: "medium" } })).toBeNull();
+    expect(checkRequest({ ...ok, system: "x", tools: undefined })).toBeNull();
+    expect(checkRequest({ ...ok, metadata: { user_id: "x" } })).toBe("Not allowed.");
+    expect(checkRequest({ ...ok, output_config: { effort: "high", task_budget: 1 } })).toBe("Not allowed.");
+    expect(checkRequest({ ...ok, thinking: { type: "enabled" } })).toBe("Not allowed.");
+  });
+  it("doesn't take built-in names as a free feature", () => {
+    expect(freeCheck("constructor", "claude-sonnet-5-5", {})).toMatchObject({ type: "plus_feature" });
+    expect(freeCheck("__proto__", "claude-sonnet-5-5", {})).toMatchObject({ type: "plus_feature" });
+  });
+  it("estimates a worst case from text, photos and output", () => {
+    const body = { model: "claude-sonnet-5-5", max_tokens: 1000, system: "x".repeat(4000), messages: [{ role: "user", content: [{ type: "image" }, { type: "text", text: "hi" }] }] };
+    // (1000 + 1600 + 1) input tokens at $2/M + 1000 output at $10/M
+    expect(estimateCost(body)).toBeCloseTo((2601 * 2 + 1000 * 10) / 1e6, 6);
+  });
+});
+
+describe("gifted and testing-period Plus", () => {
+  it("needs a confirmed email for accounts made from now on", () => {
+    expect(plusEmailOk(true, VERIFY_PLUS_FROM + 1)).toBe(true);
+    expect(plusEmailOk(false, VERIFY_PLUS_FROM + 1)).toBe(false);
+    expect(plusEmailOk(false, VERIFY_PLUS_FROM - 86_400_000)).toBe(true); // made before: kept
+    expect(plusEmailOk(false, 0)).toBe(false);
+  });
+});
