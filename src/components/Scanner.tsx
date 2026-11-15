@@ -503,7 +503,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
                   </strong>{" "}
                   {kindNow === "create"
                     ? "Plus creates 20+ recipes a month, along with about 50 recipe adds."
-                    : "Plus adds about 50 recipes a month, with the Balanced reader for handwriting."}{" "}
+                    : "Plus adds about 50 recipes a month, with the Advanced reader for handwriting."}{" "}
                   <a className="btn primary" href={href({ name: "plus" })}>
                     See Plus
                   </a>
@@ -517,7 +517,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
               ))}
             {mode === "create" ? (
               <p className="muted small">
-                Recipes are created with Claude Sonnet 5.5 or better (more capable than the budget reader), so each uses a bit more of your
+                Recipes are created with Claude Sonnet 5.5 or better (more capable than the Standard reader), so each uses a bit more of your
                 monthly AI than a scan.
               </p>
             ) : (

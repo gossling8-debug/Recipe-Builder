@@ -122,7 +122,7 @@ export default function PlusPage({ done }: { done?: boolean }) {
               <Icon name="check" size={16} />
               <span>
                 <strong>Much more AI</strong> — roughly 50 recipe adds and 20+ created recipes a month, plus nutrition, receipts and “Cook
-                with what I have”, and the Balanced reader for handwriting. Free includes 5 recipe adds and 3 created recipes.
+                with what I have”, and the Advanced reader for handwriting. Free includes 5 recipe adds and 3 created recipes.
               </span>
             </li>
             {plusFeatures.map((f) => (
