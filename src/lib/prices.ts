@@ -438,3 +438,21 @@ export function packOf(size: string | undefined): { count: number; noun: string 
   if (!m || !(Number(m[1]) > 1)) return null;
   return { count: Number(m[1]), noun: singular(m[2] ?? "item") };
 }
+
+/**
+ * Items bought at more than one store, with the cheapest store and how much
+ * less it costs than the dearest (per oz / fl oz / item), biggest saving first.
+ * Differences under 3% are left out: that's noise, not a cheaper store.
+ */
+export function cheapestStores(items = allItemPrices(), max = 5): { name: string; cheap: string; dear: string; unit: UnitPrice; saving: number }[] {
+  return items
+    .filter((it) => it.byStore.length > 1)
+    .map((it) => {
+      const cheap = it.byStore[0];
+      const dear = it.byStore[it.byStore.length - 1];
+      return { name: it.name, cheap: cheap.store, dear: dear.store, unit: cheap.unit, saving: dear.unit.value > 0 ? 1 - cheap.unit.value / dear.unit.value : 0 };
+    })
+    .filter((x) => x.saving >= 0.03)
+    .sort((a, b) => b.saving - a.saving)
+    .slice(0, max);
+}

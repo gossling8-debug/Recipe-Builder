@@ -55,7 +55,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     target: '.tabbar a[href="#/budget"]',
     title: "Budget",
-    text: "Your grocery budget, receipts and a price tracker that shows where things are cheapest.",
+    text: "Your weekly grocery budget and receipts, and which store is cheapest for things you've bought at more than one.",
   },
   {
     target: '.tabbar a[href="#/tonight"]',
@@ -65,7 +65,17 @@ export const TOUR_STEPS: TourStep[] = [
   {
     target: '.topbar a[href="#/week"]',
     title: "Your week",
-    text: "Plan the week's meals, or let Fill my week do it. The bag next to it is your shopping list.",
+    text: "Plan the week's meals, or let Fill my week do it.",
+  },
+  {
+    target: '.topbar a[href="#/pantry"]',
+    title: "Pantry",
+    text: "What you have at home. Can make now shows the recipes you have everything for, and you're reminded to use things before they go off.",
+  },
+  {
+    target: '.topbar a[href="#/shopping"]',
+    title: "Shopping list",
+    text: "Add a recipe's ingredients and they're combined into one list, leaving out what's already in your pantry. Note what you paid as you shop to track prices.",
   },
   {
     target: '.topbar a[href="#/settings"]',

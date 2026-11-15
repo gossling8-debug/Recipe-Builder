@@ -38,8 +38,13 @@ function TourSteps({ steps, onDone }: { steps: TourStep[]; onDone: () => void })
     const measure = () => {
       const el = document.querySelector(step.target);
       if (!el) return setBox(null);
-      const r = el.getBoundingClientRect();
-      setBox({ top: r.top, left: r.left, width: r.width, height: r.height });
+      // The button and anything in it that sticks out (the raised + on Add Recipe).
+      const rects = [el, ...el.querySelectorAll("*")].map((x) => x.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0);
+      const top = Math.min(...rects.map((r) => r.top));
+      const left = Math.min(...rects.map((r) => r.left));
+      const bottom = Math.max(...rects.map((r) => r.bottom));
+      const right = Math.max(...rects.map((r) => r.right));
+      setBox({ top, left, width: right - left, height: bottom - top });
     };
     measure();
     window.addEventListener("resize", measure);
