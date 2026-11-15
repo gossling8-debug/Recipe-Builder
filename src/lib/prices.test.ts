@@ -70,3 +70,22 @@ describe("editing spending", () => {
     expect(recipeCost({ title: "", servings: null, time: null, notes: null, tags: [], warnings: [], steps: [], ingredients: [{ quantity: "1", unit: "lb", name: "ground beef", preparation: null, section: null }] }, 1).total).toBeCloseTo(6);
   });
 });
+
+describe("cheapestStores", () => {
+  beforeEach(() => [...loadPrices()].forEach((p) => deletePrice(p.id)));
+  it("names the cheaper store for things bought at two, biggest saving first", async () => {
+    const { addPrice, cheapestStores } = await import("./prices");
+    addPrice("eggs", "12", 4, 1, { store: "Walmart" });
+    addPrice("eggs", "12", 3, 2, { store: "Aldi" });
+    addPrice("butter", "1 lb", 5, 3, { store: "Walmart" });
+    addPrice("butter", "1 lb", 4.9, 4, { store: "Kroger" }); // 2%: not worth showing
+    addPrice("milk", "1 gal", 2, 5, { store: "Aldi" }); // one store only
+    addPrice("flour", "5 lb", 4, 6, { store: "Target" });
+    addPrice("flour", "5 lb", 2, 7, { store: "Walmart" });
+    const out = cheapestStores();
+    expect(out.map((x) => [x.name, x.cheap, x.dear, Math.round(x.saving * 100)])).toEqual([
+      ["flour", "Walmart", "Target", 50],
+      ["eggs", "Aldi", "Walmart", 25],
+    ]);
+  });
+});

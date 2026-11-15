@@ -4,14 +4,14 @@ import Icon from "./Icon";
 import SpendingEditor from "./SpendingEditor";
 import { listRecipes } from "../lib/db";
 import { isDinner, realServings } from "../lib/autoPlan";
-import { dollars, getBudget, parsePrice, periodStarts, recipeCost, setBudget, spendingByStore, spentSince } from "../lib/prices";
+import { cheapestStores, dollars, getBudget, parsePrice, periodStarts, recipeCost, setBudget, spendingByStore, spentSince, unitText } from "../lib/prices";
 import { href } from "../lib/route";
 import { loadShopping, saveShopping, type ShoppingState } from "../lib/shopping";
 import { applySwaps } from "../lib/swaps";
 import { loadWeek, upcomingDays } from "../lib/week";
 import type { SavedRecipe } from "../lib/schema";
 
-/** The weekly grocery budget: spent vs. budget, what the planned week costs, and the cheapest dinners. */
+/** The weekly grocery budget: spent vs. budget, what the planned week costs, which store is cheapest, and the cheapest dinners. */
 export default function BudgetPage() {
   const [recipes, setRecipes] = useState<SavedRecipe[]>([]);
   const [budget, setBudgetState] = useState(getBudget);
@@ -28,6 +28,7 @@ export default function BudgetPage() {
   const month = spentSince(starts.month);
   // This month, by store (when receipts or the shopping list recorded where).
   const byStore = spendingByStore(starts.month);
+  const stores = cheapestStores();
   const left = budget - week;
   const pct = budget ? Math.min(100, (week / budget) * 100) : 0;
 
@@ -155,6 +156,39 @@ export default function BudgetPage() {
             </a>
           </section>
         )}
+
+        <section>
+          <h3>Where it's cheapest</h3>
+          {stores.length === 0 ? (
+            <p className="muted small">
+              Once you've bought the same thing at two stores (from receipts or your shopping list), the cheaper store shows here.
+            </p>
+          ) : (
+            <ul className="cheap-list">
+              {stores.map((x) => (
+                <li key={x.name}>
+                  <span>
+                    {x.name}
+                    <span className="muted small">
+                      {" "}
+                      · {unitText(x.unit)}
+                    </span>
+                  </span>
+                  <span>
+                    <strong>{x.cheap}</strong>
+                    <span className="muted small">
+                      {" "}
+                      {Math.round(x.saving * 100)}% less than {x.dear}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <a className="link-btn small" href={href({ name: "prices" })}>
+            See every price
+          </a>
+        </section>
 
         <section>
           <h3>Cheapest dinners</h3>
