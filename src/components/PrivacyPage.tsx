@@ -84,6 +84,14 @@ export default function PrivacyPage() {
           down any recipe. You can take your recipes out of The Mix at any time; copies others already saved stay theirs.
         </p>
 
+        <h3>Error reports</h3>
+        <p>
+          If the app runs into an error on your device, it sends a short technical report so the problem can be found and fixed: the
+          error message, which screen you were on (for example “recipe”), the app version and your browser and device type. It never
+          includes your recipes, notes, photos, email or account. Reports are kept for 30 days and only the app's administrators can see
+          them.
+        </p>
+
         <h3>Other services you choose to open</h3>
         <ul>
           <li>Walmart and H-E-B buttons open that store's search for the ingredient's name.</li>

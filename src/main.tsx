@@ -5,14 +5,19 @@ import "./styles.css";
 import { applyTextSize, getTextSize } from "./lib/textSize";
 import { applyTheme, getTheme } from "./lib/theme";
 import { keepSheetsAboveKeyboard } from "./lib/keyboard";
+import { installErrorReporting } from "./lib/errorReport";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 applyTextSize(getTextSize());
 applyTheme(getTheme(), false);
 keepSheetsAboveKeyboard();
+installErrorReporting();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );
 

@@ -30,6 +30,21 @@ service cloud.firestore {
     match /admins/{a} {
       allow get: if signedIn() && uid() == a;
     }
+    // Error reports from the app: a short technical note, no account id or
+    // recipe content. Signed-in people can add one; only admins can read them.
+    match /errors/{id} {
+      allow read, delete: if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['message', 'stack', 'screen', 'where', 'app', 'device', 'at', 'expireAt'])
+        && request.resource.data.message is string && request.resource.data.message.size() <= 300
+        && request.resource.data.stack is string && request.resource.data.stack.size() <= 1500
+        && request.resource.data.screen is string && request.resource.data.screen.size() <= 40
+        && (request.resource.data.where == null || (request.resource.data.where is string && request.resource.data.where.size() <= 40))
+        && request.resource.data.app is string && request.resource.data.app.size() <= 40
+        && request.resource.data.device is string && request.resource.data.device.size() <= 200
+        && request.resource.data.at is int
+        && request.resource.data.expireAt is timestamp;
+    }
     function mixOwnerDoc(id) { return /databases/$(database)/documents/mixOwners/$(id); }
     function ownsMix(id) {
       return (exists(mixOwnerDoc(id)) && get(mixOwnerDoc(id)).data.uid == uid())
