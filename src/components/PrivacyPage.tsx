@@ -21,7 +21,7 @@ export default function PrivacyPage() {
 
         <h3>On your phone</h3>
         <p>
-          Everything you add — recipes, photos, notes, your pantry, shopping list, week plan, prices, budget and settings — is saved in
+          Everything you add — recipes, photos, notes, your pantry, shopping list, week plan, prices, budget, fast food spending and settings — is saved in
           your browser's storage on your device. It stays there until you delete it or clear this site's data. Your Anthropic API key is
           also stored only on your device. If you turn on the app lock, your passcode is stored only in scrambled form on this device, and Face ID is checked by
           your phone itself — the app never receives any face data.
