@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
 import SpendingEditor from "./SpendingEditor";
+import FastFoodSection from "./FastFoodSection";
 import { listRecipes } from "../lib/db";
 import { isDinner, realServings } from "../lib/autoPlan";
 import { cheapestStores, dollars, getBudget, parsePrice, periodStarts, recipeCost, setBudget, spendingByStore, spentSince, unitText } from "../lib/prices";
@@ -11,7 +12,7 @@ import { applySwaps } from "../lib/swaps";
 import { loadWeek, upcomingDays } from "../lib/week";
 import type { SavedRecipe } from "../lib/schema";
 
-/** The weekly grocery budget: spent vs. budget, what the planned week costs, which store is cheapest, and the cheapest dinners. */
+/** The weekly grocery budget: spent vs. budget, fast food (kept separate), what the planned week costs, which store is cheapest, and the cheapest dinners. */
 export default function BudgetPage() {
   const [recipes, setRecipes] = useState<SavedRecipe[]>([]);
   const [budget, setBudgetState] = useState(getBudget);
@@ -73,7 +74,7 @@ export default function BudgetPage() {
       <Header title="Budget" back={href({ name: "library" })} />
       <main className="page">
         <section className="budget-week">
-          <h3>This week</h3>
+          <h3>Groceries this week</h3>
           {budget > 0 ? (
             <>
               <p className="budget-big">
@@ -131,6 +132,8 @@ export default function BudgetPage() {
             refresh((n) => n + 1);
           }}
         />
+
+        <FastFoodSection starts={starts} groceries={{ week, month }} />
 
         <a className="btn" href={href({ name: "prices" })}>
           <Icon name="receipt" size={18} /> Price tracker
