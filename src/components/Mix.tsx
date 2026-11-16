@@ -222,6 +222,7 @@ export function MixRecipePage({ id }: { id: string }) {
             </span>
           </div>
         )}
+        {mine && <p className="small muted mix-own-note">You can't rate your own recipe. Other cooks' ratings show here.</p>}
         <p className="small mix-average">
           {r ? (
             <>
