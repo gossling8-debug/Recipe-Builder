@@ -20,6 +20,16 @@ export default function BudgetPage() {
   const [text, setText] = useState(budget ? String(budget) : "");
   const [shopping, setShopping] = useState<ShoppingState>(loadShopping);
   const [, refresh] = useState(0);
+  // "Saved $12.50 at Chick-fil-A to fast food." after importing a fast food receipt.
+  const [saved] = useState(() => {
+    try {
+      const m = sessionStorage.getItem("recipe-builder.fastFoodSaved");
+      sessionStorage.removeItem("recipe-builder.fastFoodSaved");
+      return m;
+    } catch {
+      return null;
+    }
+  });
   useEffect(() => {
     listRecipes().then(setRecipes, () => {});
   }, []);
@@ -73,6 +83,7 @@ export default function BudgetPage() {
     <>
       <Header title="Budget" back={href({ name: "library" })} />
       <main className="page">
+        {saved && <div className="callout small">{saved}</div>}
         <section className="budget-week">
           <h3>Groceries this week</h3>
           {budget > 0 ? (
