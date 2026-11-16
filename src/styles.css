@@ -1180,3 +1180,5 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .fast-food-list li { align-items: center; }
 
 
+.receipt-fast-food .receipt-price { display: flex; align-items: center; gap: 6px; }
+.receipt-fast-food .receipt-price .text-input { width: 130px; }

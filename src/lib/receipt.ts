@@ -10,7 +10,10 @@ import { recordUsage } from "./usage";
  * and sizes, and says which line matches which item already on the list.
  */
 export const ReceiptSchema = z.object({
-  store: z.string().nullable().describe('Store name if shown, e.g. "Walmart". null if not shown.'),
+  store: z.string().nullable().describe('Store or restaurant name if shown, e.g. "Walmart", "Chick-fil-A". null if not shown.'),
+  kind: z
+    .enum(["groceries", "fast_food"])
+    .describe('"fast_food" for a fast food, drive-thru, takeout or restaurant receipt; "groceries" for a grocery store, warehouse store or online grocery order.'),
   date: z.string().nullable().describe('Purchase or order date as YYYY-MM-DD if shown, else null.'),
   items: z.array(
     z.object({
@@ -55,6 +58,8 @@ For each line give a plain generic name a recipe would use (expand abbreviations
 Sizes matter for comparing prices. Use the size printed on the line when there is one. Warehouse stores (Costco, Sam's Club) and many receipts leave it off: then give the usual package size of that product at that store — from the description, the item or barcode number and the price (e.g. Costco "KS CUT GRN BEANS" is typically 12 × 14.5 oz cans, so "174 oz (12 × 14.5 oz cans)") and mark it estimated.
 
 You are given the names on the cook's shopping list. Set "matches" to one of those names, exactly as written, only when it is clearly the same ingredient (e.g. "2% milk" matches "milk"; "shredded cheddar" matches "cheddar cheese"); otherwise null.
+
+If the receipt is from a fast food place or restaurant (a meal, not groceries), set kind to "fast_food" and still list its lines and total.
 
 If something is unreadable, give your best reading and add a short warning.`;
 
