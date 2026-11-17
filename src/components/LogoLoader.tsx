@@ -13,9 +13,9 @@ const reducedMotion = () => {
 };
 
 /**
- * The Cardamix logo while something loads or Claude is reading: the C spins,
- * filled with a flickering flame. Still (no motion) for people who've asked
- * their phone for reduced motion.
+ * The Cardamix logo while something loads or a recipe is being read: an
+ * ember travels round the copper ring and the C turns like a coin. Still (no
+ * motion) for people who've asked their phone for reduced motion.
  */
 /**
  * The animated logo for everyone, unless they turn it off in Settings →
@@ -50,12 +50,12 @@ export default function LogoLoader({ size = 64, label }: { size?: number; label?
     const px = Math.max(16, Math.round(size * 0.45));
     return <span className="spinner plain-loader" style={{ width: px, height: px }} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} />;
   }
-  const fire = `fire${id}`;
   const cu = `cu${id}`;
-  const blur = `blur${id}`;
+  const ember = `ember${id}`;
+  const glow = `glow${id}`;
   return (
     <svg
-      className="logo-loader"
+      className={still ? "logo-loader still" : "logo-loader"}
       width={size}
       height={size}
       viewBox="0 0 512 512"
@@ -69,30 +69,29 @@ export default function LogoLoader({ size = 64, label }: { size?: number; label?
           <stop offset=".45" stopColor="#cf8a5c" />
           <stop offset="1" stopColor="#9a4a26" />
         </linearGradient>
-        {/* Flame: a hot yellow core rising into orange and red tips, the bands moving upward. */}
-        <linearGradient id={fire} gradientUnits="userSpaceOnUse" x1="0" y1="420" x2="0" y2="100" spreadMethod="reflect">
-          <stop offset="0" stopColor="#fff3b0">
-            {!still && <animate attributeName="stop-color" values="#fff3b0;#ffe27a;#fff3b0" dur="0.9s" repeatCount="indefinite" />}
-          </stop>
-          <stop offset=".35" stopColor="#ffb22e" />
-          <stop offset=".7" stopColor="#ff6a13" />
-          <stop offset="1" stopColor="#d2321a" />
-          {!still && <animate attributeName="y1" values="420;360;420" dur="1.1s" repeatCount="indefinite" />}
-          {!still && <animate attributeName="y2" values="100;40;100" dur="1.1s" repeatCount="indefinite" />}
+        {/* The ember's tail: nothing at the back, burning gold at the head. */}
+        <linearGradient id={ember} gradientUnits="userSpaceOnUse" x1="256" y1="64" x2="436.4" y2="190.3">
+          <stop offset="0" stopColor="#cf8a5c" stopOpacity="0" />
+          <stop offset=".6" stopColor="#e9a46f" stopOpacity=".7" />
+          <stop offset="1" stopColor="#ffe2b8" />
         </linearGradient>
-        <filter id={blur} x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="14" />
+        <filter id={glow} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="9" />
         </filter>
       </defs>
       <rect width="512" height="512" rx="112" fill="#1c1a17" />
       <circle cx="256" cy="256" r="192" fill="none" stroke={`url(#${cu})`} strokeWidth="7" />
       <circle cx="256" cy="256" r="176" fill="none" stroke={`url(#${cu})`} strokeWidth="2.5" />
+      {/* An ember travelling round the ring. */}
+      <g className="logo-loader-ember">
+        <path d="M256 64A192 192 0 0 1 436.4 190.3" fill="none" stroke={`url(#${ember})`} strokeWidth="16" strokeLinecap="round" filter={`url(#${glow})`} />
+        <path d="M256 64A192 192 0 0 1 436.4 190.3" fill="none" stroke={`url(#${ember})`} strokeWidth="7" strokeLinecap="round" />
+        <circle cx="436.4" cy="190.3" r="16" fill="#ffb877" opacity=".7" filter={`url(#${glow})`} />
+        <circle cx="436.4" cy="190.3" r="5" fill="#fff4e2" />
+      </g>
+      {/* The C turns like a coin. */}
       <g className="logo-loader-c">
-        <g transform="translate(256 256) scale(.78) translate(-256 -256)">
-          {/* The glow behind the flame. */}
-          <path className="logo-loader-glow" d={C_PATH} fill="#ff7a1a" filter={`url(#${blur})`} />
-          <path d={C_PATH} fill={`url(#${fire})`} />
-        </g>
+        <path transform="translate(256 256) scale(.78) translate(-256 -256)" d={C_PATH} fill="#f3ece3" />
       </g>
     </svg>
   );

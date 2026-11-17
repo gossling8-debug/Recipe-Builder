@@ -83,7 +83,7 @@ export async function suggestSubstitutes(
     throw new ScanError(describeApiError(err));
   }
   recordUsage("substitutes", m.id, response.usage);
-  if (response.stop_reason === "refusal") throw new ScanError("Claude couldn't answer this one. Try again later.");
-  if (!response.parsed_output) throw new ScanError("Claude's answer couldn't be read. Please try again.");
+  if (response.stop_reason === "refusal") throw new ScanError("Cardamix couldn't answer this one. Try again later.");
+  if (!response.parsed_output) throw new ScanError("Cardamix couldn't read the answer. Please try again.");
   return response.parsed_output;
 }

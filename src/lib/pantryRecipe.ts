@@ -90,10 +90,10 @@ export async function cookWithWhatIHave(apiKey: string, input: PantryPromptInput
     throw new ScanError(describeApiError(err));
   }
   const usage = recordUsage("pantryRecipe", m.id, response.usage);
-  if (response.stop_reason === "refusal") throw new ScanError("Claude couldn't make a recipe from this. Try a different request.");
+  if (response.stop_reason === "refusal") throw new ScanError("Cardamix couldn't make a recipe from this. Try a different request.");
   if (response.stop_reason === "max_tokens") throw new ScanError("The recipe ran too long. Please try again.");
   const out = response.parsed_output;
-  if (!out || out.recipe.ingredients.length === 0) throw new ScanError("Claude's answer couldn't be read. Please try again.");
+  if (!out || out.recipe.ingredients.length === 0) throw new ScanError("Cardamix couldn't read the answer. Please try again.");
   return { recipe: sanitizeRecipe(out.recipe), usesUp: out.uses_up, notInPantry: out.not_in_pantry.slice(0, 4), usage };
 }
 

@@ -112,7 +112,7 @@ export async function importRecipe(apiKey: string, source: RecipeSource): Promis
   const usage = recordUsage(kind, m.id, response.usage);
 
   if (response.stop_reason === "refusal") {
-    throw new ScanError("Claude declined to read this. Try a clearer photo of just the recipe, or another page.");
+    throw new ScanError("Cardamix couldn't read this. Try a clearer photo of just the recipe, or another page.");
   }
   if (response.stop_reason === "max_tokens") {
     throw new ScanError("This recipe was too long to finish in one go. Try one card side at a time.");
@@ -121,7 +121,7 @@ export async function importRecipe(apiKey: string, source: RecipeSource): Promis
     throw new ScanError("Reading that page took too long. Try again, or copy the recipe text and use “Paste text”.");
   }
   const parsed = response.parsed_output;
-  if (!parsed) throw new ScanError("Claude's answer couldn't be read. Please try again.");
+  if (!parsed) throw new ScanError("Cardamix couldn't read the answer. Please try again.");
   return { recipe: sanitizeRecipe(parsed), usage };
 }
 
@@ -142,8 +142,8 @@ export function describeApiError(err: unknown): string {
     if (/credit balance/i.test(err.message)) return "Your Anthropic account is out of credit. Add credit in the Anthropic Console.";
     return `The request was rejected: ${err.message}`;
   }
-  if (err instanceof Anthropic.InternalServerError) return "Claude is having trouble right now. Try again in a minute.";
-  if (err instanceof Anthropic.APIConnectionError) return "Couldn't reach Claude. Check your internet connection.";
+  if (err instanceof Anthropic.InternalServerError) return "Cardamix's AI is having trouble right now. Try again in a minute.";
+  if (err instanceof Anthropic.APIConnectionError) return "Couldn't reach Cardamix's AI. Check your internet connection.";
   if (err instanceof Anthropic.APIError) return `Request failed: ${err.message}`;
   return err instanceof Error ? err.message : "Request failed.";
 }

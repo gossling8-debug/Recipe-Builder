@@ -118,7 +118,7 @@ export const ADD_TOUR_STEPS: TourStep[] = [
   {
     target: ".mode-switch",
     title: "Four ways to add a recipe",
-    text: "Photo: a recipe card or cookbook page. Website: paste a recipe's link. Paste text: from a message, email or note. Create: describe a dish and Claude writes the recipe.",
+    text: "Photo: a recipe card or cookbook page. Website: paste a recipe's link. Paste text: from a message, email or note. Create: describe a dish and Cardamix writes the recipe.",
   },
   {
     target: ".fab-stack",
@@ -128,7 +128,7 @@ export const ADD_TOUR_STEPS: TourStep[] = [
   {
     target: ".scan-labels",
     title: "Labels (optional)",
-    text: "Pick labels like Dinner or Dessert, or leave them off and Claude suggests some. You can filter your recipes by them later.",
+    text: "Pick labels like Dinner or Dessert, or leave them off and Cardamix suggests some. You can filter your recipes by them later.",
   },
   {
     target: ".verify-email",
@@ -137,6 +137,6 @@ export const ADD_TOUR_STEPS: TourStep[] = [
   },
   {
     title: "Then tap Read recipe",
-    text: "Claude reads it in about half a minute, keeping every amount in the steps. Check it over, and it's saved to your recipes. That's it — try your first one!",
+    text: "Cardamix reads it in about half a minute, keeping every amount in the steps. Check it over, and it's saved to your recipes. That's it — try your first one!",
   },
 ]

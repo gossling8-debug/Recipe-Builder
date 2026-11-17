@@ -96,9 +96,9 @@ export async function readReceipt(apiKey: string, images: string[], knownNames: 
     throw new ScanError(describeApiError(err));
   }
   recordUsage("receipt", m.id, response.usage);
-  if (response.stop_reason === "refusal") throw new ScanError("Claude couldn't read this. Try a clearer photo or screenshot.");
+  if (response.stop_reason === "refusal") throw new ScanError("Cardamix couldn't read this. Try a clearer photo or screenshot.");
   if (response.stop_reason === "max_tokens") throw new ScanError("This receipt is very long. Try importing it in two parts.");
-  if (!response.parsed_output) throw new ScanError("Claude's answer couldn't be read. Please try again.");
+  if (!response.parsed_output) throw new ScanError("Cardamix couldn't read the answer. Please try again.");
   const out = response.parsed_output;
   // Only keep matches to names that really are on the list.
   const known = new Set(knownNames);
