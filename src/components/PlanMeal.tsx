@@ -27,7 +27,7 @@ export default function PlanMeal({ recipe, recipeId }: { recipe: ScannedRecipe &
   const link = `${location.origin}${location.pathname}#/recipe/${encodeURIComponent(recipeId)}`;
 
   function save() {
-    const p: Plan = { recipeId, title: recipe.title, eatAt: eat.getTime(), startAt: start, minutes: est.minutes };
+    const p: Plan = { recipeId, title: recipe.title, eatAt: eat.getTime(), startAt: start, minutes: est.minutes, setAt: Date.now() };
     setPlan(p);
     setPlanState(p);
     setOpen(false);

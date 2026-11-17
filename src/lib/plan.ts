@@ -88,6 +88,18 @@ export interface Plan {
   startAt: number; // ms
   minutes: number;
   alerted?: boolean;
+  /** When the meal time was set (plans saved before this was kept have none). */
+  setAt?: number;
+}
+
+/**
+ * Made it already: the recipe was marked made after this meal time was set
+ * (for older plans, any time since the morning before the meal: within
+ * 36 hours of it). Its reminders are done.
+ */
+export function planDone(p: Plan, lastMadeAt: number | undefined): boolean {
+  if (lastMadeAt === undefined) return false;
+  return p.setAt !== undefined ? lastMadeAt >= p.setAt : lastMadeAt >= p.eatAt - 36 * 3600_000;
 }
 
 const KEY = "recipe-builder.plans";

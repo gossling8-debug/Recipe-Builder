@@ -1,7 +1,9 @@
 import { feature } from "../lib/features";
 import { useEffect, useState } from "react";
 import { href } from "../lib/route";
-import { loadPlans, markAlerted, timeOf, type Plan } from "../lib/plan";
+import { clearPlan, loadPlans, markAlerted, planDone, timeOf, type Plan } from "../lib/plan";
+import { getRecipe } from "../lib/db";
+import { lastMade } from "../lib/made";
 import { chime, unlockAudio } from "../lib/timers";
 
 /**
@@ -21,8 +23,14 @@ export default function PlanWatcher() {
       const p = Object.values(loadPlans()).find((x) => !x.alerted && x.startAt <= now && x.eatAt > now);
       if (p) {
         markAlerted(p.recipeId);
-        setDue(p);
-        chime();
+        // Already made since this meal time was set: no alert, and the plan is done.
+        void getRecipe(p.recipeId)
+          .catch(() => undefined)
+          .then((r) => {
+            if (r && planDone(p, lastMade(r))) return clearPlan(p.recipeId);
+            setDue(p);
+            chime();
+          });
       }
     };
     check();
