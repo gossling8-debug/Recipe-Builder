@@ -28,9 +28,9 @@ import Icon from "./Icon";
 import CookThisWeek from "./CookThisWeek";
 import Tour from "./Tour";
 import UpNext from "./UpNext";
-import { tourDone } from "../lib/tour";
+import { finishTour, queueAddTour, tourDone } from "../lib/tour";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
-import { href } from "../lib/route";
+import { href, navigate } from "../lib/route";
 import { aiReady } from "../lib/settings";
 import type { SavedRecipe } from "../lib/schema";
 
@@ -407,7 +407,20 @@ export default function Library() {
           </a>
         )}
       </main>
-      {tourReady && !tourClosed && <Tour onDone={() => setTourClosed(true)} />}
+      {tourReady && !tourClosed && (
+        <Tour
+          doneLabel="Next: add a recipe"
+          onDone={(finished) => {
+            finishTour();
+            setTourClosed(true);
+            // Finished (not skipped): the second tour, on Add Recipe.
+            if (finished) {
+              queueAddTour();
+              navigate({ name: "scan" });
+            }
+          }}
+        />
+      )}
       {menuFor && (
         <RecipeActions
           recipe={menuFor}
