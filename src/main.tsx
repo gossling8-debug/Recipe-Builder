@@ -6,12 +6,14 @@ import { applyTextSize, getTextSize } from "./lib/textSize";
 import { applyTheme, getTheme } from "./lib/theme";
 import { keepSheetsAboveKeyboard } from "./lib/keyboard";
 import { installErrorReporting } from "./lib/errorReport";
+import { captureInstallPrompt } from "./lib/homeScreen";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 applyTextSize(getTextSize());
 applyTheme(getTheme(), false);
 keepSheetsAboveKeyboard();
 installErrorReporting();
+captureInstallPrompt();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

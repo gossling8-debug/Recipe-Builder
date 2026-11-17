@@ -5,6 +5,8 @@ import Header from "./Header";
 import Icon from "./Icon";
 import CloudSection from "./CloudSection";
 import AppLockSection from "./AppLockSection";
+import AddToHomeScreen from "./AddToHomeScreen";
+import { isStandalone } from "../lib/homeScreen";
 import { cloudState, subscribeCloud } from "../lib/cloud";
 import { applyTextSize, getTextSize, TEXT_SIZES, type TextSize } from "../lib/textSize";
 import { applyTheme, getTheme, THEMES, type Theme } from "../lib/theme";
@@ -123,6 +125,13 @@ export default function Settings() {
             ))}
           </div>
         </section>
+
+        {!isStandalone() && (
+          <section>
+            <h3>Home screen</h3>
+            <AddToHomeScreen />
+          </section>
+        )}
 
         <section>
           <h3>Appearance</h3>
