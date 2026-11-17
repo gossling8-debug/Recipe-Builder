@@ -1,3 +1,4 @@
+import { Loading } from "./LogoLoader";
 import { useEffect, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
@@ -114,7 +115,7 @@ export function MixPage() {
           <strong>Publish to The Mix</strong>.
         </p>
         {!on && <NeedsAccount s={s} />}
-        {on && items === null && !error && <p className="muted">Loading…</p>}
+        {on && items === null && !error && <Loading />}
         {items && items.length === 0 && <p className="muted">Nothing here yet. Be the first: open one of your recipes and publish it.</p>}
         {items && items.length > 0 && (
           <>
@@ -296,7 +297,7 @@ export function MixRecipePage({ id }: { id: string }) {
       <Header title="The Mix" back={href({ name: "mix" })} returnToPrevious />
       <main className="page">
         {!on && <NeedsAccount s={s} />}
-        {on && m === undefined && !error && <p className="muted">Loading…</p>}
+        {on && m === undefined && !error && <Loading />}
         {m === null && <div className="callout error">This recipe isn't in The Mix any more.</div>}
         {hidden && <div className="callout">This recipe was reported by several cooks and is hidden while it's checked.</div>}
         {m && !hidden && m.sourceUrl && (

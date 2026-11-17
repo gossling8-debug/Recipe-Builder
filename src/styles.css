@@ -1201,3 +1201,26 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .leftover-days { margin: 10px 0 4px; }
 .leftover-day-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .leftover-day-chips .chip { min-width: 46px; border: 1px solid var(--line); }
+
+/* The logo while loading (LogoLoader): an ember round the ring, the C turning like a coin */
+.logo-loader { display: block; border-radius: 22%; flex: none; }
+.logo-loader-ember { transform-box: view-box; transform-origin: 256px 256px; animation: logo-ember 1.6s linear infinite; }
+.logo-loader-c { transform-box: view-box; transform-origin: 256px 256px; animation: logo-turn 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+@keyframes logo-ember { to { transform: rotate(360deg); } }
+/* A full turn that always shows the C the right way round (edge-on at the middle), then a rest. */
+@keyframes logo-turn {
+  0%, 35% { transform: scaleX(1); }
+  52% { transform: scaleX(0.02); }
+  70%, 100% { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-loader-ember, .logo-loader-c { animation: none; }
+}
+.logo-loader.still .logo-loader-ember, .logo-loader.still .logo-loader-c { animation: none; }
+.working .logo-loader { margin: 0 auto 20px; }
+.loading-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.btn .logo-loader { display: inline-block; vertical-align: middle; margin-right: 6px; }
+.plain-loader { display: inline-block; vertical-align: middle; margin: 0; border-width: 2px; }
+.working .plain-loader { display: block; margin: 0 auto 20px; width: 36px !important; height: 36px !important; }
+.animated-logo-toggle { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.animated-logo-toggle .logo-preview { margin-left: auto; }

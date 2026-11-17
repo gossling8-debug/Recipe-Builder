@@ -130,11 +130,11 @@ export async function createRecipe(apiKey: string, input: CreateInput): Promise<
     throw new ScanError(cutOff(err) ? "The recipe came back incomplete. Please try again, or ask for something a little simpler." : describeApiError(err));
   }
   const usage = recordUsage("create", m.id, response.usage);
-  if (response.stop_reason === "refusal") throw new ScanError("Claude couldn't create that recipe. Try asking a different way.");
+  if (response.stop_reason === "refusal") throw new ScanError("Cardamix couldn't create that recipe. Try asking a different way.");
   if (response.stop_reason === "max_tokens") throw new ScanError("The recipe ran too long. Please try again.");
   const out = response.parsed_output;
-  if (!out) throw new ScanError("Claude's answer couldn't be read. Please try again.");
-  if (out.recipe.ingredients.length === 0) throw new ScanError(out.recipe.warnings[0] ?? "Claude couldn't make a recipe from that. Try describing a dish.");
+  if (!out) throw new ScanError("Cardamix couldn't read the answer. Please try again.");
+  if (out.recipe.ingredients.length === 0) throw new ScanError(out.recipe.warnings[0] ?? "Cardamix couldn't make a recipe from that. Try describing a dish.");
   return { recipe: sanitizeRecipe(out.recipe), inspiredBy: out.inspired_by, whyItWorks: out.why_it_works.trim(), chefTips: out.chef_tips.slice(0, 4), plating: out.plating.trim(), usage };
 }
 

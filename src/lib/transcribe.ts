@@ -29,7 +29,7 @@ export async function transcribePage(apiKey: string, photo: string): Promise<str
     throw new ScanError(describeApiError(err));
   }
   recordUsage("memory", model.id, response.usage);
-  if (response.stop_reason === "refusal") throw new ScanError("Claude couldn't read this page.");
+  if (response.stop_reason === "refusal") throw new ScanError("Cardamix couldn't read this page.");
   return response.content
     .filter((b): b is Extract<(typeof response.content)[number], { type: "text" }> => b.type === "text")
     .map((b) => b.text)

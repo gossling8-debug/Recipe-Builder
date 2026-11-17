@@ -5,6 +5,7 @@ import { href } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
 import { removeFromShopping } from "../lib/shopping";
 import Header from "./Header";
+import { Loading } from "./LogoLoader";
 
 const day = (ms: number) => new Date(ms).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 
@@ -38,7 +39,7 @@ export default function DuplicatesPage() {
     <>
       <Header title="Possible duplicates" back={href({ name: "library" })} />
       <main className="page">
-        {all === null && <p className="muted">Loading…</p>}
+        {all === null && <Loading />}
         {all && pairs.length === 0 && <p className="muted">No duplicates found.</p>}
         {pairs.length > 0 && <p className="muted small">These look like the same recipe saved twice. Open them to compare, then keep one.</p>}
         <ul className="dup-list">

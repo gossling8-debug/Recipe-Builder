@@ -12,6 +12,7 @@ import Library from "./components/Library";
 import PlanWatcher from "./components/PlanWatcher";
 import { startCloud } from "./lib/cloud";
 import TabBar from "./components/TabBar";
+import { Loading } from "./components/LogoLoader";
 
 // Loaded when first opened (and fetched in the background soon after start).
 const TipsPage = lazyScreen(() => import("./components/TipsPage"));
@@ -159,7 +160,13 @@ export default function App() {
       ) : (
         <>
           <PlanWatcher />
-          <Suspense fallback={<main className="page" aria-busy="true" />}>
+          <Suspense
+            fallback={
+              <main className="page" aria-busy="true">
+                <Loading delay={400} />
+              </main>
+            }
+          >
             <Screen key={RELOAD_ON_SYNC.has(route.name) ? synced : -1} />
           </Suspense>
           {!NO_TAB_BAR.has(route.name) && <TabBar current={route.name} />}

@@ -56,7 +56,7 @@ export default function CookWithWhatIHave() {
     <section className="cook-with">
       <h3 className="list-heading">Cook with what I have</h3>
       <p className="muted small">
-        Claude creates a brand-new recipe from your pantry, using up what's about to go bad first and skipping anything you avoid.
+        Cardamix creates a brand-new recipe from your pantry, using up what's about to go bad first and skipping anything you avoid.
       </p>
       {!aiReady() ? (
         <p className="small">

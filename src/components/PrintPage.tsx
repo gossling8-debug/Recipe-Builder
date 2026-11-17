@@ -12,6 +12,7 @@ import type { Ingredient, SavedRecipe } from "../lib/schema";
 import { dollars, recipeCost } from "../lib/prices";
 import { realServings } from "../lib/autoPlan";
 import { printOrShare, recipePdf, type PdfBlock } from "../lib/printPdf";
+import { Loading } from "./LogoLoader";
 
 const line = (ing: Ingredient, scale: number) => ingredientText(ing, scale);
 
@@ -86,7 +87,11 @@ export default function PrintPage({ id }: { id: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saved, parts, large]);
 
-  if (saved === undefined) return <p className="muted page">Loading…</p>;
+  if (saved === undefined) return (
+      <div className="page">
+        <Loading />
+      </div>
+    );
   if (saved === null) return <div className="callout error page">That recipe wasn't found on this device.</div>;
 
   const scale = loadProgress(id).scale;

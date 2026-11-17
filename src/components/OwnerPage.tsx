@@ -3,6 +3,7 @@ import Header from "./Header";
 import { href } from "../lib/route";
 import { amAdmin } from "../lib/mix";
 import { clearErrorReports, confirmEmailFor, KIND_LABELS, ownerStats, type OwnerStats } from "../lib/owner";
+import { Loading } from "./LogoLoader";
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const when = (t: number) => new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -55,7 +56,7 @@ export default function OwnerPage() {
       <main className="page owner">
         {allowed === false && <div className="callout">Only the app's owner can see this page.</div>}
         {error && <div className="callout error">{error}</div>}
-        {allowed && !s && !error && <p className="muted">Loading…</p>}
+        {allowed && !s && !error && <Loading />}
         {s && (
           <>
             <p className="muted small">

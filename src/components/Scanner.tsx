@@ -25,6 +25,7 @@ import { bookRecipes, getCookbook, shareToCookbook, type Cookbook } from "../lib
 import { duplicatesOf } from "../lib/duplicates";
 import { cloudState, subscribeCloud, user } from "../lib/cloud";
 import { AddToBooksPrompt, DuplicatePrompt, SaveToMinePrompt, type DuplicateMatch } from "./AfterAdd";
+import LogoLoader from "./LogoLoader";
 
 const MAX_PHOTOS = 4;
 type Mode = "photo" | "url" | "text" | "create";
@@ -327,14 +328,14 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
       <main className="page">
         {busy ? (
           <div className="working" role="status">
-            <div className="spinner" aria-hidden />
+            <LogoLoader size={88} />
             <p>
               <strong>{mode === "create" ? "Creating your recipe…" : mode === "url" ? "Reading the web page…" : "Reading your recipe…"}</strong>
             </p>
             <p className="muted">
               {mode === "create"
-                ? "Claude is developing it like a chef would, then checking its ratios, times and temperatures. This usually takes 30–90 seconds."
-                : "Claude is reading it and matching each ingredient to the step where it's used. This usually takes 20–60 seconds."}{" "}
+                ? "Cardamix is developing it like a chef would, then checking its ratios, times and temperatures. This usually takes 30–90 seconds."
+                : "Cardamix is reading it and matching each ingredient to the step where it's used. This usually takes 20–60 seconds."}{" "}
               ({seconds}s)
             </p>
           </div>
@@ -415,7 +416,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
             {mode === "url" && (
               <>
                 <p className="muted">
-                  Copy the address of a recipe page (in your browser: Share → Copy) and paste it here. Claude skips the
+                  Copy the address of a recipe page (in your browser: Share → Copy) and paste it here. Cardamix skips the
                   story and ads and keeps just the recipe.
                 </p>
                 <input
@@ -435,7 +436,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
             {mode === "create" && (
               <>
                 <p className="muted">
-                  Describe a dish, an occasion, or a restaurant favorite to recreate. Claude develops a recipe
+                  Describe a dish, an occasion, or a restaurant favorite to recreate. Cardamix develops a recipe
                   the way a competition chef would — built on proven cooking science and written so any home cook can make it — sized for {getPeople()} {getPeople() === 1 ? "person" : "people"}.
                 </p>
                 <textarea
@@ -454,7 +455,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
                   ))}
                 </div>
                 <p className="muted small">
-                  New recipes are untested: rate them after you cook. Copycats are Claude's recreation, labeled "inspired by" — not
+                  New recipes are untested: rate them after you cook. Copycats are Cardamix's recreation, labeled "inspired by" — not
                   the restaurant's own recipe.
                 </p>
               </>
@@ -503,12 +504,12 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
               {showTags || tags.length ? (
                 <>
                   <h3>Labels</h3>
-                  <p className="muted small">Pick labels for this recipe, or leave them all off and Claude will suggest some.</p>
+                  <p className="muted small">Pick labels for this recipe, or leave them all off and Cardamix will suggest some.</p>
                   <TagPicker tags={tags} onChange={setTags} />
                 </>
               ) : (
                 <button className="link-btn small" onClick={() => setShowTags(true)}>
-                  <Icon name="plus" size={14} /> Choose labels (optional — Claude suggests some if you skip this)
+                  <Icon name="plus" size={14} /> Choose labels (optional — Cardamix suggests some if you skip this)
                 </button>
               )}
             </section>

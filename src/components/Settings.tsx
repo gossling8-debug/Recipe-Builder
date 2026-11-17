@@ -6,14 +6,35 @@ import Icon from "./Icon";
 import CloudSection from "./CloudSection";
 import AppLockSection from "./AppLockSection";
 import AddToHomeScreen from "./AddToHomeScreen";
+import LogoLoader, {
+  ANIMATED_LOGO,
+  animatedLogoOn,
+  setAnimatedLogo,
+} from "./LogoLoader";
 import { isStandalone } from "../lib/homeScreen";
 import { cloudState, subscribeCloud } from "../lib/cloud";
-import { applyTextSize, getTextSize, TEXT_SIZES, type TextSize } from "../lib/textSize";
+import {
+  applyTextSize,
+  getTextSize,
+  TEXT_SIZES,
+  type TextSize,
+} from "../lib/textSize";
 import { applyTheme, getTheme, THEMES, type Theme } from "../lib/theme";
 import { getApiKey, ownKey, setApiKey } from "../lib/settings";
 import { href } from "../lib/route";
-import { ALLERGEN_GROUPS, loadAvoid, saveAvoid, type AvoidList } from "../lib/avoid";
-import { availableModels, costOf, getModel, MODELS, setModel } from "../lib/models";
+import {
+  ALLERGEN_GROUPS,
+  loadAvoid,
+  saveAvoid,
+  type AvoidList,
+} from "../lib/avoid";
+import {
+  availableModels,
+  costOf,
+  getModel,
+  MODELS,
+  setModel,
+} from "../lib/models";
 import { allowanceFor } from "../lib/subscription";
 import { amAdmin } from "../lib/mix";
 import { restartTour } from "../lib/tour";
@@ -21,7 +42,12 @@ import { navigate } from "../lib/route";
 import AiAllowance from "./AiAllowance";
 import { loadUsage, money } from "../lib/usage";
 import { exportBackup, importBackup } from "../lib/backup";
-import { storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
+import {
+  storageErrorMessage,
+  storageMode,
+  STORAGE_MODE_TEXT,
+  type StorageMode,
+} from "../lib/db";
 
 export default function Settings() {
   const [, featuresTick] = useState(0);
@@ -41,15 +67,31 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [keyError, setKeyError] = useState("");
   const [textSize, setTextSize] = useState<TextSize>(getTextSize());
+  const [animatedLogo, setAnimatedLogoState] = useState(animatedLogoOn);
   const [theme, setTheme] = useState<Theme>(getTheme());
   const [avoid, setAvoid] = useState<AvoidList>(loadAvoid);
   const [modelId, setModelId] = useState(getModel().id);
   const usage = loadUsage();
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+  const monthStart = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1,
+  ).getTime();
   const thisMonth = usage.filter((u) => u.at >= monthStart);
   const avgFor = (id: string) => {
-    const scans = usage.filter((u) => u.model === id && u.kind !== "substitutes" && u.kind !== "nutrition" && u.kind !== "receipt");
-    return scans.length ? { avg: scans.reduce((s, u) => s + u.cost, 0) / scans.length, n: scans.length } : null;
+    const scans = usage.filter(
+      (u) =>
+        u.model === id &&
+        u.kind !== "substitutes" &&
+        u.kind !== "nutrition" &&
+        u.kind !== "receipt",
+    );
+    return scans.length
+      ? {
+          avg: scans.reduce((s, u) => s + u.cost, 0) / scans.length,
+          n: scans.length,
+        }
+      : null;
   };
   const [newAvoid, setNewAvoid] = useState("");
   const updateAvoid = (a: AvoidList) => {
@@ -58,7 +100,8 @@ export default function Settings() {
   };
   const addAvoidWord = () => {
     const w = newAvoid.trim().toLowerCase();
-    if (w && !avoid.custom.includes(w)) updateAvoid({ ...avoid, custom: [...avoid.custom, w] });
+    if (w && !avoid.custom.includes(w))
+      updateAvoid({ ...avoid, custom: [...avoid.custom, w] });
     setNewAvoid("");
   };
   const [mode, setMode] = useState<StorageMode | null>(null);
@@ -67,13 +110,17 @@ export default function Settings() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    navigator.storage?.persisted?.().then(setPersisted, () => setPersisted(null));
+    navigator.storage
+      ?.persisted?.()
+      .then(setPersisted, () => setPersisted(null));
     storageMode().then(setMode, () => {});
   }, []);
 
   function save() {
     setKeyError(
-      setApiKey(key) ? "" : "This browser won't let the app remember your key, so it's kept only until you close the app.",
+      setApiKey(key)
+        ? ""
+        : "This browser won't let the app remember your key, so it's kept only until you close the app.",
     );
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -82,9 +129,15 @@ export default function Settings() {
   async function doExport() {
     try {
       const n = await exportBackup();
-      setMessage(`Backup file created with ${n} recipe${n === 1 ? "" : "s"}. Save it somewhere safe (Files, iCloud Drive, Google Drive, email).`);
+      setMessage(
+        `Backup file created with ${n} recipe${n === 1 ? "" : "s"}. Save it somewhere safe (Files, iCloud Drive, Google Drive, email).`,
+      );
     } catch (e) {
-      setMessage(e instanceof DOMException ? storageErrorMessage(e) : `Backup failed: ${e instanceof Error ? e.message : e}`);
+      setMessage(
+        e instanceof DOMException
+          ? storageErrorMessage(e)
+          : `Backup failed: ${e instanceof Error ? e.message : e}`,
+      );
     }
   }
 
@@ -94,7 +147,13 @@ export default function Settings() {
       const n = await importBackup(file);
       setMessage(`Restored ${n} recipe${n === 1 ? "" : "s"}.`);
     } catch (e) {
-      setMessage(e instanceof DOMException ? storageErrorMessage(e) : e instanceof Error ? e.message : String(e));
+      setMessage(
+        e instanceof DOMException
+          ? storageErrorMessage(e)
+          : e instanceof Error
+            ? e.message
+            : String(e),
+      );
     }
   }
 
@@ -104,8 +163,14 @@ export default function Settings() {
       <main className="page">
         <section>
           <h3>Text size</h3>
-          <p className="muted small">Makes text, buttons and checkboxes bigger throughout the app.</p>
-          <div className="segmented text-size-control" role="radiogroup" aria-label="Text size">
+          <p className="muted small">
+            Makes text, buttons and checkboxes bigger throughout the app.
+          </p>
+          <div
+            className="segmented text-size-control"
+            role="radiogroup"
+            aria-label="Text size"
+          >
             {TEXT_SIZES.map(({ value, label }, i) => (
               <button
                 key={value}
@@ -117,7 +182,11 @@ export default function Settings() {
                   setTextSize(value);
                 }}
               >
-                <span className="aa" style={{ fontSize: `${15 + i * 4}px` }} aria-hidden>
+                <span
+                  className="aa"
+                  style={{ fontSize: `${15 + i * 4}px` }}
+                  aria-hidden
+                >
                   Aa
                 </span>
                 {label}
@@ -135,8 +204,15 @@ export default function Settings() {
 
         <section>
           <h3>Appearance</h3>
-          <p className="muted small">Night is a black background with white text — easier on the eyes in the dark. Automatic follows your phone.</p>
-          <div className="segmented appearance-control" role="radiogroup" aria-label="Appearance">
+          <p className="muted small">
+            Night is a black background with white text — easier on the eyes in
+            the dark. Automatic follows your phone.
+          </p>
+          <div
+            className="segmented appearance-control"
+            role="radiogroup"
+            aria-label="Appearance"
+          >
             {THEMES.map(({ value, label }) => (
               <button
                 key={value}
@@ -152,60 +228,93 @@ export default function Settings() {
               </button>
             ))}
           </div>
+          {ANIMATED_LOGO && (
+            <label className="pick-row animated-logo-toggle">
+              <input
+                type="checkbox"
+                checked={animatedLogo}
+                onChange={(e) => {
+                  setAnimatedLogo(e.target.checked);
+                  setAnimatedLogoState(e.target.checked);
+                }}
+              />
+              <span>Animated logo while loading</span>
+              <span className="logo-preview">
+                <LogoLoader size={28} key={String(animatedLogo)} />
+              </span>
+            </label>
+          )}
         </section>
 
         <FeaturesSection />
 
         {feature("avoid") && (
-        <section>
-          <h3>Allergies &amp; ingredients to avoid</h3>
-          <p className="muted small">
-            Recipes that use these are flagged, you can filter them out of your list, and each recipe can suggest
-            substitutes. Flags are a helpful check, not a guarantee — always read labels on packaged ingredients.
-          </p>
-          <div className="tag-picker">
-            {Object.entries(ALLERGEN_GROUPS).map(([k, g]) => {
-              const on = avoid.groups.includes(k);
-              return (
-                <button
-                  key={k}
-                  className={on ? "tag on" : "tag"}
-                  aria-pressed={on}
-                  onClick={() => updateAvoid({ ...avoid, groups: on ? avoid.groups.filter((x) => x !== k) : [...avoid.groups, k] })}
-                >
-                  {on && <Icon name="check" size={14} />} {g.label}
-                </button>
-              );
-            })}
-          </div>
-          {avoid.custom.length > 0 && (
+          <section>
+            <h3>Allergies &amp; ingredients to avoid</h3>
+            <p className="muted small">
+              Recipes that use these are flagged, you can filter them out of
+              your list, and each recipe can suggest substitutes. Flags are a
+              helpful check, not a guarantee — always read labels on packaged
+              ingredients.
+            </p>
             <div className="tag-picker">
-              {avoid.custom.map((w) => (
-                <button
-                  key={w}
-                  className="tag on"
-                  aria-label={`Stop avoiding ${w}`}
-                  onClick={() => updateAvoid({ ...avoid, custom: avoid.custom.filter((x) => x !== w) })}
-                >
-                  {w} <Icon name="close" size={14} />
-                </button>
-              ))}
+              {Object.entries(ALLERGEN_GROUPS).map(([k, g]) => {
+                const on = avoid.groups.includes(k);
+                return (
+                  <button
+                    key={k}
+                    className={on ? "tag on" : "tag"}
+                    aria-pressed={on}
+                    onClick={() =>
+                      updateAvoid({
+                        ...avoid,
+                        groups: on
+                          ? avoid.groups.filter((x) => x !== k)
+                          : [...avoid.groups, k],
+                      })
+                    }
+                  >
+                    {on && <Icon name="check" size={14} />} {g.label}
+                  </button>
+                );
+              })}
             </div>
-          )}
-          <div className="new-tag">
-            <input
-              className="text-input"
-              placeholder="Something else, e.g. butter"
-              value={newAvoid}
-              onChange={(e) => setNewAvoid(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addAvoidWord()}
-            />
-            <button className="btn" onClick={addAvoidWord} disabled={!newAvoid.trim()}>
-              Add
-            </button>
-          </div>
-        </section>
-
+            {avoid.custom.length > 0 && (
+              <div className="tag-picker">
+                {avoid.custom.map((w) => (
+                  <button
+                    key={w}
+                    className="tag on"
+                    aria-label={`Stop avoiding ${w}`}
+                    onClick={() =>
+                      updateAvoid({
+                        ...avoid,
+                        custom: avoid.custom.filter((x) => x !== w),
+                      })
+                    }
+                  >
+                    {w} <Icon name="close" size={14} />
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="new-tag">
+              <input
+                className="text-input"
+                placeholder="Something else, e.g. butter"
+                value={newAvoid}
+                onChange={(e) => setNewAvoid(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addAvoidWord()}
+              />
+              <button
+                className="btn"
+                onClick={addAvoidWord}
+                disabled={!newAvoid.trim()}
+              >
+                Add
+              </button>
+            </div>
+          </section>
         )}
 
         <AppLockSection />
@@ -218,11 +327,13 @@ export default function Settings() {
             {signedIn
               ? "Everything is backed up to your account automatically. A backup file is an extra copy of your recipes that you keep yourself."
               : "Recipes are saved on this phone. Clearing this site's data in your browser settings (or deleting the app) erases them, so sign in to cloud backup above or export a backup now and then."}
-            {persisted === true && " This browser has agreed not to clear them on its own to free up space."}
+            {persisted === true &&
+              " This browser has agreed not to clear them on its own to free up space."}
           </p>
           {mode && (
             <p className="small" data-testid="storage-mode">
-              <strong>Storage on this browser:</strong> {STORAGE_MODE_TEXT[mode]}
+              <strong>Storage on this browser:</strong>{" "}
+              {STORAGE_MODE_TEXT[mode]}
             </p>
           )}
           <div className="button-row">
@@ -251,10 +362,15 @@ export default function Settings() {
         <section>
           <h3>Recipe reader</h3>
           <p className="muted small">
-            Which Claude model reads your cards, websites and text. Budget stretches your AI much further but may misread messy
-            handwriting — you can always fix a mistake with Edit.
+            Which Claude model reads your cards, websites and text. Budget
+            stretches your AI much further but may misread messy handwriting —
+            you can always fix a mistake with Edit.
           </p>
-          <div className="model-list" role="radiogroup" aria-label="Recipe reader">
+          <div
+            className="model-list"
+            role="radiogroup"
+            aria-label="Recipe reader"
+          >
             {availableModels().map((m) => {
               const mine = avgFor(m.id);
               // Typical card scan: ~3,500 tokens in (photo + instructions), ~4,000 out (reasoning + recipe).
@@ -264,7 +380,9 @@ export default function Settings() {
                   key={m.id}
                   role="radio"
                   aria-checked={modelId === m.id}
-                  className={modelId === m.id ? "model-option on" : "model-option"}
+                  className={
+                    modelId === m.id ? "model-option on" : "model-option"
+                  }
                   onClick={() => {
                     setModel(m.id);
                     setModelId(m.id);
@@ -273,7 +391,13 @@ export default function Settings() {
                   <span className="model-head">
                     <strong>{m.label}</strong>
                     <span className="model-cost">
-                      {ownKey() ? (mine ? `your average ${money(mine.avg)}` : `≈ ${money(typical)} per card`) : hasPlus() ? `≈ ${Math.round(allowanceFor() / typical)} scans a month` : "5 free recipe adds a month"}
+                      {ownKey()
+                        ? mine
+                          ? `your average ${money(mine.avg)}`
+                          : `≈ ${money(typical)} per card`
+                        : hasPlus()
+                          ? `≈ ${Math.round(allowanceFor() / typical)} scans a month`
+                          : "5 free recipe adds a month"}
                     </span>
                   </span>
                   <span className="muted small">{m.blurb}</span>
@@ -283,71 +407,97 @@ export default function Settings() {
           </div>
           {!hasPlus() && !ownKey() && (
             <p className="muted small">
-              The free plan reads recipes with Standard. <a href={href({ name: "plus" })}>Plus</a> adds Advanced, better for messy handwriting.
+              The free plan reads recipes with Standard.{" "}
+              <a href={href({ name: "plus" })}>Plus</a> adds Advanced, better
+              for messy handwriting.
             </p>
           )}
         </section>
 
         <details className="advanced">
           <summary>Your own API key (advanced)</summary>
-        <section>
-          <h3>Your own Anthropic key</h3>
-          <p className="muted small">
-            Optional, for advanced users. With your own key, AI is billed to your Anthropic account instead of using your monthly
-            allowance, and the Expert model is available. Create one at console.anthropic.com → API Keys. It's stored only on this
-            phone. Leave it empty to use Cardamix's AI.
-          </p>
-          <input
-            className="text-input"
-            type="password"
-            autoComplete="off"
-            placeholder="sk-ant-…"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-          />
-          <div className="button-row">
-            <button className="btn primary" onClick={save}>
-              {saved ? "Saved ✓" : "Save key"}
-            </button>
-          </div>
-          {keyError && <div className="callout warn">{keyError}</div>}
-        </section>
+          <section>
+            <h3>Your own Anthropic key</h3>
+            <p className="muted small">
+              Optional, for advanced users. With your own key, AI is billed to
+              your Anthropic account instead of using your monthly allowance,
+              and the Expert model is available. Create one at
+              console.anthropic.com → API Keys. It's stored only on this phone.
+              Leave it empty to use Cardamix's AI.
+            </p>
+            <input
+              className="text-input"
+              type="password"
+              autoComplete="off"
+              placeholder="sk-ant-…"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+            />
+            <div className="button-row">
+              <button className="btn primary" onClick={save}>
+                {saved ? "Saved ✓" : "Save key"}
+              </button>
+            </div>
+            {keyError && <div className="callout warn">{keyError}</div>}
+          </section>
 
-        {ownKey() && (
-        <section>
-          <h3>Spending</h3>
-          {usage.length === 0 ? (
-            <p className="muted small">Nothing yet. After your first scan this shows what the app has cost you.</p>
-          ) : (
-            <>
-              <p>
-                This month: <strong>{money(thisMonth.reduce((s, u) => s + u.cost, 0))}</strong>{" "}
-                <span className="muted">
-                  ({thisMonth.length} {thisMonth.length === 1 ? "request" : "requests"})
-                </span>
+          {ownKey() && (
+            <section>
+              <h3>Spending</h3>
+              {usage.length === 0 ? (
+                <p className="muted small">
+                  Nothing yet. After your first scan this shows what the app has
+                  cost you.
+                </p>
+              ) : (
+                <>
+                  <p>
+                    This month:{" "}
+                    <strong>
+                      {money(thisMonth.reduce((s, u) => s + u.cost, 0))}
+                    </strong>{" "}
+                    <span className="muted">
+                      ({thisMonth.length}{" "}
+                      {thisMonth.length === 1 ? "request" : "requests"})
+                    </span>
+                  </p>
+                  <ul className="usage-list small">
+                    {usage
+                      .slice(-5)
+                      .reverse()
+                      .map((u, i) => (
+                        <li key={i}>
+                          <span>
+                            {
+                              {
+                                scan: "Card scan",
+                                website: "Website",
+                                text: "Pasted text",
+                                substitutes: "Substitutes",
+                                nutrition: "Nutrition",
+                                receipt: "Receipt",
+                                pantryRecipe: "Pantry recipe",
+                                memory: "Memory page",
+                                create: "Created recipe",
+                              }[u.kind]
+                            }{" "}
+                            ·{" "}
+                            {MODELS.find((m) => m.id === u.model)?.label ??
+                              u.model}
+                          </span>
+                          <span>{money(u.cost)}</span>
+                        </li>
+                      ))}
+                  </ul>
+                </>
+              )}
+              <p className="muted small">
+                Estimates from Anthropic's list prices and the size of each
+                request. Your exact bill is in the Anthropic Console. Cheapest
+                to most expensive: pasted text, websites, card photos.
               </p>
-              <ul className="usage-list small">
-                {usage
-                  .slice(-5)
-                  .reverse()
-                  .map((u, i) => (
-                    <li key={i}>
-                      <span>
-                        {{ scan: "Card scan", website: "Website", text: "Pasted text", substitutes: "Substitutes", nutrition: "Nutrition", receipt: "Receipt", pantryRecipe: "Pantry recipe", memory: "Memory page", create: "Created recipe" }[u.kind]} ·{" "}
-                        {MODELS.find((m) => m.id === u.model)?.label ?? u.model}
-                      </span>
-                      <span>{money(u.cost)}</span>
-                    </li>
-                  ))}
-              </ul>
-            </>
+            </section>
           )}
-          <p className="muted small">
-            Estimates from Anthropic's list prices and the size of each request. Your exact bill is in the Anthropic
-            Console. Cheapest to most expensive: pasted text, websites, card photos.
-          </p>
-        </section>
-        )}
         </details>
 
         <p className="small settings-footer">
@@ -360,7 +510,8 @@ export default function Settings() {
           >
             Take the tour again
           </button>{" "}
-          · <a href={href({ name: "privacy" })}>Privacy policy</a> · <a href={href({ name: "terms" })}>Terms of service</a>
+          · <a href={href({ name: "privacy" })}>Privacy policy</a> ·{" "}
+          <a href={href({ name: "terms" })}>Terms of service</a>
           {admin && (
             <>
               {" "}

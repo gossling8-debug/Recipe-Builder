@@ -102,8 +102,8 @@ export async function estimateNutrition(apiKey: string, recipe: ScannedRecipe, a
     throw new ScanError(describeApiError(err));
   }
   recordUsage("nutrition", m.id, response.usage);
-  if (response.stop_reason === "refusal") throw new ScanError("Claude couldn't answer this one. Try again later.");
-  if (!response.parsed_output) throw new ScanError("Claude's answer couldn't be read. Please try again.");
+  if (response.stop_reason === "refusal") throw new ScanError("Cardamix couldn't answer this one. Try again later.");
+  if (!response.parsed_output) throw new ScanError("Cardamix couldn't read the answer. Please try again.");
   const out = response.parsed_output;
   // Drop swaps that point at an ingredient that doesn't exist.
   return { ...out, healthier: out.healthier.filter((h) => h.ingredient_index >= 0 && h.ingredient_index < recipe.ingredients.length) };

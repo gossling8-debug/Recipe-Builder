@@ -40,6 +40,7 @@ import {
 } from "../lib/shopping";
 import { shoppingItems } from "../lib/shoppingItems";
 import type { SavedRecipe } from "../lib/schema";
+import LogoLoader from "./LogoLoader";
 
 interface Row {
   include: boolean;
@@ -437,6 +438,7 @@ export default function ReceiptPage() {
                     onClick={read}
                     disabled={busy}
                   >
+                    {busy && <LogoLoader size={22} />}
                     {busy ? "Reading… (about 20–40 seconds)" : "Read receipt"}
                   </button>
                 </div>

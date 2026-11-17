@@ -6,6 +6,7 @@ import type { SavedRecipe } from "../lib/schema";
 import { activeSwaps, ingredientsKey, shortName, type Swap } from "../lib/swaps";
 import { matchIngredient } from "../lib/edit";
 import Icon from "./Icon";
+import LogoLoader from "./LogoLoader";
 
 /**
  * Substitutes for the ingredients on the cook's avoid list, written by
@@ -151,7 +152,7 @@ export default function Substitutes({ recipe, onSaved }: { recipe: SavedRecipe; 
               </p>
             )}
             <button className="btn" onClick={ask} disabled={busy}>
-              <Icon name="reset" size={18} /> {busy ? "Thinking… (about 15–30 seconds)" : saved ? "Update suggestions" : "Suggest substitutes"}
+              {busy ? <LogoLoader size={22} /> : <Icon name="reset" size={18} />} {busy ? "Thinking… (about 15–30 seconds)" : saved ? "Update suggestions" : "Suggest substitutes"}
             </button>
           </>
         ) : (
