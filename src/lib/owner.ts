@@ -16,6 +16,8 @@ export interface OwnerStats {
 
 export const ownerStats = () => callable<OwnerStats>("ownerStats");
 export const clearErrorReports = () => callable<{ removed: number }>("ownerClearErrors");
+/** Marks someone's email as confirmed (their confirmation email never arrived). */
+export const confirmEmailFor = (email: string) => callable<{ already: boolean }>("ownerConfirmEmail", { email });
 
 /** What each AI request kind is called on the dashboard. */
 export const KIND_LABELS: Record<string, string> = {

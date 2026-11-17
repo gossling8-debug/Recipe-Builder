@@ -7,6 +7,7 @@
  *  - billingPortal: opens Stripe's page to manage or cancel a subscription.
  *  - closeMyAccount / accountDeleted: cancel a deleted account's subscription and clear its records.
  *  - ownerStats / ownerClearErrors: the owner dashboard (admins only; counts, no names or emails).
+ *  - ownerConfirmEmail: the owner marks someone's email as confirmed when the email never arrives.
  *  - mixVote:       rates or reports a Mix recipe, privately (only totals are public).
  *  - deleteMyData / accountDeleted: remove everything an account left, server-side.
  *  - mixDeleted:    clears the private votes on a Mix recipe once it's taken down.
@@ -224,6 +225,25 @@ export const ownerStats = onCall({ ...opts, timeoutSeconds: 60 }, async (req) =>
   ]);
   const data = (q) => q.docs.map((d) => d.data());
   return summarize({ users, plans: data(plans), usage: data(usage), mix: data(mix), cookbooks: cookbooks.data().count, errors: data(errors) });
+});
+
+/**
+ * The confirmation email never arrived (spam filters, a blocked sender): the
+ * owner, who knows the person, marks their address as confirmed by hand.
+ */
+export const ownerConfirmEmail = onCall({ ...opts, timeoutSeconds: 30 }, async (req) => {
+  await requireAdmin(req);
+  const email = typeof req.data?.email === "string" ? req.data.email.trim() : "";
+  if (!email) throw new HttpsError("invalid-argument", "Enter their email address.");
+  let u;
+  try {
+    u = await getAuth().getUserByEmail(email);
+  } catch {
+    throw new HttpsError("not-found", "No account with that email. Check the spelling (it must match exactly).");
+  }
+  if (u.emailVerified) return { already: true };
+  await getAuth().updateUser(u.uid, { emailVerified: true });
+  return { already: false };
 });
 
 /** Delete every error report (after reading them). */

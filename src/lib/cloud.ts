@@ -199,8 +199,9 @@ export async function createAccount(email: string, password: string): Promise<vo
   const { auth, a } = await fb();
   try {
     const cred = await a.createUserWithEmailAndPassword(auth, email.trim(), password);
-    // Confirm the address (the free plan's AI needs it). Not fatal if it fails: Settings can resend.
-    await a.sendEmailVerification(cred.user, { url: verifyReturnUrl() }).catch(() => {});
+    // Confirm the address (the free plan's AI needs it). Not fatal if it fails: it can be sent again,
+    // but the owner dashboard hears about it (so a sending problem doesn't go unnoticed).
+    await a.sendEmailVerification(cred.user, { url: verifyReturnUrl() }).catch((e) => reportSendFailure(e));
   } catch (e) {
     throw new Error(friendly(e));
   }
@@ -234,6 +235,8 @@ export async function changeEmail(newEmail: string, password: string): Promise<v
   }
 }
 
+const reportSendFailure = (e: unknown) => void import("./errorReport").then((m) => m.reportError(e, "confirmation email")).catch(() => {});
+
 /** Where the verification link brings people back to. */
 const verifyReturnUrl = () => `${location.origin}${location.pathname}`;
 
@@ -244,6 +247,7 @@ export async function sendVerificationEmail(): Promise<void> {
   try {
     await a.sendEmailVerification(auth.currentUser, { url: verifyReturnUrl() });
   } catch (e) {
+    reportSendFailure(e);
     throw new Error(friendly(e));
   }
 }

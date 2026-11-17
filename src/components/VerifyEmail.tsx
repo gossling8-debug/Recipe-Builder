@@ -36,7 +36,7 @@ export default function VerifyEmail({ compact = false }: { compact?: boolean }) 
       <strong>Confirm your email to use AI.</strong>{" "}
       {compact
         ? "Tap the link we sent you."
-        : `We sent a link to ${s.email}. Tap it to confirm your address — then adding and creating recipes with AI works. (Check spam if you don't see it.)`}
+        : `We sent a link to ${s.email}. Tap it to confirm your address — then adding and creating recipes with AI works. It comes from noreply@recipe-relief.firebaseapp.com: if it isn't in your inbox, check spam or junk (and Promotions in Gmail).`}
       <div className="button-row">
         <button
           className="btn primary"
