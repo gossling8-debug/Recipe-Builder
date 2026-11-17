@@ -12,6 +12,7 @@ import RecipeEditor from "./RecipeEditor";
 import CopyBackedRecipe from "./CopyBackedRecipe";
 import { feature } from "../lib/features";
 import SearchBox from "./SearchBox";
+import { LabelFilters, ListToolbar, allLabels, hasLabel, labelKey } from "./ListControls";
 import { CookbookRating, RatingBadge } from "./CookbookRating";
 import { searchRecipe, type SearchScope } from "../lib/search";
 import { BookRecipeActions, HoldLink } from "./RecipeActions";
@@ -206,19 +207,25 @@ export function BookPage({ id }: { id: string }) {
   const found = new Map(
     q ? (recipes ?? []).map((r) => [r.id, searchRecipe({ ...r.recipe, tags: [...(r.recipe.tags ?? []), r.sharedByName] }, q, scope)] as const) : [],
   );
-  // Everyone's ratings, and the list's order: A–Z or top rated (unrated last).
+  // Filter by a label, as in your own recipes (a label nobody uses any more shows everything).
+  const labels = allLabels((recipes ?? []).map((r) => r.recipe.tags));
+  const [chosenLabel, setChosenLabel] = useState("all");
+  const label = labels.some((l) => labelKey(l) === labelKey(chosenLabel)) ? chosenLabel : "all";
+  // Everyone's ratings, and the list's order: A–Z, newest or top rated (unrated last).
   const [ratings, setRatings] = useState<Record<string, Rating[]>>({});
   useEffect(() => {
     if (on) bookRatings(id).then(setRatings, () => {});
   }, [on, id]);
-  const [order, setOrder] = useState<"az" | "rating">("az");
+  const [order, setOrder] = useState<"az" | "newest" | "rating">("az");
   const avg = (r: SharedRecipe) => ratingSummary(ratings[r.id])?.average ?? -1;
   const shownRecipes = (recipes ?? [])
-    .filter((r) => !q || found.get(r.id)?.match)
+    .filter((r) => (!q || found.get(r.id)?.match) && hasLabel(r.recipe.tags, label))
     .sort((a, b) =>
       order === "rating"
         ? avg(b) - avg(a) || (ratings[b.id]?.length ?? 0) - (ratings[a.id]?.length ?? 0) || a.recipe.title.localeCompare(b.recipe.title)
-        : a.recipe.title.localeCompare(b.recipe.title),
+        : order === "newest"
+          ? b.sharedAt - a.sharedAt
+          : a.recipe.title.localeCompare(b.recipe.title),
     );
   async function removeShared(r: SharedRecipe) {
     if (!confirm(`Remove “${r.recipe.title}” from the cookbook? Copies people saved stay.`)) return;
@@ -299,22 +306,21 @@ export function BookPage({ id }: { id: string }) {
                 {recipes && recipes.length > 0 && (
                   <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
                 )}
+                {recipes && recipes.length > 0 && <LabelFilters labels={labels} value={label} onChange={setChosenLabel} />}
                 {recipes && recipes.length > 1 && (
-                  <div className="book-sort" role="radiogroup" aria-label="Order">
-                    {(
-                      [
-                        ["az", "A–Z"],
-                        ["rating", "Top rated"],
-                      ] as const
-                    ).map(([v, label]) => (
-                      <button key={v} role="radio" aria-checked={order === v} className={order === v ? "chip active" : "chip"} onClick={() => setOrder(v)}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                  <ListToolbar
+                    count={shownRecipes.length}
+                    sort={order}
+                    options={[
+                      ["az", "A–Z"],
+                      ["newest", "Newest"],
+                      ["rating", "Top rated"],
+                    ]}
+                    onSort={setOrder}
+                  />
                 )}
-                {q && recipes && recipes.length > 0 && shownRecipes.length === 0 && (
-                  <p className="muted">No recipes in this cookbook match “{q}”.</p>
+                {(q || label !== "all") && recipes && recipes.length > 0 && shownRecipes.length === 0 && (
+                  <p className="muted">No recipes in this cookbook match{q ? ` “${q}”` : ""}{label !== "all" ? ` with the label ${label}` : ""}.</p>
                 )}
                 {shownRecipes.length > 0 && (
                   <ul className="recipe-list">
