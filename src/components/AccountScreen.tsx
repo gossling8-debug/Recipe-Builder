@@ -4,10 +4,14 @@ import { createAccount, resetPassword, signIn, startCloud, type CloudState } fro
 import { listRecipes } from "../lib/db";
 import { lastAccount } from "../lib/stateSync";
 import { href } from "../lib/route";
+import { isStandalone } from "../lib/homeScreen";
+import AddToHomeScreen from "./AddToHomeScreen";
 
 /** Everyone has an account: shown until someone signs in (or while we find out). */
 export default function AccountScreen({ cloud }: { cloud: CloudState }) {
-  const [mode, setMode] = useState<"create" | "signin">("create");
+  // Opened from a home screen icon: almost always someone who already has an account.
+  const fromHome = isStandalone();
+  const [mode, setMode] = useState<"create" | "signin">(fromHome ? "signin" : "create");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
@@ -62,6 +66,13 @@ export default function AccountScreen({ cloud }: { cloud: CloudState }) {
         </button>
       </div>
 
+      {fromHome && (
+        <div className="callout small home-signin-note">
+          <strong>Opened from your Home Screen?</strong> Sign in once with your email and password. Your passcode, Face ID or fingerprint only unlocks
+          Cardamix after that.
+        </div>
+      )}
+
       <form
         className="cloud-form"
         onSubmit={(e) => {
@@ -106,6 +117,7 @@ export default function AccountScreen({ cloud }: { cloud: CloudState }) {
         )}
       </form>
       {(message || cloud.message) && <div className="callout small">{message || cloud.message}</div>}
+      <AddToHomeScreen collapsed />
       <p className="muted small account-fine-print">
         Free. Your account keeps your recipes, photos and lists safe if you lose or change your phone. By creating an account you agree
         to the <a href={href({ name: "terms" })}>Terms of service</a>. <a href={href({ name: "privacy" })}>Privacy policy</a>

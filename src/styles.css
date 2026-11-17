@@ -1183,3 +1183,10 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .receipt-fast-food .receipt-price .text-input { width: 130px; }
 .owner-confirm { display: flex; gap: 8px; flex-wrap: wrap; }
 .owner-confirm .text-input { flex: 1 1 200px; min-width: 0; }
+
+/* Add to home screen */
+.add-home { margin: 8px 0; }
+.add-home-steps { margin: 6px 0; padding-left: 20px; }
+.add-home-steps li { margin: 4px 0; }
+.add-home-switch { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.account-screen .add-home { border-top: 1px solid var(--line); padding-top: 10px; }
