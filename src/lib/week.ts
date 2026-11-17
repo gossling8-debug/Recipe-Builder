@@ -158,3 +158,48 @@ export function leftoverDayName(key: string, now = new Date()): string {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString([], { weekday: "long" });
 }
+
+/**
+ * Moves one meal to another day (dragged on the Week page). It counts as your
+ * own choice from then on, so "Shuffle again" leaves it where you put it.
+ */
+export function moveMeal(from: string, index: number, to: string): WeekState {
+  const s = loadWeek();
+  const meal = (s.days[from] ?? [])[index];
+  if (!meal || from === to) return s;
+  const { auto: _auto, ...own } = meal;
+  const days = { ...s.days, [from]: (s.days[from] ?? []).filter((_, i) => i !== index) };
+  days[to] = [...(days[to] ?? []), own];
+  const next = { days };
+  saveWeek(next);
+  return next;
+}
+
+// ---------- leftovers nights pinned to a weekday ----------
+const LEFTOVER_DAYS_KEY = "recipe-builder.leftoverDays";
+let leftoverDaysMemory: number[] = [];
+
+/** Weekdays (0 = Sunday … 6 = Saturday) that are always a leftovers night. */
+export function getLeftoverDays(): number[] {
+  try {
+    const raw = localStorage.getItem(LEFTOVER_DAYS_KEY);
+    if (raw) return (JSON.parse(raw) as number[]).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+  } catch {
+    /* blocked */
+  }
+  return leftoverDaysMemory;
+}
+export function setLeftoverDays(days: number[]): void {
+  leftoverDaysMemory = [...new Set(days)].sort();
+  try {
+    localStorage.setItem(LEFTOVER_DAYS_KEY, JSON.stringify(leftoverDaysMemory));
+  } catch {
+    /* session only */
+  }
+  if (typeof window !== "undefined") queueMicrotask(() => window.dispatchEvent(new Event("week-changed")));
+}
+/** The weekday of a day key (0 = Sunday). */
+export function weekdayOf(key: string): number {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d, 12).getDay();
+}

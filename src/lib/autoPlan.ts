@@ -1,7 +1,7 @@
 import { madeDays } from "./made";
 import type { Leftover } from "./leftovers";
 import type { SavedRecipe } from "./schema";
-import { dayKey, type PlannedMeal, type WeekState } from "./week";
+import { dayKey, daysBetween, LEFTOVER_DAYS, weekdayOf, type PlannedMeal, type WeekState } from "./week";
 
 /**
  * "Fill my week": picks dinners for the empty days.
@@ -59,6 +59,8 @@ export interface FillResult {
   cooked: number; // new dinners picked
   leftovers: number; // leftovers nights
   short: number; // days left empty (not enough different recipes)
+  /** Pinned leftovers nights with nothing cooked in the days before to eat. */
+  emptyLeftoverNights: number;
 }
 
 export function fillWeek(opts: {
@@ -68,6 +70,8 @@ export function fillWeek(opts: {
   fridge: Leftover[];
   people: number;
   days: string[]; // the day keys to fill, in order
+  /** Weekdays (0 = Sunday) that are always a leftovers night: nothing new is cooked then. */
+  leftoverDays?: number[];
   random?: () => number;
   now?: Date;
 }): FillResult {
@@ -97,13 +101,17 @@ export function fillWeek(opts: {
   for (const [k, v] of Object.entries(plan)) for (const m of v) if (!m.leftover) note(m.id, dayIndex(k));
   const free = (id: string, i: number) => (when.get(id) ?? []).every((j) => Math.abs(j - i) >= NO_REPEAT_DAYS);
 
-  let cooked = 0, leftovers = 0, short = 0;
+  let cooked = 0, leftovers = 0, short = 0, emptyLeftoverNights = 0;
   const empty = (k: string) => !(plan[k]?.length);
+  const pinned = new Set(opts.leftoverDays ?? []);
+  const isPinned = (k: string) => pinned.has(weekdayOf(k));
 
   // Leftovers already in the fridge go first, one night each, before they're past their date.
   const fridge = opts.fridge.filter((l) => !l.frozen && l.eatBy >= now.getTime()).sort((a, b) => a.eatBy - b.eatBy);
   for (const l of fridge) {
-    const k = days.find((d) => empty(d) && dayIndex(d) <= msIndex(l.eatBy));
+    const ok = (d: string) => empty(d) && dayIndex(d) <= msIndex(l.eatBy);
+    // A pinned leftovers night first, if one comes before it goes off.
+    const k = days.find((d) => ok(d) && isPinned(d)) ?? days.find(ok);
     if (!k || !recipes.some((r) => r.id === l.id)) continue;
     plan[k] = [{ id: l.id, scale: 1, auto: true, leftover: true }];
     note(l.id, msIndex(l.madeAt)); // it was just cooked: don't plan it again soon
@@ -114,7 +122,7 @@ export function fillWeek(opts: {
   const dinners = recipes.filter(isDinner);
   for (let n = 0; n < days.length; n++) {
     const k = days[n];
-    if (!empty(k)) continue;
+    if (!empty(k) || isPinned(k)) continue;
     const i = dayIndex(k);
     const choice = pick(dinners.filter((r) => free(r.id, i)), weight, random);
     if (!choice) {
@@ -131,7 +139,22 @@ export function fillWeek(opts: {
       leftovers++;
     }
   }
-  return { week: { days: plan }, cooked, leftovers, short };
+  // Pinned leftovers nights still open: the most recent dinner from the 3 days before.
+  for (const k of days) {
+    if (!empty(k) || !isPinned(k)) continue;
+    const recent = Object.entries(plan)
+      .filter(([d]) => {
+        const n = daysBetween(d, k);
+        return n >= 1 && n <= LEFTOVER_DAYS;
+      })
+      .sort(([a], [b]) => b.localeCompare(a))
+      .flatMap(([, v]) => v.filter((m) => !m.leftover))[0];
+    if (recent) {
+      plan[k] = [{ id: recent.id, scale: 1, auto: true, leftover: true }];
+      leftovers++;
+    } else emptyLeftoverNights++;
+  }
+  return { week: { days: plan }, cooked, leftovers, short, emptyLeftoverNights };
 }
 
 // ---------- how many people ----------
