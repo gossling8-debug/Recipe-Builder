@@ -102,6 +102,40 @@ export function thawReminders(meals: PlannedThawMeal[], now = Date.now()): ThawR
   return out.sort((a, b) => a.moveBy - b.moveBy || a.title.localeCompare(b.title));
 }
 
+/**
+ * One reminder per recipe per meal: everything it needs thawed at the same
+ * time together ("move chicken breast and chicken thighs to the fridge").
+ * Items needing more days (a turkey) stay separate, since they go in earlier.
+ */
+export interface ThawGroup {
+  id: string;
+  recipeId: string;
+  title: string;
+  items: ThawItem[];
+  /** The reminders it stands for (to mark them all done). */
+  ids: string[];
+  moveBy: number;
+  mealAt: number;
+}
+export function groupThaw(list: ThawReminder[]): ThawGroup[] {
+  const groups = new Map<string, ThawGroup>();
+  for (const r of list) {
+    const key = `${r.recipeId}|${r.mealAt}|${r.moveBy}`;
+    const g = groups.get(key);
+    if (g) {
+      g.items.push(r.item);
+      g.ids.push(r.id);
+    } else groups.set(key, { id: key, recipeId: r.recipeId, title: r.title, items: [r.item], ids: [r.id], moveBy: r.moveBy, mealAt: r.mealAt });
+  }
+  return [...groups.values()].sort((a, b) => a.moveBy - b.moveBy || a.title.localeCompare(b.title));
+}
+
+/** "chicken", "chicken and shrimp", "chicken, shrimp and bacon". */
+export function namesText(items: { name: string }[]): string {
+  const n = items.map((i) => i.name);
+  return n.length <= 1 ? (n[0] ?? "") : `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}`;
+}
+
 /** "now" (late), "today", "tomorrow", "Wednesday" — when to move it to the fridge. */
 export function whenText(moveBy: number, now = Date.now()): "late" | "today" | "tomorrow" | string {
   const start = new Date(now);
@@ -153,21 +187,23 @@ const icsDate = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, "").
 const icsText = (s: string) => s.replace(/\\/g, "\\\\").replace(/([,;])/g, "\\$1").replace(/\n/g, "\\n");
 
 /** One calendar file with an alert at each "move it to the fridge" time. */
-export function thawIcs(list: ThawReminder[], link: (r: ThawReminder) => string, now = Date.now()): string {
+export function thawIcs(list: ThawGroup[], link: (r: ThawGroup) => string, now = Date.now()): string {
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cardamix//EN", "CALSCALE:GREGORIAN"];
   for (const r of list) {
     const meal = new Date(r.mealAt).toLocaleDateString([], { weekday: "long" });
+    const names = namesText(r.items);
+    const days = Math.max(...r.items.map((i) => i.days));
     lines.push(
       "BEGIN:VEVENT",
-      `UID:thaw-${r.id.replace(/[^a-z0-9]/gi, "-")}@recipe-builder`,
+      `UID:thaw-${r.ids[0].replace(/[^a-z0-9]/gi, "-")}@recipe-builder`,
       `DTSTAMP:${icsDate(now)}`,
       `DTSTART:${icsDate(r.moveBy)}`,
       `DTEND:${icsDate(r.moveBy + 15 * 60000)}`,
-      `SUMMARY:${icsText(`Thaw: move ${r.item.name} to the fridge`)}`,
-      `DESCRIPTION:${icsText(`For ${r.title} on ${meal}. Thawing in the fridge takes about ${r.item.days} ${r.item.days === 1 ? "day" : "days"}.\nOpen the recipe: ${link(r)}`)}`,
+      `SUMMARY:${icsText(`Thaw: move ${names} to the fridge`)}`,
+      `DESCRIPTION:${icsText(`For ${r.title} on ${meal}. Thawing in the fridge takes about ${days} ${days === 1 ? "day" : "days"}.\nOpen the recipe: ${link(r)}`)}`,
       "BEGIN:VALARM",
       "ACTION:DISPLAY",
-      `DESCRIPTION:${icsText(`Move ${r.item.name} from the freezer to the fridge`)}`,
+      `DESCRIPTION:${icsText(`Move ${names} from the freezer to the fridge`)}`,
       "TRIGGER:PT0M",
       "END:VALARM",
       "END:VEVENT",

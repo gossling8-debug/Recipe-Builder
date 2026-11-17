@@ -102,3 +102,59 @@ export function mealsToShop(s: WeekState, days: string[]): PlannedMeal[] {
 }
 
 export const countMeals = (s: WeekState) => Object.values(s.days).reduce((n, v) => n + v.length, 0);
+
+/** Whole days from one day key to another ("2026-11-16" → "2026-11-18" is 2). */
+export function daysBetween(from: string, to: string): number {
+  const at = (k: string) => {
+    const [y, m, d] = k.split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((at(to) - at(from)) / 86_400_000);
+}
+
+/** How many days after cooking leftovers can be planned (cooked food keeps 3–4 days in the fridge). */
+export const LEFTOVER_DAYS = 3;
+
+export interface LeftoverChoice {
+  id: string;
+  /** Where they come from: "cooked Monday", "in your fridge", "in your freezer". */
+  from: string;
+}
+
+/**
+ * What a day could have as leftovers: recipes cooked (planned) in the
+ * 3 days before it, and leftovers already in the fridge (still good that day)
+ * or freezer. One choice per recipe, the most recent first; recipes already
+ * planned that day aren't offered.
+ */
+export function leftoverChoices(
+  day: string,
+  plans: WeekState["days"],
+  fridge: { id: string; eatBy: number; frozen?: boolean }[],
+  dayName: (key: string) => string,
+): LeftoverChoice[] {
+  const out = new Map<string, LeftoverChoice>();
+  const already = new Set((plans[day] ?? []).map((m) => m.id));
+  const cooked = Object.entries(plans)
+    .filter(([k]) => {
+      const n = daysBetween(k, day);
+      return n >= 1 && n <= LEFTOVER_DAYS;
+    })
+    .sort(([a], [b]) => b.localeCompare(a));
+  for (const [k, meals] of cooked) for (const m of meals) if (!m.leftover && !already.has(m.id) && !out.has(m.id)) out.set(m.id, { id: m.id, from: `cooked ${dayName(k)}` });
+  const [y, mo, d] = day.split("-").map(Number);
+  const dayStart = new Date(y, mo - 1, d).getTime();
+  for (const l of fridge)
+    if (!already.has(l.id) && !out.has(l.id) && (l.frozen || l.eatBy >= dayStart)) out.set(l.id, { id: l.id, from: l.frozen ? "in your freezer" : "in your fridge" });
+  return [...out.values()];
+}
+
+/** "today", "yesterday", "tomorrow" or the weekday ("Monday"), for a day key. */
+export function leftoverDayName(key: string, now = new Date()): string {
+  const n = daysBetween(dayKey(now), key);
+  if (n === 0) return "today";
+  if (n === -1) return "yesterday";
+  if (n === 1) return "tomorrow";
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString([], { weekday: "long" });
+}

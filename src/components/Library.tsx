@@ -1,5 +1,5 @@
 import { useThawReminders } from "./ThawList";
-import { dueNow, whenText } from "../lib/thaw";
+import { dueNow, groupThaw, namesText, whenText } from "../lib/thaw";
 import type { Route } from "../lib/route";
 import { feature } from "../lib/features";
 import { useEffect, useMemo, useState } from "react";
@@ -46,7 +46,8 @@ export default function Library() {
   const [sort, setSort] = useState(() => remembered("sort", "newest"));
   const onList = loadShopping().recipes.length;
   const fridge = useLeftovers().filter((l) => !l.frozen);
-  const thawNow = dueNow(useThawReminders(recipes));
+  // One per recipe and day ("chicken breast and chicken thighs").
+  const thawNow = groupThaw(dueNow(useThawReminders(recipes)));
   const [cloud, setCloud] = useState(cloudState());
   useEffect(() => subscribeCloud(setCloud), []);
   const familyOn = cloud.status !== "off" && cloud.status !== "signed-out";
@@ -296,7 +297,7 @@ export default function Library() {
             {whenText(thawNow[0].moveBy) === "late" ? <WarnIcon /> : <Icon name="timer" size={18} />}
             <span>
               <strong>
-                {whenText(thawNow[0].moveBy) === "late" ? "Thaw now" : "Thaw tonight"}: {thawNow[0].item.name}
+                {whenText(thawNow[0].moveBy) === "late" ? "Thaw now" : "Thaw tonight"}: {namesText(thawNow[0].items)}
               </strong>
               <span className="muted small">
                 {" "}

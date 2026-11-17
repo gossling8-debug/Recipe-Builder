@@ -59,11 +59,28 @@ describe("reminders for planned meals", () => {
 });
 
 describe("thaw calendar", () => {
-  it("has one alert per reminder", async () => {
-    const { thawIcs } = await import("./thaw");
-    const r = { id: "t|2026-11-11|ground beef", recipeId: "t", title: "Tacos", item: { key: "ground beef", name: "ground beef", days: 1 }, moveBy: new Date(2026, 10, 10, 19).getTime(), mealAt: new Date(2026, 10, 11, 18).getTime() };
-    const ics = thawIcs([r, { ...r, id: "x" }], () => "https://x");
+  it("has one alert per recipe and day, listing everything to thaw", async () => {
+    const { groupThaw, thawIcs } = await import("./thaw");
+    const at = { moveBy: new Date(2026, 10, 10, 19).getTime(), mealAt: new Date(2026, 10, 11, 18).getTime() };
+    const r = (recipeId: string, title: string, name: string) => ({ id: `${recipeId}|2026-11-11|${name}`, recipeId, title, item: { key: name, name, days: 1 }, ...at });
+    const groups = groupThaw([r("s", "Sesame Chicken", "chicken breast"), r("t", "Tacos", "ground beef"), r("s", "Sesame Chicken", "chicken thighs")]);
+    expect(groups.map((g) => [g.title, g.items.map((i) => i.name), g.ids.length])).toEqual([
+      ["Sesame Chicken", ["chicken breast", "chicken thighs"], 2],
+      ["Tacos", ["ground beef"], 1],
+    ]);
+    const ics = thawIcs(groups, () => "https://x");
     expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(2);
+    expect(ics).toContain("SUMMARY:Thaw: move chicken breast and chicken thighs to the fridge");
     expect(ics).toContain("SUMMARY:Thaw: move ground beef to the fridge");
+  });
+  it("keeps something that thaws longer (a turkey) as its own reminder", async () => {
+    const { groupThaw } = await import("./thaw");
+    const meal = new Date(2026, 10, 27, 15).getTime();
+    const base = { recipeId: "d", title: "Dinner", mealAt: meal };
+    const g = groupThaw([
+      { ...base, id: "a", item: { key: "turkey", name: "turkey", days: 3 }, moveBy: meal - 3 * 86_400_000 },
+      { ...base, id: "b", item: { key: "sausage", name: "sausage", days: 1 }, moveBy: meal - 86_400_000 },
+    ]);
+    expect(g.map((x) => x.items.map((i) => i.name))).toEqual([["turkey"], ["sausage"]]);
   });
 });

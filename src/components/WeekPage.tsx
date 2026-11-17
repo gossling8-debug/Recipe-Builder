@@ -7,7 +7,7 @@ import { useToast } from "./Toast";
 import { listRecipes } from "../lib/db";
 import { href } from "../lib/route";
 import { addToShopping } from "../lib/shopping";
-import { addMeal, countMeals, loadWeek, mealsToShop, pastPlans, removeMeal, saveWeek, upcomingDays, type WeekState } from "../lib/week";
+import { addMeal, countMeals, leftoverChoices, leftoverDayName, loadWeek, mealsToShop, pastPlans, removeMeal, saveWeek, upcomingDays, type WeekState } from "../lib/week";
 import { fillWeek, getPeople, isDinner, NO_REPEAT_DAYS, realServings, setPeople } from "../lib/autoPlan";
 import { loadLeftovers } from "../lib/leftovers";
 import type { SavedRecipe } from "../lib/schema";
@@ -178,17 +178,35 @@ export default function WeekPage() {
                       aria-label={`Recipe for ${d.name}`}
                       defaultValue=""
                       onChange={(e) => {
-                        if (!e.target.value) return;
-                        setWeek(addMeal(d.key, { id: e.target.value, scale: 1 }));
+                        const v = e.target.value;
+                        if (!v) return;
+                        // "left:<id>" is a leftovers night: nothing new to cook or buy.
+                        setWeek(addMeal(d.key, v.startsWith("left:") ? { id: v.slice(5), scale: 1, leftover: true } : { id: v, scale: 1 }));
                         setAdding(null);
                       }}
                     >
-                      <option value="">Choose a recipe…</option>
-                      {(recipes ?? []).map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.title}
-                        </option>
-                      ))}
+                      <option value="">Choose a recipe or leftovers…</option>
+                      {(() => {
+                        const left = leftoverChoices(d.key, { ...pastPlans(), ...week.days }, loadLeftovers(), leftoverDayName).filter((c) => byId.has(c.id));
+                        return (
+                          left.length > 0 && (
+                            <optgroup label="Leftovers">
+                              {left.map((c) => (
+                                <option key={c.id} value={`left:${c.id}`}>
+                                  Leftovers: {byId.get(c.id)!.title} ({c.from})
+                                </option>
+                              ))}
+                            </optgroup>
+                          )
+                        );
+                      })()}
+                      <optgroup label="Cook">
+                        {(recipes ?? []).map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.title}
+                          </option>
+                        ))}
+                      </optgroup>
                     </select>
                     <button className="link-btn small" onClick={() => setAdding(null)}>
                       Cancel
@@ -198,7 +216,7 @@ export default function WeekPage() {
                   recipes &&
                   recipes.length > 0 && (
                     <button className="link-btn small week-add" onClick={() => setAdding(d.key)}>
-                      <Icon name="plus" size={16} /> Add a recipe
+                      <Icon name="plus" size={16} /> Add a recipe or leftovers
                     </button>
                   )
                 )}
