@@ -4,7 +4,7 @@ import WarnIcon from "./WarnIcon";
 import { href } from "../lib/route";
 import { plannedThawReminders } from "../lib/thawPlan";
 import type { SavedRecipe } from "../lib/schema";
-import { COLD_WATER_TIP, markNotFrozen, markThawed, thawIcs, whenText, type ThawReminder } from "../lib/thaw";
+import { COLD_WATER_TIP, groupThaw, markNotFrozen, markThawed, namesText, thawIcs, whenText, type ThawGroup, type ThawReminder } from "../lib/thaw";
 
 const mealDay = (ms: number) => {
   const d = new Date(ms);
@@ -14,15 +14,19 @@ const mealDay = (ms: number) => {
   return days === 0 ? "tonight" : days === 1 ? "tomorrow" : d.toLocaleDateString([], { weekday: "long" });
 };
 
-/** "Move ground beef to the fridge tonight — for Tacos tomorrow", with Done and Not frozen. */
+/**
+ * "Move ground beef to the fridge tonight — for Tacos tomorrow", with Done and
+ * Not frozen. One line per recipe and day, listing everything it needs thawed.
+ */
 export default function ThawList({ reminders, calendar = false }: { reminders: ThawReminder[]; calendar?: boolean }) {
   if (!reminders.length) return null;
-  const late = reminders.some((r) => whenText(r.moveBy) === "late");
+  const groups = groupThaw(reminders);
+  const late = groups.some((r) => whenText(r.moveBy) === "late");
 
   function addToCalendar() {
-    const link = (r: ThawReminder) => `${location.origin}${location.pathname}#/recipe/${encodeURIComponent(r.recipeId)}`;
+    const link = (r: ThawGroup) => `${location.origin}${location.pathname}#/recipe/${encodeURIComponent(r.recipeId)}`;
     // Only reminders still ahead — an alert in the past is no use.
-    const blob = new Blob([thawIcs(reminders.filter((r) => r.moveBy > Date.now()), link)], { type: "text/calendar" });
+    const blob = new Blob([thawIcs(groups.filter((r) => r.moveBy > Date.now()), link)], { type: "text/calendar" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -36,8 +40,10 @@ export default function ThawList({ reminders, calendar = false }: { reminders: T
   return (
     <div className="thaw-list">
       <ul>
-        {reminders.map((r) => {
+        {groups.map((r) => {
           const when = whenText(r.moveBy);
+          const days = Math.max(...r.items.map((i) => i.days));
+          const several = r.items.length > 1;
           return (
             <li key={r.id} className={when === "late" ? "late" : when === "today" ? "today" : ""}>
               <div>
@@ -45,19 +51,18 @@ export default function ThawList({ reminders, calendar = false }: { reminders: T
                 <strong>
                   {when === "late" ? "Thaw now: " : when === "today" ? "Tonight: " : `${when.charAt(0).toUpperCase()}${when.slice(1)}: `}
                 </strong>
-                move <strong>{r.item.name}</strong> to the fridge
+                move <strong>{namesText(r.items)}</strong> to the fridge
                 <span className="muted small">
                   {" "}
-                  — for <a href={href({ name: "recipe", id: r.recipeId })}>{r.title}</a> {mealDay(r.mealAt)} · about {r.item.days}{" "}
-                  {r.item.days === 1 ? "day" : "days"} to thaw
+                  — for <a href={href({ name: "recipe", id: r.recipeId })}>{r.title}</a> {mealDay(r.mealAt)} · about {days} {days === 1 ? "day" : "days"} to thaw
                 </span>
               </div>
               <div className="thaw-actions">
-                <button className="link-btn small" onClick={() => markThawed(r.id)}>
-                  <Icon name="check" size={14} /> It's in the fridge
+                <button className="link-btn small" onClick={() => r.ids.forEach(markThawed)}>
+                  <Icon name="check" size={14} /> {several ? "They're in the fridge" : "It's in the fridge"}
                 </button>
-                <button className="link-btn small" onClick={() => markNotFrozen(r.item.key)}>
-                  I buy it fresh
+                <button className="link-btn small" onClick={() => r.items.forEach((i) => markNotFrozen(i.key))}>
+                  {several ? "I buy these fresh" : "I buy it fresh"}
                 </button>
               </div>
             </li>
@@ -65,7 +70,7 @@ export default function ThawList({ reminders, calendar = false }: { reminders: T
         })}
       </ul>
       {late && <p className="small thaw-tip">{COLD_WATER_TIP}</p>}
-      {calendar && reminders.some((r) => r.moveBy > Date.now()) && (
+      {calendar && groups.some((r) => r.moveBy > Date.now()) && (
         <button className="btn" onClick={addToCalendar}>
           <Icon name="calendar" size={18} /> Add thaw reminders to Calendar
         </button>
