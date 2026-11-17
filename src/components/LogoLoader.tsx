@@ -17,9 +17,39 @@ const reducedMotion = () => {
  * filled with a flickering flame. Still (no motion) for people who've asked
  * their phone for reduced motion.
  */
+/**
+ * The animated logo for everyone, unless they turn it off in Settings →
+ * Appearance (which brings back the plain spinner). To take it out for
+ * everyone, set this to false: the plain spinner shows everywhere and the
+ * Settings switch disappears.
+ */
+export const ANIMATED_LOGO = true;
+
+const PLAIN_KEY = "recipe-builder.plainLoader"; // "1": this person turned it off
+export function animatedLogoOn(): boolean {
+  if (!ANIMATED_LOGO) return false;
+  try {
+    return localStorage.getItem(PLAIN_KEY) !== "1";
+  } catch {
+    return true;
+  }
+}
+export function setAnimatedLogo(on: boolean): void {
+  try {
+    if (on) localStorage.removeItem(PLAIN_KEY);
+    else localStorage.setItem(PLAIN_KEY, "1");
+  } catch {
+    /* this visit only */
+  }
+}
+
 export default function LogoLoader({ size = 64, label }: { size?: number; label?: string }) {
   const id = useId().replace(/:/g, "");
   const still = reducedMotion();
+  if (!animatedLogoOn()) {
+    const px = Math.max(16, Math.round(size * 0.45));
+    return <span className="spinner plain-loader" style={{ width: px, height: px }} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} />;
+  }
   const fire = `fire${id}`;
   const cu = `cu${id}`;
   const blur = `blur${id}`;

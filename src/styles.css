@@ -1214,3 +1214,7 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .working .logo-loader { margin: 0 auto 20px; }
 .loading-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
 .btn .logo-loader { display: inline-block; vertical-align: middle; margin-right: 6px; }
+.plain-loader { display: inline-block; vertical-align: middle; margin: 0; border-width: 2px; }
+.working .plain-loader { display: block; margin: 0 auto 20px; width: 36px !important; height: 36px !important; }
+.animated-logo-toggle { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.animated-logo-toggle .logo-preview { margin-left: auto; }
