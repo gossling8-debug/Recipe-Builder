@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { href } from "../lib/route";
 import { deleteAccount, signOutHere } from "../lib/account";
 import { cloudState, subscribeCloud, syncNow, type CloudState } from "../lib/cloud";
+import ChangeEmail from "./ChangeEmail";
 
 const ago = (ms?: number) => {
   if (!ms) return "";
@@ -48,6 +49,7 @@ export default function CloudSection() {
       <p>
         Signed in as <strong>{s.email}</strong>
       </p>
+      <ChangeEmail label="Change email" />
       <p className={s.status === "error" ? "small cloud-status error" : "small cloud-status"} role="status">
         {s.status === "syncing" && "Syncing…"}
         {s.status === "synced" && `Everything backed up · ${ago(s.lastSync)}`}
