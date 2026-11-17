@@ -67,3 +67,14 @@ describe("moving a meal to another day", () => {
     expect(loadWeek().days[b]).toEqual([{ id: "x", scale: 2 }]);
   });
 });
+
+describe("dropping a meal on a day that has one", () => {
+  it("swaps them", async () => {
+    const { moveMeal, saveWeek, loadWeek, upcomingDays } = await import("./week");
+    const [a, , c] = upcomingDays(3).map((d) => d.key);
+    saveWeek({ days: { [a]: [{ id: "alfredo", scale: 1, auto: true }], [c]: [{ id: "soup", scale: 1, auto: true }] } });
+    moveMeal(a, 0, c);
+    expect(loadWeek().days[c]).toEqual([{ id: "alfredo", scale: 1 }]);
+    expect(loadWeek().days[a]).toEqual([{ id: "soup", scale: 1 }]);
+  });
+});
