@@ -35,8 +35,8 @@ export function restartTour(): void {
 }
 
 export interface TourStep {
-  /** The button to point at (skipped if it isn't on screen, e.g. a feature that's off). */
-  target: string;
+  /** The button to point at (skipped if it isn't on screen, e.g. a feature that's off). None: a card on its own. */
+  target?: string;
   title: string;
   text: string;
 }
@@ -84,7 +84,59 @@ export const TOUR_STEPS: TourStep[] = [
   },
 ];
 
-/** The steps whose button is on screen right now. */
+/** The steps whose button is on screen right now (and those that point at nothing). */
 export function visibleSteps(steps: TourStep[], exists: (selector: string) => boolean): TourStep[] {
-  return steps.filter((s) => exists(s.target));
+  return steps.filter((s) => !s.target || exists(s.target));
 }
+
+// ---------- the second tour: adding your first recipe ----------
+// Straight after the home screen tour (when it's finished, not skipped): it opens Add Recipe and starts there.
+const ADD_NEXT = "cardamix-add-tour";
+export function queueAddTour(): void {
+  try {
+    sessionStorage.setItem(ADD_NEXT, "1");
+  } catch {
+    /* ignore */
+  }
+}
+export function addTourQueued(): boolean {
+  try {
+    return sessionStorage.getItem(ADD_NEXT) === "1";
+  } catch {
+    return false;
+  }
+}
+export function finishAddTour(): void {
+  try {
+    sessionStorage.removeItem(ADD_NEXT);
+  } catch {
+    /* ignore */
+  }
+}
+
+export const ADD_TOUR_STEPS: TourStep[] = [
+  {
+    target: ".mode-switch",
+    title: "Four ways to add a recipe",
+    text: "Photo: a recipe card or cookbook page. Website: paste a recipe's link. Paste text: from a message, email or note. Create: describe a dish and Claude writes the recipe.",
+  },
+  {
+    target: ".fab-stack",
+    title: "Snap a recipe card",
+    text: "Tap Scan a card to use the camera — it finds the card and straightens it — or Choose from photos. If the recipe continues on the back, add a second photo.",
+  },
+  {
+    target: ".scan-labels",
+    title: "Labels (optional)",
+    text: "Pick labels like Dinner or Dessert, or leave them off and Claude suggests some. You can filter your recipes by them later.",
+  },
+  {
+    target: ".verify-email",
+    title: "Confirm your email first",
+    text: "Reading recipes uses AI, which needs a confirmed email. Tap the link we emailed you, then “I've confirmed it”.",
+  },
+  {
+    title: "Then tap Read recipe",
+    text: "Claude reads it in about half a minute, keeping every amount in the steps. Check it over, and it's saved to your recipes. That's it — try your first one!",
+  },
+]

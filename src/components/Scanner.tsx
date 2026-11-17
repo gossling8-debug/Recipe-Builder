@@ -3,6 +3,8 @@ import { hasPlus } from "../lib/features";
 import { FREE_LIMITS, freeLeft, loadAiUsage, type AiUsage } from "../lib/subscription";
 import { ownKey } from "../lib/settings";
 import VerifyEmail from "./VerifyEmail";
+import Tour from "./Tour";
+import { ADD_TOUR_STEPS, addTourQueued, finishAddTour } from "../lib/tour";
 import { ALLERGEN_GROUPS, isActive, loadAvoid } from "../lib/avoid";
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
@@ -76,6 +78,8 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
     setAdded({ recipe: r, into, mineTwin });
   }
   const [mode, setMode] = useState<Mode>("photo");
+  // Straight after the home screen tour: a short tour of adding a recipe (on the Photo tab).
+  const [addTour, setAddTour] = useState(() => !bookId && addTourQueued());
   const [photos, setPhotos] = useState<string[]>([]);
   // Each photo's original and chosen corners, so it can be re-cropped; and photos waiting to be cropped.
   const [originals, setOriginals] = useState<({ source: CropSource; quad: Quad | null } | null)[]>([]);
@@ -310,6 +314,15 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
 
   return (
     <>
+      {addTour && !busy && mode === "photo" && (
+        <Tour
+          steps={ADD_TOUR_STEPS}
+          onDone={() => {
+            finishAddTour();
+            setAddTour(false);
+          }}
+        />
+      )}
       <Header title={book ? `Add to ${book.name}` : "Add a recipe"} back={busy ? undefined : back} />
       <main className="page">
         {busy ? (

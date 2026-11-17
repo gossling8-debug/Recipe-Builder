@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useState } from "react";
-import { finishTour, TOUR_STEPS, visibleSteps, type TourStep } from "../lib/tour";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { TOUR_STEPS, visibleSteps, type TourStep } from "../lib/tour";
 
 interface Box {
   top: number;
@@ -9,34 +9,43 @@ interface Box {
 }
 
 /**
- * A short tour of the home screen: dims the screen, rings one button at a
- * time and explains it. Next / Back, and Skip on every step.
+ * A short tour: dims the screen, rings one button at a time and explains it.
+ * Next / Back, and Skip on every step. `onDone(true)` when finished,
+ * `onDone(false)` when skipped. The home screen's steps unless given others.
  */
-export default function Tour({ onDone }: { onDone: () => void }) {
+export default function Tour({
+  steps: all = TOUR_STEPS,
+  onDone,
+  doneLabel = "Done",
+}: {
+  steps?: TourStep[];
+  onDone: (finished: boolean) => void;
+  doneLabel?: string;
+}) {
   // Start a moment after the home screen shows, once its buttons (which depend on your plan and features) are in place.
   const [steps, setSteps] = useState<TourStep[] | null>(null);
   useEffect(() => {
-    const t = window.setTimeout(() => setSteps(visibleSteps(TOUR_STEPS, (s) => !!document.querySelector(s))), 1200);
+    const t = window.setTimeout(() => setSteps(visibleSteps(all, (s) => !!document.querySelector(s))), 1200);
     return () => window.clearTimeout(t);
   }, []);
-  return steps ? <TourSteps steps={steps} onDone={onDone} /> : null;
+  return steps ? <TourSteps steps={steps} onDone={onDone} doneLabel={doneLabel} /> : null;
 }
 
-function TourSteps({ steps, onDone }: { steps: TourStep[]; onDone: () => void }) {
+function TourSteps({ steps, onDone, doneLabel }: { steps: TourStep[]; onDone: (finished: boolean) => void; doneLabel: string }) {
   const [i, setI] = useState(0);
   const [box, setBox] = useState<Box | null>(null);
+  // The card's height, to place it where it fits.
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardH, setCardH] = useState(220);
   const step = steps[i];
 
-  const done = () => {
-    finishTour();
-    onDone();
-  };
+  const done = (finished = false) => onDone(finished);
 
   // Where the current button is (again after scrolling, rotating or the keyboard).
   useLayoutEffect(() => {
     if (!step) return;
     const measure = () => {
-      const el = document.querySelector(step.target);
+      const el = step.target ? document.querySelector(step.target) : null;
       if (!el) return setBox(null);
       // The button and anything in it that sticks out (the raised + on Add Recipe).
       const rects = [el, ...el.querySelectorAll("*")].map((x) => x.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0);
@@ -46,6 +55,13 @@ function TourSteps({ steps, onDone }: { steps: TourStep[]; onDone: () => void })
       const right = Math.max(...rects.map((r) => r.right));
       setBox({ top, left, width: right - left, height: bottom - top });
     };
+    // Bring it on screen first (things further down a page); the scroll listener then re-measures.
+    const target = step.target ? document.querySelector(step.target) : null;
+    const r0 = target?.getBoundingClientRect();
+    if (target && r0 && (r0.top < 60 || r0.bottom > window.innerHeight - 60)) {
+      // Near the top (under the header), so the card fits below it.
+      window.scrollBy(0, r0.top - 90);
+    }
     measure();
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
@@ -69,9 +85,12 @@ function TourSteps({ steps, onDone }: { steps: TourStep[]; onDone: () => void })
 
   // Nothing to show (every feature off): count it as seen.
   useEffect(() => {
-    if (steps.length === 0) done();
+    if (steps.length === 0) done(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useLayoutEffect(() => {
+    if (cardRef.current) setCardH(cardRef.current.offsetHeight);
+  });
   if (!step) return null;
 
   const pad = 6;
@@ -84,14 +103,25 @@ function TourSteps({ steps, onDone }: { steps: TourStep[]; onDone: () => void })
     return { top, left, width: right - left, height: bottom - top };
   })();
   // The card goes on the side of the button with more room.
-  const below = !box || box.top + box.height / 2 < window.innerHeight / 2;
+  // Below the button if it fits, else above, else over the bottom of the screen (a tall button).
+  const H = window.innerHeight;
+  const roomBelow = ring ? H - (ring.top + ring.height) : H - 80;
+  const roomAbove = ring ? ring.top : 0;
+  const place: React.CSSProperties = !ring
+    ? { top: 80 }
+    : roomBelow >= cardH + 24
+      ? { top: ring.top + ring.height + 12 }
+      : roomAbove >= cardH + 24
+        ? { bottom: H - ring.top + 12 }
+        : { bottom: 12 };
   const last = i === steps.length - 1;
   return (
     <div className="tour" role="dialog" aria-modal="true" aria-labelledby="tour-title">
       {ring ? <div className="tour-ring" style={ring} /> : <div className="tour-dim" />}
       <div
         className="tour-card"
-        style={below ? { top: (ring ? ring.top + ring.height : 80) + 12 } : { bottom: window.innerHeight - (ring ? ring.top : window.innerHeight) + 12 }}
+        ref={cardRef}
+        style={place}
       >
         <p className="muted small tour-count">
           {i + 1} of {steps.length}
@@ -99,7 +129,7 @@ function TourSteps({ steps, onDone }: { steps: TourStep[]; onDone: () => void })
         <h2 id="tour-title">{step.title}</h2>
         <p>{step.text}</p>
         <div className="tour-actions">
-          <button className="link-btn small" onClick={done}>
+          <button className="link-btn small" onClick={() => done(false)}>
             Skip tour
           </button>
           <span className="tour-nav">
@@ -108,8 +138,8 @@ function TourSteps({ steps, onDone }: { steps: TourStep[]; onDone: () => void })
                 Back
               </button>
             )}
-            <button className="btn primary" autoFocus onClick={() => (last ? done() : setI(i + 1))}>
-              {last ? "Done" : "Next"}
+            <button className="btn primary" autoFocus onClick={() => (last ? done(true) : setI(i + 1))}>
+              {last ? doneLabel : "Next"}
             </button>
           </span>
         </div>
