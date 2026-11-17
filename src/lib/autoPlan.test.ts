@@ -94,3 +94,27 @@ describe("tonight's suggestion", () => {
     expect(suggestDinner({ recipes: [made, planned, ok], past: {}, week, now, skip: new Set(["ok"]) })).toBeUndefined();
   });
 });
+
+describe("pinned leftovers nights", () => {
+  const many = "abcdefghij".split("").map((x) => mk(x));
+  it("never cooks on them; eats the night before's dinner instead", () => {
+    // Nov 9 2026 is a Monday: days are Mon…Sun. Wednesday (3) and Sunday (0) are leftovers nights.
+    const r = fillWeek({ week: { days: {} }, past: {}, recipes: many, fridge: [], people: 4, days, now, leftoverDays: [3, 0], random: seq(0) });
+    const out = ids(r.week);
+    expect(out[2]).toBe(`L:${out[1]}`); // Wednesday: Tuesday's dinner
+    expect(out[6]).toBe(`L:${out[5]}`); // Sunday: Saturday's dinner
+    expect(out.filter((x) => !x.startsWith("L:") && x !== "-")).toHaveLength(5);
+    expect(r.emptyLeftoverNights).toBe(0);
+  });
+  it("puts fridge leftovers on a pinned night first", () => {
+    const fridge = [{ id: "a", title: "a", madeAt: now.getTime(), eatBy: new Date(2026, 10, 12, 23).getTime() }];
+    const r = fillWeek({ week: { days: {} }, past: {}, recipes: many, fridge, people: 4, days, now, leftoverDays: [3] });
+    expect(ids(r.week)[2]).toBe("L:a");
+  });
+  it("says so when there's nothing to eat that night", () => {
+    // Monday is pinned and nothing was cooked in the days before.
+    const r = fillWeek({ week: { days: {} }, past: {}, recipes: many, fridge: [], people: 4, days, now, leftoverDays: [1] });
+    expect(ids(r.week)[0]).toBe("-");
+    expect(r.emptyLeftoverNights).toBe(1);
+  });
+});

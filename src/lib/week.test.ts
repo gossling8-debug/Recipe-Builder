@@ -56,3 +56,14 @@ describe("choosing a leftovers day", () => {
     expect(leftoverChoices("2026-11-16", plans, [], (k) => k)).toEqual([]);
   });
 });
+
+describe("moving a meal to another day", () => {
+  it("moves it and makes it your own choice", async () => {
+    const { moveMeal, saveWeek, loadWeek, upcomingDays } = await import("./week");
+    const [a, b] = upcomingDays(2).map((d) => d.key);
+    saveWeek({ days: { [a]: [{ id: "x", scale: 2, auto: true }, { id: "y", scale: 1 }] } });
+    moveMeal(a, 0, b);
+    expect(loadWeek().days[a]).toEqual([{ id: "y", scale: 1 }]);
+    expect(loadWeek().days[b]).toEqual([{ id: "x", scale: 2 }]);
+  });
+});

@@ -1190,3 +1190,14 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .add-home-steps li { margin: 4px 0; }
 .add-home-switch { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .account-screen .add-home { border-top: 1px solid var(--line); padding-top: 10px; }
+
+/* Week page: drag a meal to another day */
+.drag-handle { background: none; border: 0; padding: 6px 4px; margin-right: 2px; color: var(--muted); cursor: grab; touch-action: none; display: inline-flex; align-items: center; vertical-align: middle; }
+.week-meals li.dragging { opacity: 0.4; }
+.week-day.drop-target { background: var(--accent-soft, rgba(176, 106, 63, 0.12)); outline: 2px dashed var(--accent); outline-offset: -2px; border-radius: 10px; }
+.drag-ghost { position: fixed; z-index: 50; transform: translate(-30%, -120%); pointer-events: none; background: var(--ink); color: var(--ink-text); padding: 8px 12px; border-radius: 10px; font-size: 15px; max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
+.move-to { margin: 6px 0; }
+.move-to .day-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.leftover-days { margin: 10px 0 4px; }
+.leftover-day-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.leftover-day-chips .chip { min-width: 46px; border: 1px solid var(--line); }
