@@ -78,9 +78,29 @@ export default function WeekPage() {
     days.find((d) => d.key === key)?.name ?? key;
   function move(from: string, index: number, to: string, title: string) {
     if (from === to) return;
+    // A day that already has meals swaps with the one moved there.
+    const there = (week.days[to] ?? []).map((m) => (m.leftover ? `leftover ${byId.get(m.id)?.title ?? "meal"}` : (byId.get(m.id)?.title ?? "meal")));
     setWeek(moveMeal(from, index, to));
-    showToast(`Moved ${title} to ${dayLabel(to)}`);
+    showToast(there.length ? `Swapped: ${title} → ${dayLabel(to)}, ${there.join(" and ")} → ${dayLabel(from)}` : `Moved ${title} to ${dayLabel(to)}`);
   }
+  // A recipe already planned on a night you've made a leftovers night: keep it there (remembered) or move it.
+  const KEEP_KEY = "recipe-builder.keepOnLeftoversNight";
+  const [kept, setKept] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(KEEP_KEY) ?? "[]") as string[];
+    } catch {
+      return [];
+    }
+  });
+  const keep = (k: string) => {
+    const next = [...kept, k].slice(-50);
+    setKept(next);
+    try {
+      localStorage.setItem(KEEP_KEY, JSON.stringify(next));
+    } catch {
+      /* this visit only */
+    }
+  };
   function startDrag(
     e: React.PointerEvent,
     from: string,
@@ -422,6 +442,25 @@ export default function WeekPage() {
                     })}
                   </ul>
                 )}
+                {leftoverDays.includes(weekdayOf(d.key)) &&
+                  (() => {
+                    const i = meals.findIndex((m) => !m.leftover && !kept.includes(`${d.key}|${m.id}`));
+                    const r = i >= 0 ? byId.get(meals[i].id) : undefined;
+                    if (!r || moving) return null;
+                    return (
+                      <div className="callout small pinned-clash" role="status">
+                        <strong>{d.name} is your leftovers night</strong>, but {r.title} is planned. Keep it, or move it to another day?
+                        <div className="button-row">
+                          <button className="btn" onClick={() => keep(`${d.key}|${r.id}`)}>
+                            Keep it
+                          </button>
+                          <button className="btn primary" onClick={() => setMoving({ from: d.key, index: i, title: r.title })}>
+                            Move it
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 {moving?.from === d.key && (
                   <div
                     className="move-to"

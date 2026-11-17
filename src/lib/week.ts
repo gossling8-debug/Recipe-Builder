@@ -160,16 +160,17 @@ export function leftoverDayName(key: string, now = new Date()): string {
 }
 
 /**
- * Moves one meal to another day (dragged on the Week page). It counts as your
- * own choice from then on, so "Shuffle again" leaves it where you put it.
+ * Moves one meal to another day (dragged on the Week page). If that day
+ * already has meals, they swap: those go to the day the meal came from. Moved
+ * meals count as your own choice from then on, so "Shuffle again" leaves them.
  */
 export function moveMeal(from: string, index: number, to: string): WeekState {
   const s = loadWeek();
   const meal = (s.days[from] ?? [])[index];
   if (!meal || from === to) return s;
-  const { auto: _auto, ...own } = meal;
-  const days = { ...s.days, [from]: (s.days[from] ?? []).filter((_, i) => i !== index) };
-  days[to] = [...(days[to] ?? []), own];
+  const own = ({ auto: _auto, ...m }: PlannedMeal) => m;
+  const there = (s.days[to] ?? []).map(own);
+  const days = { ...s.days, [from]: [...(s.days[from] ?? []).filter((_, i) => i !== index), ...there], [to]: [own(meal)] };
   const next = { days };
   saveWeek(next);
   return next;
