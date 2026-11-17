@@ -1,19 +1,16 @@
 import { useThawReminders } from "./ThawList";
-import { dueNow, groupThaw, namesText, whenText } from "../lib/thaw";
-import type { Route } from "../lib/route";
+import { dueNow, groupThaw } from "../lib/thaw";
 import { feature } from "../lib/features";
 import { useEffect, useMemo, useState } from "react";
 import { saveRecipe } from "../lib/db";
 import { loadShopping } from "../lib/shopping";
 import { findAvoided, isActive, loadAvoid } from "../lib/avoid";
 import { activeSwaps } from "../lib/swaps";
-import { loadPlans, timeOf, untilText } from "../lib/plan";
 import { whatCanIMake } from "../lib/canMake";
 import { loadPantry, useSoon } from "../lib/pantry";
 import { freshness, useByText } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
 import { agoText, lastMade } from "../lib/made";
-import { dayKey, loadWeek } from "../lib/week";
 import { cloudState, subscribeCloud } from "../lib/cloud";
 import { eatByLabel, leftoverPast, useLeftovers } from "../lib/leftovers";
 import { aYearAgo } from "../lib/history";
@@ -30,6 +27,7 @@ import { welcomeDone } from "../lib/welcome";
 import Icon from "./Icon";
 import CookThisWeek from "./CookThisWeek";
 import Tour from "./Tour";
+import UpNext from "./UpNext";
 import { tourDone } from "../lib/tour";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 import { href } from "../lib/route";
@@ -292,21 +290,6 @@ export default function Library() {
             </a>
           );
         })()}
-        {thawNow.length > 0 && (
-          <a className="plan-strip use-soon-strip" href={href({ name: thawNow.length === 1 ? "recipe" : "week", id: thawNow[0].recipeId } as Route)}>
-            {whenText(thawNow[0].moveBy) === "late" ? <WarnIcon /> : <Icon name="timer" size={18} />}
-            <span>
-              <strong>
-                {whenText(thawNow[0].moveBy) === "late" ? "Thaw now" : "Thaw tonight"}: {namesText(thawNow[0].items)}
-              </strong>
-              <span className="muted small">
-                {" "}
-                · for {thawNow[0].title}
-                {thawNow.length > 1 ? ` · +${thawNow.length - 1} more` : ""}
-              </span>
-            </span>
-          </a>
-        )}
         {feature("pantry") && fridge.length > 0 && (
           <a className="plan-strip use-soon-strip" href={href({ name: "pantry" })}>
             {leftoverPast(fridge[0]) ? <WarnIcon /> : <Icon name="jar" size={18} />}
@@ -318,38 +301,8 @@ export default function Library() {
             </span>
           </a>
         )}
-        {(() => {
-          const today = (feature("weekPlanner") ? (loadWeek().days[dayKey(new Date())] ?? []) : [])
-            .map((m) => {
-              const r = all.find((x) => x.id === m.id);
-              return r && { title: m.leftover ? `leftover ${r.title}` : r.title };
-            })
-            .filter(Boolean);
-          if (!today.length) return null;
-          return (
-            <a className="plan-strip" href={href({ name: "week" })}>
-              <Icon name="calendar" size={18} />
-              <span>
-                <strong>Today: {today.map((r) => r!.title).join(", ")}</strong>
-                <span className="muted small"> · see the week</span>
-              </span>
-            </a>
-          );
-        })()}
-        {Object.values(feature("mealTime") ? loadPlans() : {})
-          .sort((a, b) => a.startAt - b.startAt)
-          .map((p) => (
-            <a key={p.recipeId} className="plan-strip" href={href({ name: "recipe", id: p.recipeId })}>
-              <Icon name="timer" size={18} />
-              <span>
-                <strong>{p.startAt <= Date.now() ? `Start ${p.title} now` : `Start ${p.title} by ${timeOf(p.startAt)}`}</strong>
-                <span className="muted small">
-                  {" "}
-                  {p.startAt > Date.now() && `${untilText(p.startAt)} · `}eat at {timeOf(p.eatAt)}
-                </span>
-              </span>
-            </a>
-          ))}
+        {/* One line per recipe: on today's plan, when to start, what to thaw. */}
+        <UpNext recipes={all} thaw={thawNow} />
         {!aiReady() && !error && (
           <div className="callout">
             <strong>Welcome!</strong> To scan cards, add your Anthropic API key first.{" "}

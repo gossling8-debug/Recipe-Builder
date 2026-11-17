@@ -57,3 +57,18 @@ describe("reminderIcs", () => {
     expect(ics.split("\r\n")[0]).toBe("BEGIN:VCALENDAR");
   });
 });
+
+describe("a meal time already made", () => {
+  it("is done once the recipe is made after the time was set", async () => {
+    const { planDone } = await import("./plan");
+    const H = 3600_000;
+    const p = { recipeId: "r", title: "T", eatAt: 100 * H, startAt: 99 * H, minutes: 60, setAt: 50 * H };
+    expect(planDone(p, undefined)).toBe(false);
+    expect(planDone(p, 40 * H)).toBe(false); // made before it was planned
+    expect(planDone(p, 60 * H)).toBe(true);
+    // Plans saved before setAt existed: made within 36 hours before the meal.
+    const old = { ...p, setAt: undefined };
+    expect(planDone(old, 66 * H)).toBe(true);
+    expect(planDone(old, 60 * H)).toBe(false);
+  });
+});
