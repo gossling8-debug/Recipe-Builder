@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Header from "./Header";
 import { href } from "../lib/route";
 import { amAdmin } from "../lib/mix";
-import { clearErrorReports, KIND_LABELS, ownerStats, type OwnerStats } from "../lib/owner";
+import { clearErrorReports, confirmEmailFor, KIND_LABELS, ownerStats, type OwnerStats } from "../lib/owner";
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const when = (t: number) => new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -135,6 +135,8 @@ export default function OwnerPage() {
               )}
             </section>
 
+            <ConfirmSomeone />
+
             <section>
               <h3>Error reports</h3>
               <p className="muted small">
@@ -182,5 +184,47 @@ function Stat(props: { n: number | string; label: string }) {
       <strong>{props.n}</strong>
       <span>{props.label}</span>
     </div>
+  );
+}
+
+/** When someone's confirmation email never arrives: confirm their address by hand (you know who they are). */
+function ConfirmSomeone() {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+  return (
+    <section>
+      <h3>Confirm someone's email</h3>
+      <p className="muted small">
+        If someone's confirmation email never arrives, enter their account's email exactly. Then they tap “I've confirmed it” in the app
+        (or sign out and back in).
+      </p>
+      <form
+        className="owner-confirm"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setNote("");
+          try {
+            const r = await confirmEmailFor(email.trim());
+            setNote(r.already ? `${email.trim()} was already confirmed.` : `Confirmed ${email.trim()}.`);
+            setEmail("");
+          } catch (err) {
+            setNote(errText(err));
+          }
+          setBusy(false);
+        }}
+      >
+        <input className="text-input" type="email" placeholder="their@email.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Their email" />
+        <button className="btn primary" type="submit" disabled={busy || !email.trim()}>
+          {busy ? "Confirming…" : "Confirm"}
+        </button>
+      </form>
+      {note && (
+        <p className="small" role="status">
+          {note}
+        </p>
+      )}
+    </section>
   );
 }

@@ -102,7 +102,7 @@ export default function PrivacyPage() {
           Besides error reports, the administrators have a dashboard of totals: how many accounts there are and how many were active
           recently, how many have Plus, what AI has cost this month (overall, by feature and by plan, and the largest amounts spent by a
           single account, without saying whose) and how many recipes are in The Mix and in cookbooks. It shows no names, email addresses
-          or recipes.
+          or recipes. If your confirmation email doesn't arrive, an administrator can mark your address as confirmed for you.
         </p>
 
         <h3>Other services you choose to open</h3>

@@ -57,7 +57,7 @@ jobs:
         # deploy. Each function still checks the person's sign-in itself.
         run: |
           gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS" --quiet
-          for s in ai refreshplan checkout billingportal closemyaccount deletemydata mixvote ownerstats ownerclearerrors; do
+          for s in ai refreshplan checkout billingportal closemyaccount deletemydata mixvote ownerstats ownerclearerrors ownerconfirmemail; do
             gcloud run services add-iam-policy-binding "$s" --region us-central1 --project "$PROJECT" \
               --member=allUsers --role=roles/run.invoker --quiet --format=none
             echo "$s: callable by the app"
