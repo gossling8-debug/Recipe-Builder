@@ -34,6 +34,7 @@ import { loadShopping, removeFromShopping } from "../lib/shopping";
 import { useToast } from "./Toast";
 import { cleanTags, type SavedRecipe } from "../lib/schema";
 import { feature } from "../lib/features";
+import { Loading } from "./LogoLoader";
 
 export default function RecipePage({ id }: { id: string }) {
   const [recipe, setRecipe] = useState<SavedRecipe | null | undefined>(undefined);
@@ -282,7 +283,7 @@ export default function RecipePage({ id }: { id: string }) {
         }
       />
       <main className="page">
-        {recipe === undefined && <p className="muted">Loading…</p>}
+        {recipe === undefined && <Loading />}
         {recipe === null && <div className="callout error">That recipe wasn't found on this device.</div>}
         {recipe && editing && (
           <RecipeEditor

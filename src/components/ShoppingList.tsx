@@ -22,6 +22,7 @@ import { addPrice, deletePrice, dollars, parsePrice } from "../lib/prices";
 import SpendingEditor from "./SpendingEditor";
 
 import { ALWAYS_KEEP } from "../lib/shoppingItems";
+import { Loading } from "./LogoLoader";
 
 const scaleLabel = (s: number) => (s === 1 ? "" : ` · ×${s === 0.5 ? "½" : s === 1.5 ? "1½" : s}`);
 
@@ -258,7 +259,7 @@ export default function ShoppingList() {
             <Icon name="camera" size={18} /> Import a receipt
           </a>
         )}
-        {all === null && <p className="muted">Loading…</p>}
+        {all === null && <Loading />}
         {all !== null && entries.length === 0 && stapleItems.length === 0 && (
           <div className="empty">
             <p className="empty-title">Your shopping list is empty.</p>

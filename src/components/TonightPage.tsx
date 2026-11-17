@@ -12,6 +12,7 @@ import { loadPlans, timeOf } from "../lib/plan";
 import { href, navigate } from "../lib/route";
 import { addMeal, dayKey, loadWeek, pastPlans, removeMeal } from "../lib/week";
 import type { SavedRecipe } from "../lib/schema";
+import { Loading } from "./LogoLoader";
 
 const thumb = (r: SavedRecipe) => r.dishPhoto ?? r.photos[0];
 
@@ -70,7 +71,7 @@ export default function TonightPage() {
       <Header title="Tonight" back={href({ name: "library" })} />
       <main className="page">
         <p className="muted">{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</p>
-        {recipes === null && <p className="muted">Loading…</p>}
+        {recipes === null && <Loading />}
 
         {meals.length > 0 && (
           <section>

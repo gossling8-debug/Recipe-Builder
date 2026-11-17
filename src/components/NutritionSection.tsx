@@ -9,6 +9,7 @@ import type { SavedRecipe } from "../lib/schema";
 import { formatNumber } from "../lib/quantity";
 import { realServings } from "../lib/autoPlan";
 import { convertText, useUnits } from "../lib/units";
+import LogoLoader from "./LogoLoader";
 
 type Healthier = Nutrition["healthier"][number];
 
@@ -97,6 +98,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
           {!n.serving_size && current && hasKey && (
             <p className="small">
               <button className="link-btn small" onClick={ask} disabled={busy}>
+                {busy && <LogoLoader size={22} />}
                 {busy ? "Working… (about 15–30 seconds)" : "Add the serving size"}
               </button>{" "}
               <span className="muted">(reads it from your card)</span>
@@ -201,7 +203,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
               </p>
             )}
             <button className="btn" onClick={ask} disabled={busy}>
-              <Icon name="reset" size={18} /> {busy ? "Estimating… (about 15–30 seconds)" : n ? "Estimate again" : "Estimate nutrition"}
+              {busy ? <LogoLoader size={22} /> : <Icon name="reset" size={18} />} {busy ? "Estimating… (about 15–30 seconds)" : n ? "Estimate again" : "Estimate nutrition"}
             </button>
           </>
         ) : (

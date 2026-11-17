@@ -8,6 +8,7 @@ import { bigMealIcs, ovenClashes, timeline } from "../lib/bigMeal";
 import { dayOf, setPlan, timeOf, type Plan } from "../lib/plan";
 import { fromDateInput, toDateInput } from "../lib/shelfLife";
 import type { SavedRecipe } from "../lib/schema";
+import { Loading } from "./LogoLoader";
 
 const duration = (m: number) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`);
 const BASIS = { history: "your own time", stated: "from the recipe", guess: "a rough guess" } as const;
@@ -136,7 +137,7 @@ export default function BigMealPage({ day, ids }: { day?: string; ids?: string[]
         )}
 
         <h3>Dishes {picked.size > 0 && <span className="muted small">· {picked.size} chosen</span>}</h3>
-        {recipes === null && <p className="muted">Loading…</p>}
+        {recipes === null && <Loading />}
         {recipes?.length === 0 && <p className="muted">Add some recipes first.</p>}
         <ul className="ingredients meal-pick">
           {(recipes ?? []).map((r) => (

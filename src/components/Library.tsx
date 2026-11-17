@@ -33,6 +33,7 @@ import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type 
 import { href, navigate } from "../lib/route";
 import { aiReady } from "../lib/settings";
 import type { SavedRecipe } from "../lib/schema";
+import { Loading } from "./LogoLoader";
 
 export default function Library() {
   const [recipes, setRecipes] = useState<SavedRecipe[] | null>(null);
@@ -315,7 +316,7 @@ export default function Library() {
         {recipes && recipes.length > 0 && (
           <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
         )}
-        {recipes === null && !error && <p className="muted">Loading…</p>}
+        {recipes === null && !error && <Loading />}
         {recipes?.length === 0 && (
           <div className="empty">
             <p className="empty-title">Your recipe box is empty.</p>

@@ -4,6 +4,7 @@ import { listRecipes } from "../lib/db";
 import { aYearAgo, byMonth, cookedHistory, mostMade } from "../lib/history";
 import { href } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
+import { Loading } from "./LogoLoader";
 
 const dayText = (ms: number) => new Date(ms).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 
@@ -25,7 +26,7 @@ export default function HistoryPage() {
     <>
       <Header title="What we've cooked" back={href({ name: "week" })} returnToPrevious />
       <main className="page">
-        {recipes === null && <p className="muted">Loading…</p>}
+        {recipes === null && <Loading />}
         {recipes && list.length === 0 && (
           <div className="empty">
             <p className="empty-title">Nothing cooked yet.</p>

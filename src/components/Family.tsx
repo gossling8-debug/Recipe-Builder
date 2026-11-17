@@ -43,6 +43,7 @@ import { href, navigate } from "../lib/route";
 import { shareText } from "../lib/share";
 import { applySwaps } from "../lib/swaps";
 import type { SavedRecipe } from "../lib/schema";
+import { Loading } from "./LogoLoader";
 
 function useCloud(): CloudState {
   const [s, setS] = useState(cloudState());
@@ -119,7 +120,7 @@ export function FamilyPage() {
           recipes. Your other recipes stay private.
         </p>
         {!on && <NeedsSignIn s={s} />}
-        {on && books === null && !error && <p className="muted">Loading…</p>}
+        {on && books === null && !error && <Loading />}
         {books && books.length > 0 && (
           <ul className="book-list">
             {books.map((b) => (
@@ -301,7 +302,7 @@ export function BookPage({ id }: { id: string }) {
                     <Icon name="plus" size={18} /> Add recipes
                   </button>
                 </div>
-                {recipes === null && !error && <p className="muted">Loading…</p>}
+                {recipes === null && !error && <Loading />}
                 {recipes?.length === 0 && <p className="muted">No recipes yet. Tap Add recipes to scan a new one or share some of yours.</p>}
                 {recipes && recipes.length > 0 && (
                   <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
@@ -504,7 +505,7 @@ export function SharedRecipePage({ bookId, docId }: { bookId: string; docId: str
         <Header title={book?.name ?? ""} back={href({ name: "family", book: bookId })} returnToPrevious />
         <main className="page">
           {!on && <NeedsSignIn s={s} />}
-          {on && item === undefined && !error && <p className="muted">Loading…</p>}
+          {on && item === undefined && !error && <Loading />}
           {item === null && <div className="callout error">This recipe was removed from the cookbook.</div>}
           {error && <div className="callout error">{error}</div>}
         </main>

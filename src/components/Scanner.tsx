@@ -25,6 +25,7 @@ import { bookRecipes, getCookbook, shareToCookbook, type Cookbook } from "../lib
 import { duplicatesOf } from "../lib/duplicates";
 import { cloudState, subscribeCloud, user } from "../lib/cloud";
 import { AddToBooksPrompt, DuplicatePrompt, SaveToMinePrompt, type DuplicateMatch } from "./AfterAdd";
+import LogoLoader from "./LogoLoader";
 
 const MAX_PHOTOS = 4;
 type Mode = "photo" | "url" | "text" | "create";
@@ -327,7 +328,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
       <main className="page">
         {busy ? (
           <div className="working" role="status">
-            <div className="spinner" aria-hidden />
+            <LogoLoader size={88} />
             <p>
               <strong>{mode === "create" ? "Creating your recipe…" : mode === "url" ? "Reading the web page…" : "Reading your recipe…"}</strong>
             </p>

@@ -6,6 +6,7 @@ import DocumentScanner from "./DocumentScanner";
 import { href } from "../lib/route";
 import { aiReady, getApiKey } from "../lib/settings";
 import Icon from "./Icon";
+import LogoLoader from "./LogoLoader";
 
 /** Keeps a photo small enough to share in a cookbook (Firestore documents are capped at 1 MB). */
 async function fitForBook(url: string): Promise<string> {
@@ -442,6 +443,7 @@ export function CookbookMemories({
           <MultiPhotoPicker photos={photos} onChange={setPhotos} />
           {photos.length > 0 && aiReady() && (
             <button type="button" className="link-btn small" disabled={reading} onClick={typeItOut}>
+              {reading && <LogoLoader size={22} />}
               {reading ? "Reading…" : photos.length > 1 ? "Type out the writing in these photos" : "Type out the writing in this photo"}
             </button>
           )}

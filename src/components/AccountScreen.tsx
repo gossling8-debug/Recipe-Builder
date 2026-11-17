@@ -6,6 +6,7 @@ import { lastAccount } from "../lib/stateSync";
 import { href } from "../lib/route";
 import { isStandalone } from "../lib/homeScreen";
 import AddToHomeScreen from "./AddToHomeScreen";
+import { Loading } from "./LogoLoader";
 
 /** Everyone has an account: shown until someone signs in (or while we find out). */
 export default function AccountScreen({ cloud }: { cloud: CloudState }) {
@@ -28,7 +29,7 @@ export default function AccountScreen({ cloud }: { cloud: CloudState }) {
     return (
       <main className="page account-screen" aria-busy="true">
         <h1 className="page-title">Cardamix</h1>
-        <p className="muted">Loading…</p>
+        <Loading />
       </main>
     );
   }
