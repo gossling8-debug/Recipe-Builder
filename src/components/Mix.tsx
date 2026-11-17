@@ -3,6 +3,7 @@ import Header from "./Header";
 import Icon from "./Icon";
 import CopyBackedRecipe from "./CopyBackedRecipe";
 import SearchBox from "./SearchBox";
+import { LabelFilters, ListToolbar, allLabels, hasLabel, labelKey } from "./ListControls";
 import { useToast } from "./Toast";
 import { cloudState, subscribeCloud, type CloudState } from "../lib/cloud";
 import { duplicatesOf } from "../lib/duplicates";
@@ -81,7 +82,8 @@ export function MixPage() {
   const [mineIds, setMineIds] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<SearchScope>("all");
-  const [order, setOrder] = useState<"newest" | "rating">("newest");
+  const [order, setOrder] = useState<"newest" | "az" | "rating">("newest");
+  const [chosenLabel, setChosenLabel] = useState("all");
   useEffect(() => {
     if (!on) return;
     latestMix().then(setItems, (e) => setError(errText(e)));
@@ -92,11 +94,16 @@ export function MixPage() {
   const q = query.trim();
   const found = new Map(q ? (items ?? []).map((m) => [m.id, searchRecipe({ ...m.recipe, tags: [...(m.recipe.tags ?? []), m.byName] }, q, scope)] as const) : []);
   const avg = (m: MixRecipe) => mixRating(m)?.average ?? -1;
-  const shown = (items ?? [])
-    // Reported by several people: hidden until an admin looks (still shown to its cook and admins).
-    .filter((m) => reportCount(m) < HIDE_AFTER_REPORTS || mineIds.has(m.id) || admin)
-    .filter((m) => !q || found.get(m.id)?.match)
-    .sort((a, b) => (order === "rating" ? avg(b) - avg(a) || b.ratingCount - a.ratingCount || b.at - a.at : b.at - a.at));
+  // Reported by several people: hidden until an admin looks (still shown to its cook and admins).
+  const visible = (items ?? []).filter((m) => reportCount(m) < HIDE_AFTER_REPORTS || mineIds.has(m.id) || admin);
+  // Filter by a label, as in your own recipes (a label no longer used shows everything).
+  const labels = allLabels(visible.map((m) => m.recipe.tags));
+  const label = labels.some((l) => labelKey(l) === labelKey(chosenLabel)) ? chosenLabel : "all";
+  const shown = visible
+    .filter((m) => (!q || found.get(m.id)?.match) && hasLabel(m.recipe.tags, label))
+    .sort((a, b) =>
+      order === "rating" ? avg(b) - avg(a) || b.ratingCount - a.ratingCount || b.at - a.at : order === "az" ? a.recipe.title.localeCompare(b.recipe.title) : b.at - a.at,
+    );
 
   return (
     <>
@@ -112,19 +119,20 @@ export function MixPage() {
         {items && items.length > 0 && (
           <>
             <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
-            <div className="book-sort" role="radiogroup" aria-label="Order">
-              {(
-                [
-                  ["newest", "Newest"],
-                  ["rating", "Top rated"],
-                ] as const
-              ).map(([v, label]) => (
-                <button key={v} role="radio" aria-checked={order === v} className={order === v ? "chip active" : "chip"} onClick={() => setOrder(v)}>
-                  {label}
-                </button>
-              ))}
-            </div>
-            {q && shown.length === 0 && <p className="muted">No recipes match “{q}”.</p>}
+            <LabelFilters labels={labels} value={label} onChange={setChosenLabel} />
+            <ListToolbar
+              count={shown.length}
+              sort={order}
+              options={[
+                ["newest", "Newest"],
+                ["az", "A–Z"],
+                ["rating", "Top rated"],
+              ]}
+              onSort={setOrder}
+            />
+            {(q || label !== "all") && shown.length === 0 && (
+              <p className="muted">No recipes match{q ? ` “${q}”` : ""}{label !== "all" ? ` with the label ${label}` : ""}.</p>
+            )}
             <ul className="recipe-list">
               {shown.map((m) => (
                 <li key={m.id} className="recipe-row">
