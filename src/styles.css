@@ -172,7 +172,11 @@ h1, h2, h3, h4 { line-height: 1.2; }
   border: 0; background: rgba(20, 19, 17, 0.55); color: #fff; cursor: pointer;
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
-.working { text-align: center; padding: 64px 8px; }
+/* Reading a recipe: the logo in the very middle of the screen, the words just under it. */
+.working { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; pointer-events: none; text-align: center; }
+.working-center { position: relative; }
+.working-text { position: absolute; top: calc(100% + 16px); left: 50%; transform: translateX(-50%); width: min(88vw, 440px); }
+.working-text p { margin: 0 0 8px; }
 .spinner {
   width: 36px; height: 36px; margin: 0 auto 20px; border-radius: 50%;
   border: 2px solid var(--line); border-top-color: var(--ink);
@@ -1217,10 +1221,14 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
   .logo-loader-ember, .logo-loader-c { animation: none; }
 }
 .logo-loader.still .logo-loader-ember, .logo-loader.still .logo-loader-c { animation: none; }
-.working .logo-loader { margin: 0 auto 20px; }
-.loading-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.working .logo-loader { margin: 0 auto; }
+/* "Loading…": the logo in the middle of the screen, the word under it. */
+.loading-row {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  min-height: calc(100vh - 260px); min-height: calc(100dvh - 260px); padding: 16px 0; text-align: center;
+}
 .btn .logo-loader { display: inline-block; vertical-align: middle; margin-right: 6px; }
 .plain-loader { display: inline-block; vertical-align: middle; margin: 0; border-width: 2px; }
-.working .plain-loader { display: block; margin: 0 auto 20px; width: 36px !important; height: 36px !important; }
+.working .plain-loader { display: block; margin: 0 auto; width: 36px !important; height: 36px !important; }
 .animated-logo-toggle { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
 .animated-logo-toggle .logo-preview { margin-left: auto; }
