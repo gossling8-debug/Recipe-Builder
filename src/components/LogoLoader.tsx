@@ -108,7 +108,7 @@ export function Loading({ text = "Loading…", delay = 250 }: { text?: string; d
   if (!show) return null;
   return (
     <div className="loading-row" role="status">
-      <LogoLoader size={36} />
+      <LogoLoader size={56} />
       <span className="muted">{text}</span>
     </div>
   );
