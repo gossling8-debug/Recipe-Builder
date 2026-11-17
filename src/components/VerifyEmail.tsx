@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { checkEmailVerified, cloudState, sendVerificationEmail, subscribeCloud } from "../lib/cloud";
+import ChangeEmail from "./ChangeEmail";
 
 /**
  * Free plan: AI needs a confirmed email address. Shown until it's confirmed,
- * with "I've confirmed it" (checks again) and "Send the email again".
+ * with "I've confirmed it" (checks again), "Send the email again" and
+ * "Wrong email? Change it".
  */
 export default function VerifyEmail({ compact = false }: { compact?: boolean }) {
   const [s, setS] = useState(cloudState());
@@ -48,6 +50,7 @@ export default function VerifyEmail({ compact = false }: { compact?: boolean }) 
         </button>
       </div>
       {note && <p className="small verify-note">{note}</p>}
+      <ChangeEmail />
     </div>
   );
 }

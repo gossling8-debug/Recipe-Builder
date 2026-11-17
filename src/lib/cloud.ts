@@ -206,6 +206,34 @@ export async function createAccount(email: string, password: string): Promise<vo
   }
 }
 
+/**
+ * A wrong (or old) email address: after the password is entered again, sends a
+ * link to the new address. Tapping it switches the account to that address and
+ * confirms it; until then the old address stays.
+ */
+export async function changeEmail(newEmail: string, password: string): Promise<void> {
+  const { auth, a } = await fb();
+  const u = auth.currentUser;
+  if (!u || !u.email) throw new Error("Sign in first.");
+  const next = newEmail.trim();
+  if (!next) throw new Error("Enter the new email address.");
+  if (next.toLowerCase() === u.email.toLowerCase()) throw new Error("That's the address the account has now.");
+  try {
+    await a.reauthenticateWithCredential(u, a.EmailAuthProvider.credential(u.email, password));
+  } catch (e) {
+    const code = (e as { code?: string })?.code ?? "";
+    if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/missing-password") throw new Error("That password is wrong.");
+    throw new Error(friendly(e));
+  }
+  try {
+    await a.verifyBeforeUpdateEmail(u, next, { url: verifyReturnUrl() });
+  } catch (e) {
+    const code = (e as { code?: string })?.code ?? "";
+    if (code === "auth/email-already-in-use") throw new Error("There's already a Cardamix account with that email.");
+    throw new Error(friendly(e));
+  }
+}
+
 /** Where the verification link brings people back to. */
 const verifyReturnUrl = () => `${location.origin}${location.pathname}`;
 
@@ -225,10 +253,21 @@ export async function sendVerificationEmail(): Promise<void> {
  * is confirmed now, and refreshes the sign-in so the app's AI server sees it.
  */
 export async function checkEmailVerified(): Promise<boolean> {
-  const { auth } = await fb();
+  const { auth, a } = await fb();
   const u = auth.currentUser;
   if (!u) return false;
-  await u.reload();
+  try {
+    await u.reload();
+  } catch (e) {
+    // Changing the address signs the account out everywhere once the link is tapped.
+    const code = (e as { code?: string })?.code ?? "";
+    if (code === "auth/user-token-expired" || code === "auth/invalid-user-token" || code === "auth/user-not-found") {
+      await a.signOut(auth).catch(() => {});
+      throw new Error("Your email address was changed. Sign in again with the new address.");
+    }
+    throw new Error(friendly(e));
+  }
+  set({ email: u.email ?? undefined });
   if (u.emailVerified) {
     await u.getIdToken(true);
     // Testing-period or gifted Plus waits for a confirmed email: ask the server again.
