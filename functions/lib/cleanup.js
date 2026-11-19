@@ -108,6 +108,16 @@ export async function deleteUserData(db, uid, email) {
     });
   }
 
+  // A Family household: theirs ends (the others go back to their own plans); otherwise they leave it.
+  const homes = await db.collection("households").where("members", "array-contains", uid).get();
+  for (const h of homes.docs) {
+    if (h.id === uid) {
+      await h.ref.delete();
+      await Promise.all((h.data().members ?? []).filter((m) => m !== uid).map((m) => db.doc(`plans/${m}`).delete()));
+    } else await h.ref.update({ members: FieldValue.arrayRemove(uid), [`names.${uid}`]: FieldValue.delete() });
+  }
+  await db.doc(`aiUsage/household_${uid}`).delete();
+
   // Their own recipes, photos and settings, and admin access.
   await db.recursiveDelete(db.doc(`users/${uid}`));
   await db.doc(`admins/${uid}`).delete();

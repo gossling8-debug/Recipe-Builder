@@ -11,18 +11,25 @@ export const APP_MODELS = {
 };
 
 /**
- * Monthly AI allowance, in dollars of Anthropic list price. Yearly Plus is a
- * little lower (it's cheaper per month). Free is limited by counts (below);
- * its dollar amount is only a backstop.
+ * Monthly AI allowance, in dollars of Anthropic list price. Yearly plans are a
+ * little lower (they're cheaper per month). Free is limited by counts (below);
+ * its dollar amount is only a backstop. Family is one allowance shared by the
+ * whole household (up to HOUSEHOLD_MAX accounts), not one each.
  */
-export const ALLOWANCE = { free: 0.4, plus: 2.5, plus_yearly: 2.25 };
+export const ALLOWANCE = { free: 0.4, plus: 2.5, plus_yearly: 2.25, family: 5, family_yearly: 4.5 };
+/** Accounts in one Family plan, the payer included. */
+export const HOUSEHOLD_MAX = 6;
 /** Free accounts each month: recipe adds (photo, website, text) and created recipes. */
 export const FREE_LIMITS = { scan: 5, create: 3 };
 /** Free accounts read recipes with the budget model. */
 export const FREE_SCAN_MODEL = "claude-haiku-5-5";
 
-/** Which allowance applies: free, Plus monthly, or Plus yearly. */
-export const allowanceKey = (plan, interval) => (plan === "plus" ? (interval === "year" ? "plus_yearly" : "plus") : "free");
+/** Which allowance applies: free, Plus or Family, monthly or yearly. */
+export const allowanceKey = (plan, interval) =>
+  plan === "plus" || plan === "family" ? `${plan}${interval === "year" ? "_yearly" : ""}` : "free";
+
+/** Whose AI usage a request counts against: Family shares one, kept under the payer's id. */
+export const usageId = (uid, planDoc) => (planDoc?.plan === "family" ? `household_${planDoc.owner ?? uid}` : uid);
 
 const NOUN = { scan: ["recipe add", "recipe adds"], create: ["created recipe", "created recipes"] };
 /**
@@ -98,7 +105,9 @@ export function allowanceCheck(plan, usage, now = Date.now()) {
       status: 429,
       type: "allowance_exceeded",
       message:
-        plan.startsWith("plus")
+        plan.startsWith("family")
+          ? "Your household has used this month's AI allowance. It resets on the 1st."
+          : plan.startsWith("plus")
           ? "You've used this month's AI allowance. It resets on the 1st."
           : "You've used this month's free AI. Upgrade to Plus for much more, or wait until the 1st.",
     };
@@ -214,11 +223,15 @@ export function allowedBeta(header) {
 export const VERIFY_PLUS_FROM = Date.UTC(2026, 10, 15, 17, 0);
 export const plusEmailOk = (verified, createdAt) => !!verified || (createdAt > 0 && createdAt < VERIFY_PLUS_FROM);
 
-/** Plus if a subscription is active (past_due keeps access while Stripe retries the card). */
+/** Plus or Family, from the subscription's price (Family prices' lookup keys start "cardamix_family"). */
+export const tierOf = (sub) => (/^cardamix_family/.test(sub?.items?.data?.[0]?.price?.lookup_key ?? "") ? "family" : "plus");
+
+/** Plus or Family if a subscription is active (past_due keeps access while Stripe retries the card); Family wins over Plus. */
 export function planFromSubscriptions(subs) {
-  const live = (subs ?? []).find((s) => ["active", "trialing", "past_due"].includes(s.status));
+  const liveAll = (subs ?? []).filter((s) => ["active", "trialing", "past_due"].includes(s.status));
+  const live = liveAll.find((s) => tierOf(s) === "family") ?? liveAll[0];
   return live
-    ? { plan: "plus", source: "stripe", status: live.status, interval: live.items?.data?.[0]?.price?.recurring?.interval ?? live.plan?.interval ?? null, renews: live.cancel_at_period_end ? null : (live.current_period_end ?? live.items?.data?.[0]?.current_period_end ?? null) * 1000 || null, cancelsAt: live.cancel_at_period_end ? (live.cancel_at ?? null) * 1000 || null : null }
+    ? { plan: tierOf(live), source: "stripe", subscription: live.id, status: live.status, interval: live.items?.data?.[0]?.price?.recurring?.interval ?? live.plan?.interval ?? null, renews: live.cancel_at_period_end ? null : (live.current_period_end ?? live.items?.data?.[0]?.current_period_end ?? null) * 1000 || null, cancelsAt: live.cancel_at_period_end ? (live.cancel_at ?? null) * 1000 || null : null }
     : { plan: "free", source: "stripe", status: subs?.[0]?.status ?? "none", renews: null, cancelsAt: null };
 }
 
