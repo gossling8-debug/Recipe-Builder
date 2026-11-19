@@ -40,8 +40,7 @@ export type FeatureId =
   | "avoid"
   | "family"
   | "mix"
-  | "budgetPlan"
-  | "videoImport";
+  | "budgetPlan";
 
 export const FEATURES: Feature[] = [
   { id: "cookMode", name: "Cooking mode", what: "One step at a time, big text, timers.", plan: "free", group: "Cooking" },
@@ -64,7 +63,6 @@ export const FEATURES: Feature[] = [
   { id: "nutrition", name: "Nutrition", what: "Calories per serving and healthier swaps.", plan: "plus", group: "Health" },
   { id: "avoid", name: "Allergies & substitutes", what: "Flag ingredients you avoid and get swaps.", plan: "plus", group: "Health" },
   { id: "family", name: "Cookbooks", what: "Share recipes with family and friends.", plan: "plus", group: "Extras" },
-  { id: "videoImport", name: "Recipes from videos", what: "Save a recipe from a TikTok, Instagram or YouTube video link.", plan: "family", group: "Extras" },
   { id: "budgetPlan", name: "Plan on a budget", what: "Plan the week's dinners under a set amount, using what you have.", plan: "family", group: "Planning" },
   { id: "mix", name: "The Mix", what: "Publish recipes for everyone and find recipes other cooks shared.", plan: "free", group: "Extras" },
 ];
