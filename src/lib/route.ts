@@ -23,6 +23,7 @@ export type Route =
   | { name: "family"; book?: string; recipe?: string }
   | { name: "mix"; id?: string }
   | { name: "join"; id: string }
+  | { name: "shopjoin"; id: string }
   | { name: "import"; data: string }
   | { name: "recipe"; id: string };
 
@@ -53,6 +54,8 @@ export function parseRoute(hash: string): Route {
   if (pr) return { name: "print", id: decodeURIComponent(pr[1]) };
   const meal = path.match(/^meal(?:\/(\d{4}-\d{2}-\d{2}))?(?:\/([^/]+))?$/);
   if (meal) return { name: "meal", day: meal[1], ids: meal[2] ? meal[2].split(",").map(decodeURIComponent) : undefined };
+  const shopJoin = path.match(/^shop\/([^/]+)$/);
+  if (shopJoin) return { name: "shopjoin", id: decodeURIComponent(shopJoin[1]) };
   const join = path.match(/^join\/([^/]+)$/);
   if (join) return { name: "join", id: decodeURIComponent(join[1]) };
   const imp = path.match(/^import\/(.+)$/);
@@ -71,6 +74,7 @@ export function href(route: Route): string {
     return ["#/meal", route.day, route.ids?.length ? route.ids.map(encodeURIComponent).join(",") : undefined].filter(Boolean).join("/");
   if (route.name === "mix") return route.id ? `#/mix/${encodeURIComponent(route.id)}` : "#/mix";
   if (route.name === "join") return `#/join/${encodeURIComponent(route.id)}`;
+  if (route.name === "shopjoin") return `#/shop/${encodeURIComponent(route.id)}`;
   if (route.name === "family")
     return ["#/family", route.book, route.recipe].filter(Boolean).map((p, i) => (i ? encodeURIComponent(p!) : p)).join("/");
   return route.name === "recipe" ? `#/recipe/${encodeURIComponent(route.id)}` : route.name === "library" ? "#/" : `#/${route.name}`;

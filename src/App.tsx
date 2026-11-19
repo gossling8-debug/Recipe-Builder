@@ -38,6 +38,7 @@ const OwnerPage = lazyScreen(() => import("./components/OwnerPage"));
 const BookPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.BookPage })));
 const FamilyPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.FamilyPage })));
 const JoinPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.JoinPage })));
+const ShopJoinPage = lazyScreen(() => import("./components/SharedShopping").then((m) => ({ default: m.ShopJoinPage })));
 const SharedRecipePage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.SharedRecipePage })));
 const MixPage = lazyScreen(() => import("./components/Mix").then((m) => ({ default: m.MixPage })));
 const MixRecipePage = lazyScreen(() => import("./components/Mix").then((m) => ({ default: m.MixRecipePage })));
@@ -59,6 +60,8 @@ function Screen() {
       return route.id ? <MixRecipePage key={route.id} id={route.id} /> : <MixPage />;
     case "join":
       return <JoinPage id={route.id} />;
+    case "shopjoin":
+      return <ShopJoinPage id={route.id} />;
     case "tips":
       return <TipsPage />;
     case "privacy":
@@ -144,6 +147,7 @@ export default function App() {
     requestPersistentStorage().catch(() => {});
     preloadScreens();
     startCloud().catch(() => {});
+    void import("./lib/sharedShopping").then((m) => m.startSharedSync()).catch(() => {});
     const on = () => {
       applyTextSize(getTextSize());
       applyTheme(getTheme(), false);

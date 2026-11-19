@@ -208,5 +208,67 @@ service cloud.firestore {
         allow delete: if isMember(b) && (resource.data.sharedBy == uid() || book(b).owner == uid());
       }
     }
-  }
+  
+    // Shared shopping lists. The id is the invite code (random, only shared by its
+    // members), so knowing it is what lets someone join. Members read and change
+    // the list; each person's name is their own.
+    function shopList(l) { return get(/databases/$(database)/documents/shoppingLists/$(l)).data; }
+    function onShopList(l) { return signedIn() && uid() in shopList(l).members; }
+    match /shoppingLists/{l} {
+      allow get: if signedIn();
+      allow list: if signedIn() && uid() in resource.data.members;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['owner', 'members', 'names', 'createdAt'])
+        && request.resource.data.owner == uid()
+        && request.resource.data.members == [uid()]
+        && request.resource.data.names.keys().hasOnly([uid()])
+        && request.resource.data.names[uid()] is string && request.resource.data.names[uid()].size() <= 40;
+      // Join (add yourself), leave (take yourself off), or rename yourself; an owner who
+      // leaves hands the list to someone still on it.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'names', 'owner'])
+        && request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([uid()])
+        && (!(uid() in request.resource.data.names) || (request.resource.data.names[uid()] is string && request.resource.data.names[uid()].size() <= 40))
+        && (
+          (request.resource.data.owner == resource.data.owner && (
+            (!(uid() in resource.data.members)
+              && request.resource.data.members == resource.data.members.concat([uid()])
+              && resource.data.members.size() < 10)
+            || (uid() in resource.data.members && uid() != resource.data.owner
+              && request.resource.data.members == resource.data.members.removeAll([uid()]))
+            || (uid() in resource.data.members && request.resource.data.members == resource.data.members)
+          ))
+          || (uid() == resource.data.owner
+            && request.resource.data.members == resource.data.members.removeAll([uid()])
+            && request.resource.data.members.size() > 0
+            && request.resource.data.owner in request.resource.data.members)
+        );
+      // The last one to leave deletes it.
+      allow delete: if signedIn() && resource.data.members == [uid()];
+
+      // Recipes on the list (a copy of their ingredients): members add their own (the id
+      // starts with their account id) under their own name, and anyone on the list takes one off.
+      match /entries/{e} {
+        allow read: if onShopList(l);
+        allow create, update: if onShopList(l)
+          && e.matches(uid() + '_.+')
+          && request.resource.data.keys().hasOnly(['title', 'scale', 'ingredients', 'sourceId', 'addedBy', 'addedByName', 'at'])
+          && request.resource.data.addedBy == uid()
+          && request.resource.data.addedByName == shopList(l).names[uid()]
+          && request.resource.data.title is string && request.resource.data.title.size() <= 200
+          && request.resource.data.scale is number
+          && request.resource.data.ingredients is list && request.resource.data.ingredients.size() <= 150;
+        allow delete: if onShopList(l);
+      }
+      // What's been ticked off (by whom): anyone on the list ticks and unticks.
+      match /ticks/{t} {
+        allow read: if onShopList(l);
+        allow create, update: if onShopList(l)
+          && request.resource.data.keys().hasOnly(['by', 'at'])
+          && request.resource.data.by == uid()
+          && request.resource.data.at is int;
+        allow delete: if onShopList(l);
+      }
+    }
+}
 }

@@ -23,6 +23,9 @@ import SpendingEditor from "./SpendingEditor";
 
 import { ALWAYS_KEEP } from "../lib/shoppingItems";
 import { Loading } from "./LogoLoader";
+import { SharedListCard } from "./SharedShopping";
+import { cloudState } from "../lib/cloud";
+import { clearSharedList, entryAsRecipe, forgetSharedList, removeEntry, setTick, useSharedShopping } from "../lib/sharedShopping";
 
 const scaleLabel = (s: number) => (s === 1 ? "" : ` · ×${s === 0.5 ? "½" : s === 1.5 ? "1½" : s}`);
 
@@ -31,6 +34,10 @@ export default function ShoppingList() {
   const [all, setAll] = useState<SavedRecipe[] | null>(null);
   const [toast, showToast] = useToast();
   const [units] = useUnits();
+  // Shared live with others (sharedShopping): the list comes from there instead of your own.
+  const shared = useSharedShopping();
+  const sharing = !!shared.id;
+  const myUid = cloudState().uid;
   // A message left by the receipt import, shown once.
   const [receiptDone] = useState(() => {
     try {
@@ -45,6 +52,16 @@ export default function ShoppingList() {
   useEffect(() => {
     listRecipes().then(setAll, () => setAll([]));
   }, []);
+  // Changed elsewhere (leaving a shared list, a recipe page, another phone): show it, and don't write over it.
+  useEffect(() => {
+    const on = () => setState(loadShopping());
+    window.addEventListener("shopping-changed", on);
+    window.addEventListener("state-synced", on);
+    return () => {
+      window.removeEventListener("shopping-changed", on);
+      window.removeEventListener("state-synced", on);
+    };
+  }, []);
 
   const update = (next: ShoppingState) => {
     setState(next);
@@ -52,7 +69,7 @@ export default function ShoppingList() {
   };
 
   // Recipes on the list that still exist, with their chosen size.
-  const entries = useMemo(
+  const localEntries = useMemo(
     () =>
       (all ?? []).length
         ? state.recipes
@@ -64,12 +81,34 @@ export default function ShoppingList() {
         : [],
     [all, state.recipes],
   );
+  // Shared: everyone's recipes (as copies of what to buy). Your own: your recipes plus copies kept from a list you shared.
+  const entries = useMemo(
+    () =>
+      sharing
+        ? (shared.entries ?? []).map((e) => ({ recipe: entryAsRecipe(e), scale: e.scale, skip: undefined as number[] | undefined }))
+        : [...localEntries, ...(state.copies ?? []).map((c) => ({ recipe: entryAsRecipe(c), scale: c.scale, skip: undefined as number[] | undefined }))],
+    [sharing, shared.entries, localEntries, state.copies],
+  );
   const recipeItems = useMemo(() => combine(entries), [entries]);
   // "Always keep" staples that are out or low join the list by themselves. Once
   // ticked they stay (in the cart) until the list is cleared, so ticking can be undone.
   const stapleItems = feature("pantry") ? staplesToBuyOrTicked(state.checked, new Set(recipeItems.map((i) => i.key))) : [];
   const items = [...recipeItems, ...stapleItems];
-  const checked = new Set(state.checked);
+  // Shared: ticks are everyone's (your "Always keep" staples stay yours).
+  const stapleKeys = new Set(stapleItems.map((i) => i.key));
+  const tickedBy = new Map(shared.ticks.map((t) => [t.key, t.by]));
+  const checked = sharing ? new Set([...shared.ticks.map((t) => t.key), ...state.checked.filter((k) => stapleKeys.has(k))]) : new Set(state.checked);
+  const nameOf = (uid: string) => shared.list?.names[uid] ?? "someone";
+  // Taken off the shared list (or it was stopped): back to your own list.
+  useEffect(() => {
+    if (!sharing || shared.entries === null || shared.error) return;
+    if (!shared.list || (myUid && !shared.list.members.includes(myUid))) {
+      forgetSharedList();
+      showToast("This list isn't shared with you any more — it's your own list again");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sharing, shared.list, shared.entries, shared.error, myUid]);
+  const sharedFail = () => showToast("Couldn't update the shared list — check your connection");
   // Ticks saved under the older matching rule move to the current item keys.
   useEffect(() => {
     const map = new Map(items.map((i) => [legacyNameKey(i.name), i.key]));
@@ -92,21 +131,57 @@ export default function ShoppingList() {
   const [editing, setEditing] = useState<{ key: string; text: string; price: string } | null>(null);
   const defaultBought = (it: (typeof items)[number]) => (it.need ? formatQty(it.need) : it.amount);
 
-  // Ticking = bought: it goes into the pantry. Unticking undoes that.
+  // Ticking = bought: it goes into your pantry (whoever ticks it). Unticking undoes that.
   const toggle = (key: string) => {
     const it = items.find((i) => i.key === key)!;
     const bought = { ...(state.bought ?? {}) };
+    const onShared = sharing && !stapleKeys.has(key);
     if (checked.has(key)) {
       if (bought[key]) setItem(key, bought[key].before);
       if (bought[key]?.priceId) deletePrice(bought[key].priceId!);
       delete bought[key];
       update({ ...state, checked: state.checked.filter((k) => k !== key), bought });
+      if (onShared) setTick(key, false).catch(sharedFail);
     } else {
       const text = defaultBought(it);
       bought[key] = { text, before: recordPurchase(it.name, text) };
       update({ ...state, checked: [...state.checked, key], bought });
+      if (onShared) setTick(key, true).catch(sharedFail);
     }
   };
+
+  // The recipes the list is for, each with who added it (shared) and a way to take it off.
+  const forRows: { key: string; title: string; scale: number; link?: string; by?: string; remove: () => void }[] = sharing
+    ? (shared.entries ?? []).map((e) => {
+        const mine = e.addedBy === myUid && !!e.sourceId && (all ?? []).some((r) => r.id === e.sourceId);
+        return {
+          key: e.id,
+          title: e.title,
+          scale: e.scale,
+          link: mine ? e.sourceId : undefined,
+          by: e.addedBy === myUid ? undefined : e.addedByName,
+          remove: () => {
+            if (mine) update({ ...state, recipes: state.recipes.filter((r) => r.id !== e.sourceId) });
+            removeEntry(e.id).catch(sharedFail);
+          },
+        };
+      })
+    : [
+        ...localEntries.map(({ recipe, scale }) => ({
+          key: recipe.id,
+          title: recipe.title,
+          scale,
+          link: recipe.id,
+          remove: () => update({ ...state, recipes: state.recipes.filter((r) => r.id !== recipe.id) }),
+        })),
+        ...(state.copies ?? []).map((c) => ({
+          key: c.id,
+          title: c.title,
+          scale: c.scale,
+          by: c.from,
+          remove: () => update({ ...state, copies: (state.copies ?? []).filter((x) => x.id !== c.id) }),
+        })),
+      ];
 
   // "Change": what was really bought, and (optionally) what it cost.
   const changeBought = (key: string, text: string, priceText: string) => {
@@ -150,6 +225,9 @@ export default function ShoppingList() {
           {it.amount && <span className="shop-amount">{convertText(it.amount, units, it.name)} </span>}
           {it.name}
           {(entries.length > 1 || it.recipes[0]?.startsWith(ALWAYS_KEEP)) && <span className="shop-for">{it.recipes.join(", ")}</span>}
+          {sharing && checked.has(it.key) && tickedBy.get(it.key) && tickedBy.get(it.key) !== myUid && (
+            <span className="shop-for">Ticked by {nameOf(tickedBy.get(it.key)!)}</span>
+          )}
           {!checked.has(it.key) && <PantryNote status={status.get(it.key)} />}
         </span>
       </label>
@@ -259,8 +337,9 @@ export default function ShoppingList() {
             <Icon name="camera" size={18} /> Import a receipt
           </a>
         )}
-        {all === null && <Loading />}
-        {all !== null && entries.length === 0 && stapleItems.length === 0 && (
+        {myUid && <SharedListCard list={shared.list} toast={showToast} />}
+        {(all === null || (sharing && shared.entries === null)) && <Loading />}
+        {all !== null && !(sharing && shared.entries === null) && entries.length === 0 && stapleItems.length === 0 && (
           <div className="empty">
             <p className="empty-title">Your shopping list is empty.</p>
             <p className="muted">Open a recipe and tap “Add to shopping list”. Ingredients from several recipes are combined here.</p>
@@ -271,15 +350,14 @@ export default function ShoppingList() {
           <>
             {entries.length > 0 && <h3>For</h3>}
             <ul className="shop-recipes">
-              {entries.map(({ recipe, scale }) => (
-                <li key={recipe.id}>
-                  <a href={href({ name: "recipe", id: recipe.id })}>{recipe.title}</a>
-                  <span className="muted small">{scaleLabel(scale)}</span>
-                  <button
-                    className="icon-btn small-btn"
-                    aria-label={`Remove ${recipe.title} from the list`}
-                    onClick={() => update({ ...state, recipes: state.recipes.filter((r) => r.id !== recipe.id) })}
-                  >
+              {forRows.map((r) => (
+                <li key={r.key}>
+                  {r.link ? <a href={href({ name: "recipe", id: r.link })}>{r.title}</a> : <span>{r.title}</span>}
+                  <span className="muted small">
+                    {scaleLabel(r.scale)}
+                    {r.by ? ` · from ${r.by}` : ""}
+                  </span>
+                  <button className="icon-btn small-btn" aria-label={`Remove ${r.title} from the list`} onClick={r.remove}>
                     <Icon name="close" size={18} />
                   </button>
                 </li>
@@ -346,7 +424,9 @@ export default function ShoppingList() {
               <button
                 className="btn"
                 onClick={() => {
-                  if (confirm("Clear the whole shopping list?")) update({ recipes: [], checked: [], opened: [] });
+                  if (!confirm(sharing ? "Clear the whole list for everyone sharing it?" : "Clear the whole shopping list?")) return;
+                  update({ recipes: [], checked: [], opened: [], copies: [] });
+                  if (sharing) clearSharedList().catch(sharedFail);
                 }}
               >
                 Clear list

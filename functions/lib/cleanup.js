@@ -86,6 +86,24 @@ export async function deleteUserData(db, uid) {
   const books = await db.collection("cookbooks").where("members", "array-contains", uid).get();
   for (const b of books.docs) await leaveBook(db, b, uid);
 
+  // Shared shopping lists: their recipes and ticks go; the others keep the list.
+  const lists = await db.collection("shoppingLists").where("members", "array-contains", uid).get();
+  for (const l of lists.docs) {
+    const d = l.data();
+    const rest = (d.members ?? []).filter((m) => m !== uid);
+    if (rest.length === 0) {
+      await db.recursiveDelete(l.ref);
+      continue;
+    }
+    await deleteAll(l.ref.collection("entries").where("addedBy", "==", uid));
+    await deleteAll(l.ref.collection("ticks").where("by", "==", uid));
+    await l.ref.update({
+      members: rest,
+      names: Object.fromEntries(Object.entries(d.names ?? {}).filter(([k]) => k !== uid)),
+      ...(d.owner === uid ? { owner: rest[0] } : {}),
+    });
+  }
+
   // Their own recipes, photos and settings, and admin access.
   await db.recursiveDelete(db.doc(`users/${uid}`));
   await db.doc(`admins/${uid}`).delete();
