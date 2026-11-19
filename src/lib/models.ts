@@ -80,7 +80,7 @@ export function availableModels(): ModelOption[] {
     /* blocked */
   }
   if (own) return MODELS;
-  if (myPlan().plan !== "plus") return MODELS.filter((m) => m.id === "claude-haiku-5-5");
+  if (myPlan().plan === "free") return MODELS.filter((m) => m.id === "claude-haiku-5-5");
   return MODELS.filter((m) => m.id !== "claude-opus-5-5");
 }
 

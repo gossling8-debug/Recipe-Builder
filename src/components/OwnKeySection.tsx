@@ -94,6 +94,7 @@ export default function OwnKeySection({ open = false }: { open?: boolean }) {
                             nutrition: "Nutrition",
                             receipt: "Receipt",
                             pantryRecipe: "Pantry recipe",
+                            prices: "Price estimates",
                             memory: "Memory page",
                             create: "Created recipe",
                           }[u.kind]

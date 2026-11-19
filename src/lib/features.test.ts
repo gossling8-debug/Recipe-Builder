@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { feature, FEATURES, hasPlus, locked, setSwitchedOn, switchedOn } from "./features";
+import { feature, FEATURES, hasFamily, hasPlus, locked, setSwitchedOn, switchedOn } from "./features";
 import { remember } from "./subscription";
 
 describe("feature switches and plans", () => {
@@ -8,8 +8,17 @@ describe("feature switches and plans", () => {
     remember({ plan: "plus" });
   });
 
-  it("with Plus, everything is on by default", () => {
+  it("with Plus, everything but Family's extras is on by default", () => {
     expect(hasPlus()).toBe(true);
+    expect(FEATURES.filter((f) => f.plan !== "family").every((f) => feature(f.id))).toBe(true);
+    expect(feature("budgetPlan")).toBe(false);
+  });
+
+  it("with Family — or while Cardamix is being tested — everything is on", () => {
+    remember({ plan: "family" });
+    expect(FEATURES.every((f) => feature(f.id))).toBe(true);
+    remember({ plan: "plus", source: "beta" });
+    expect(hasFamily()).toBe(true);
     expect(FEATURES.every((f) => feature(f.id))).toBe(true);
   });
 

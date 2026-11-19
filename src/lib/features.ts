@@ -6,7 +6,9 @@ import { myPlan } from "./subscription";
  *
  * Plus comes from the server (Stripe or a complimentary account), see subscription.ts.
  */
-export type Plan = "free" | "plus";
+export type Plan = "free" | "plus" | "family";
+/** Each plan includes everything in the ones before it. */
+const RANK: Record<Plan, number> = { free: 0, plus: 1, family: 2 };
 
 export interface Feature {
   id: FeatureId;
@@ -37,7 +39,8 @@ export type FeatureId =
   | "nutrition"
   | "avoid"
   | "family"
-  | "mix";
+  | "mix"
+  | "budgetPlan";
 
 export const FEATURES: Feature[] = [
   { id: "cookMode", name: "Cooking mode", what: "One step at a time, big text, timers.", plan: "free", group: "Cooking" },
@@ -60,6 +63,7 @@ export const FEATURES: Feature[] = [
   { id: "nutrition", name: "Nutrition", what: "Calories per serving and healthier swaps.", plan: "plus", group: "Health" },
   { id: "avoid", name: "Allergies & substitutes", what: "Flag ingredients you avoid and get swaps.", plan: "plus", group: "Health" },
   { id: "family", name: "Cookbooks", what: "Share recipes with family and friends.", plan: "plus", group: "Extras" },
+  { id: "budgetPlan", name: "Plan on a budget", what: "Plan the week's dinners under a set amount, using what you have.", plan: "family", group: "Planning" },
   { id: "mix", name: "The Mix", what: "Publish recipes for everyone and find recipes other cooks shared.", plan: "free", group: "Extras" },
 ];
 
@@ -83,9 +87,17 @@ function write(key: string, value: unknown) {
   if (typeof window !== "undefined") window.dispatchEvent(new Event("features-changed"));
 }
 
-/** Your plan, as last confirmed by the server. */
-export const plan = (): Plan => myPlan().plan;
-export const hasPlus = () => plan() === "plus";
+/**
+ * Your plan, as last confirmed by the server. While Cardamix is being tested
+ * (Plus free for everyone), and on gifted accounts, everything is included — Family too.
+ */
+export const plan = (): Plan => {
+  const p = myPlan();
+  if (p.plan !== "free" && (p.source === "beta" || p.source === "comp")) return "family"; // testing period, or gifted
+  return p.plan;
+};
+export const hasPlus = () => RANK[plan()] >= RANK.plus;
+export const hasFamily = () => RANK[plan()] >= RANK.family;
 
 const offList = (): string[] => read<string[]>(OFF_KEY, offMemory);
 /** The cook's own on/off switch (regardless of plan). */
@@ -97,7 +109,7 @@ export function setSwitchedOn(id: FeatureId, on: boolean): void {
 }
 
 /** Locked because the plan doesn't include it. */
-export const locked = (id: FeatureId) => FEATURES.find((f) => f.id === id)?.plan === "plus" && !hasPlus();
+export const locked = (id: FeatureId) => RANK[FEATURES.find((f) => f.id === id)?.plan ?? "free"] > RANK[plan()];
 
 /** Show this feature? (switched on and included in the plan) */
 export const feature = (id: FeatureId): boolean => switchedOn(id) && !locked(id);
