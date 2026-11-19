@@ -8,12 +8,14 @@ import { keepSheetsAboveKeyboard } from "./lib/keyboard";
 import { installErrorReporting } from "./lib/errorReport";
 import { captureInstallPrompt } from "./lib/homeScreen";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { catchSharedLink } from "./lib/shareTarget";
 
 applyTextSize(getTextSize());
 applyTheme(getTheme(), false);
 keepSheetsAboveKeyboard();
 installErrorReporting();
 captureInstallPrompt();
+catchSharedLink(); // a recipe link shared to Cardamix from another app
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

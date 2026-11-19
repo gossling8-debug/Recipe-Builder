@@ -118,7 +118,7 @@ export const ADD_TOUR_STEPS: TourStep[] = [
   {
     target: ".mode-switch",
     title: "Four ways to add a recipe",
-    text: "Photo: a recipe card or cookbook page. Website: paste a recipe's link. Paste text: from a message, email or note. Create: describe a dish and Cardamix writes the recipe.",
+    text: "Photo: a recipe card or cookbook page. Website: paste a recipe's link — or a TikTok, Instagram or YouTube video's. Paste text: from a message, email or note. Create: describe a dish and Cardamix writes the recipe.",
   },
   {
     target: ".fab-stack",

@@ -1,5 +1,7 @@
 import { getPeople } from "../lib/autoPlan";
-import { hasPlus } from "../lib/features";
+import { feature, hasPlus, locked } from "../lib/features";
+import { videoSource } from "../lib/videoLink";
+import { clearSharedLink, takeSharedLink } from "../lib/shareTarget";
 import {
   FREE_LIMITS,
   freeLeft,
@@ -128,7 +130,9 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
     setTwins(null);
     setAdded({ recipe: r, into, mineTwin });
   }
-  const [mode, setMode] = useState<Mode>("photo");
+  // A link shared to Cardamix from another app (Android's share sheet) opens here, ready to read.
+  const [sharedLink] = useState(takeSharedLink);
+  const [mode, setMode] = useState<Mode>(sharedLink ? "url" : "photo");
   // Straight after the home screen tour: a short tour of adding a recipe (on the Photo tab).
   const [addTour, setAddTour] = useState(() => !bookId && addTourQueued());
   const [photos, setPhotos] = useState<string[]>([]);
@@ -155,7 +159,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
   // Labels picked before reading; if none, Claude's suggestions are used.
   const [tags, setTags] = useState<string[]>([]);
   const [showTags, setShowTags] = useState(false);
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(sharedLink ?? "");
   const [text, setText] = useState("");
   const [wish, setWish] = useState("");
   // Free plan: how many recipe adds and created recipes are left this month.
@@ -267,6 +271,8 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
     }
   })();
 
+  const video = mode === "url" && cleanUrl ? videoSource(cleanUrl) : null;
+
   const ready =
     mode === "photo"
       ? photos.length > 0
@@ -277,6 +283,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
           : text.trim().length > 20;
 
   async function read() {
+    clearSharedLink();
     setBusy(true);
     setError("");
     try {
@@ -284,14 +291,21 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
       const source: RecipeSource =
         mode === "photo"
           ? { kind: "photos", photos: photos.map(stripDataUrl) }
-          : mode === "url"
-            ? { kind: "url", url: cleanUrl }
-            : { kind: "text", text: text.trim() };
+          : mode === "url" && video
+            ? { kind: "video", url: cleanUrl, site: video.site, pages: video.pages }
+            : mode === "url"
+              ? { kind: "url", url: cleanUrl }
+              : { kind: "text", text: text.trim() };
+      if (video && locked("videoImport"))
+        throw new Error("Saving recipes from videos comes with Cardamix Family. You can copy the video's caption and use Paste text instead.");
       // The Claude SDK is loaded only when needed, so the library opens fast.
       const { importRecipe } = await import("../lib/claude");
       const { recipe, usage } = await importRecipe(apiKey, source);
       if (recipe.steps.length === 0 && recipe.ingredients.length === 0) {
-        throw new Error(recipe.warnings[0] ?? "No recipe was found there.");
+        throw new Error(
+          (recipe.warnings[0] ?? "No recipe was found there.") +
+            (video ? " If the recipe is in the caption, open the video, copy the caption, and use Paste text." : ""),
+        );
       }
       const id = newId();
       // Smaller copies for the library so storage doesn't fill up.
@@ -466,9 +480,11 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
                   <strong>
                     {mode === "create"
                       ? "Creating your recipe…"
-                      : mode === "url"
-                        ? "Reading the web page…"
-                        : "Reading your recipe…"}
+                      : video
+                        ? `Reading the ${video.site} video…`
+                        : mode === "url"
+                          ? "Reading the web page…"
+                          : "Reading your recipe…"}
                   </strong>
                 </p>
                 <p className="muted">
@@ -585,6 +601,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
                   Copy the address of a recipe page (in your browser: Share →
                   Copy) and paste it here. Cardamix skips the story and ads and
                   keeps just the recipe.
+                  {feature("videoImport") && " A TikTok, Instagram or YouTube video link works too (Share → Copy link)."}
                 </p>
                 <input
                   className="text-input"
@@ -596,6 +613,12 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                 />
+                {video && (
+                  <p className="small video-note">
+                    <strong>{video.site} video.</strong> Cardamix reads the recipe written in its caption or description (or the
+                    recipe page it links to). A recipe that's only spoken in the video can't be read.
+                  </p>
+                )}
                 {url.trim() && !cleanUrl && (
                   <p className="small" style={{ color: "var(--error)" }}>
                     That doesn't look like a web address.

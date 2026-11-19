@@ -56,6 +56,7 @@ export async function makeClient(apiKey: string, kind = "other"): Promise<Anthro
 export type RecipeSource =
   | { kind: "photos"; photos: string[] } // base64 JPEG strings (no data: prefix)
   | { kind: "url"; url: string }
+  | { kind: "video"; url: string; site: string; pages: string[] } // see videoLink.ts
   | { kind: "text"; text: string };
 
 export interface ImportResult {
@@ -90,6 +91,24 @@ export async function importRecipe(apiKey: string, source: RecipeSource): Promis
     // Claude reads the page on Anthropic's side (websites block apps from
     // reading them directly). Capped so a huge page can't run up the bill.
     tools = [{ type: m.webFetch, name: "web_fetch", max_uses: 2, max_content_tokens: 30000 } as Anthropic.Beta.BetaToolUnion];
+  } else if (source.kind === "video") {
+    const [first, backup] = source.pages;
+    content = [
+      {
+        type: "text",
+        text: [
+          `This is a cooking video on ${source.site}: ${source.url}`,
+          `The recipe is usually written in the video's caption or description. Fetch ${first} with web_fetch to read it.`,
+          backup ? `If that page can't be read, fetch ${backup} instead.` : "",
+          "If the caption only points to the full recipe on a website (a link in the caption or description), fetch that page instead. You can fetch 2 pages in total.",
+          "Use only what is written: don't make up a recipe from the video's title or what the dish probably contains. If neither the caption nor a linked page lists the ingredients, return empty ingredient and step lists, with a warning that the recipe isn't written in the video's caption.",
+          "For the notes, mention the creator (e.g. \"From @name on TikTok\") if their name is shown.",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      },
+    ];
+    tools = [{ type: m.webFetch, name: "web_fetch", max_uses: 2, max_content_tokens: 30000 } as Anthropic.Beta.BetaToolUnion];
   } else {
     content = [{ type: "text", text: `Convert this recipe:\n\n${source.text}` }];
   }
@@ -108,7 +127,7 @@ export async function importRecipe(apiKey: string, source: RecipeSource): Promis
     throw new ScanError(describeApiError(err));
   }
 
-  const kind = source.kind === "photos" ? "scan" : source.kind === "url" ? "website" : "text";
+  const kind = source.kind === "photos" ? "scan" : source.kind === "url" || source.kind === "video" ? "website" : "text";
   const usage = recordUsage(kind, m.id, response.usage);
 
   if (response.stop_reason === "refusal") {
