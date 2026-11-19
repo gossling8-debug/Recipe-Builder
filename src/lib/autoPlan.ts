@@ -72,6 +72,8 @@ export function fillWeek(opts: {
   days: string[]; // the day keys to fill, in order
   /** Weekdays (0 = Sunday) that are always a leftovers night: nothing new is cooked then. */
   leftoverDays?: number[];
+  /** Picks each new dinner from the ones allowed that day (default: at random, favoring ones you like). */
+  choose?: (candidates: SavedRecipe[]) => SavedRecipe | undefined;
   random?: () => number;
   now?: Date;
 }): FillResult {
@@ -124,7 +126,8 @@ export function fillWeek(opts: {
     const k = days[n];
     if (!empty(k) || isPinned(k)) continue;
     const i = dayIndex(k);
-    const choice = pick(dinners.filter((r) => free(r.id, i)), weight, random);
+    const allowed = dinners.filter((r) => free(r.id, i));
+    const choice = opts.choose ? opts.choose(allowed) : pick(allowed, weight, random);
     if (!choice) {
       short++;
       continue;

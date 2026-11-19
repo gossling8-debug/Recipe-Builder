@@ -202,8 +202,8 @@ export type PantryStatus =
   | { kind: "some"; item: PantryItem; short: Qty };
 
 /** How the pantry compares with what a shopping-list item needs. */
-export function statusFor(key: string, name: string, need: Qty | null): PantryStatus {
-  const item = loadPantry()[key];
+export function statusFor(key: string, name: string, need: Qty | null, pantry: Pantry = loadPantry()): PantryStatus {
+  const item = pantry[key];
   if (!item) return { kind: "none" };
   if (item.useBy !== undefined && freshness(item.useBy) === "past") return { kind: "expired", item };
   if (!item.qty || !need) return { kind: "unknown", item };

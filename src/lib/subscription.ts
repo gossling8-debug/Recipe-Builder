@@ -6,7 +6,7 @@
 import { fb, user } from "./cloud";
 
 export interface MyPlan {
-  plan: "free" | "plus";
+  plan: "free" | "plus" | "family";
   source?: "stripe" | "comp" | "beta" | "none";
   status?: string;
   /** Plus billed monthly or yearly. */
@@ -123,7 +123,7 @@ export const ALLOWANCE = { free: 0.4, plus: 2.5, plus_yearly: 2.25 };
 /** Free accounts each month — kept in step with functions/lib/guard.js. */
 export const FREE_LIMITS = { scan: 5, create: 3 };
 /** The allowance that applies to you: free, Plus monthly or Plus yearly. */
-export const allowanceFor = (p: MyPlan = myPlan()) => (p.plan === "plus" ? (p.interval === "year" ? ALLOWANCE.plus_yearly : ALLOWANCE.plus) : ALLOWANCE.free);
+export const allowanceFor = (p: MyPlan = myPlan()) => (p.plan !== "free" ? (p.interval === "year" ? ALLOWANCE.plus_yearly : ALLOWANCE.plus) : ALLOWANCE.free);
 /** How many free recipe adds / created recipes are left this month (usage from loadAiUsage). */
 export function freeLeft(kind: "scan" | "create", usage: AiUsage | null): number {
   return Math.max(0, FREE_LIMITS[kind] - (usage?.counts?.[kind] ?? 0));

@@ -1,4 +1,5 @@
 import ThawList, { useThawReminders } from "./ThawList";
+import BudgetPlan from "./BudgetPlan";
 import { feature } from "../lib/features";
 import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
@@ -297,6 +298,14 @@ export default function WeekPage() {
               )}
             </div>
             {result && <p className="small">{result}</p>}
+            <BudgetPlan
+              recipes={recipes}
+              week={week}
+              days={days.map((d) => d.key)}
+              people={people}
+              leftoverDays={leftoverDays}
+              onPlanned={() => (setWeek(loadWeek()), setResult(""))}
+            />
             <p className="muted small">
               Fills the empty days with dinners you haven't had in the last{" "}
               {NO_REPEAT_DAYS} days, leaves leftovers nights after big meals and

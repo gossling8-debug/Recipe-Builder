@@ -40,9 +40,9 @@ export default function FeaturesSection() {
                     <span>
                       <span className="feature-name">
                         {f.name}
-                        {f.plan === "plus" && <span className="plus-badge">Plus</span>}
+                        {f.plan !== "free" && <span className="plus-badge">{f.plan === "family" ? "Family" : "Plus"}</span>}
                       </span>
-                      <span className="muted small feature-what">{isLocked ? <>Comes with <a href={href({ name: "plus" })}>Plus</a>.</> : f.what}</span>
+                      <span className="muted small feature-what">{isLocked ? <>Comes with <a href={href({ name: "plus" })}>{f.plan === "family" ? "Cardamix Family" : "Plus"}</a>.</> : f.what}</span>
                     </span>
                     <input
                       type="checkbox"

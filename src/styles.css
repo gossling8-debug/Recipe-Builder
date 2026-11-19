@@ -1248,3 +1248,10 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .invite-url { word-break: break-all; user-select: all; -webkit-user-select: all; font-weight: 600; }
 .email-invite { margin: 8px 0; }
 .invite-waiting { border-left: 3px solid var(--accent); }
+
+/* ---------- Plan on a budget (Week) ---------- */
+.budget-plan-open { margin-top: 12px; }
+.budget-plan { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.budget-plan h3 { margin: 0 0 8px; font-size: 16px; }
+.budget-plan-fields { display: grid; grid-template-columns: minmax(90px, 1fr) 2fr; gap: 10px; }
+.budget-plan .callout p { margin: 6px 0 0; }

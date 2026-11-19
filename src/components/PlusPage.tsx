@@ -49,7 +49,8 @@ export default function PlusPage({ done }: { done?: boolean }) {
   };
 
   const plusFeatures = FEATURES.filter((f) => f.plan === "plus");
-  const isPlus = plan.plan === "plus";
+  const familyFeatures = FEATURES.filter((f) => f.plan === "family");
+  const isPlus = plan.plan !== "free";
   const beta = plan.source === "beta"; // testing period: Plus is free, subscribing is optional
 
   return (
@@ -135,6 +136,24 @@ export default function PlusPage({ done }: { done?: boolean }) {
             ))}
           </ul>
         </section>
+        {familyFeatures.length > 0 && (
+          <section>
+            <h3>Coming with Cardamix Family</h3>
+            <p className="muted small">
+              Everything in Plus for your whole household, and more. {beta ? "Included free while Cardamix is being tested." : ""}
+            </p>
+            <ul className="plus-list">
+              {familyFeatures.map((f) => (
+                <li key={f.id}>
+                  <Icon name="check" size={16} />
+                  <span>
+                    <strong>{f.name}</strong> — {f.what}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
     </>
   );
