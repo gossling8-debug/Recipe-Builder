@@ -87,6 +87,14 @@ export default function PrivacyPage() {
           When you stop sharing (or delete your account), your recipes and ticks come off the list and you keep a copy of it.
         </p>
 
+        <h3>Invites by email</h3>
+        <p>
+          When you invite someone to a shared shopping list or a cookbook by email, we store their email address, your name, and the
+          list or cookbook's name, so the invite can wait for them in Cardamix. Only you and they (once they've confirmed that email) can
+          see it. It's deleted when they join or decline, and when either of you deletes your account. We never email them or use the
+          address for anything else.
+        </p>
+
         <h3>The Mix</h3>
         <p>
           A recipe you publish to The Mix — the recipe as you cook it, the name you publish under and when you published it — can be seen

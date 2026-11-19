@@ -398,7 +398,7 @@ export const deleteMyData = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY], time
   // Only right after the password was entered again, so a stolen sign-in can't wipe an account.
   if (Date.now() / 1000 - (req.auth.token.auth_time ?? 0) > 10 * 60) throw new HttpsError("unauthenticated", "Enter your password again first.");
   await closeAccount(req.auth.uid, false);
-  await deleteUserData(db, req.auth.uid);
+  await deleteUserData(db, req.auth.uid, req.auth.token.email);
   return { ok: true };
 });
 
@@ -410,5 +410,5 @@ export const accountDeleted = functionsV1
   .auth.user()
   .onDelete(async (user) => {
     await closeAccount(user.uid, true);
-    await deleteUserData(db, user.uid);
+    await deleteUserData(db, user.uid, user.email);
   });

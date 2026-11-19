@@ -1246,3 +1246,5 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .invite-note .button-row { margin-top: 8px; }
 .paste-invite { margin-top: 8px; }
 .invite-url { word-break: break-all; user-select: all; -webkit-user-select: all; font-weight: 600; }
+.email-invite { margin: 8px 0; }
+.invite-waiting { border-left: 3px solid var(--accent); }

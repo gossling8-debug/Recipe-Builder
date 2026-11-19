@@ -214,6 +214,31 @@ service cloud.firestore {
     // the list; each person's name is their own.
     function shopList(l) { return get(/databases/$(database)/documents/shoppingLists/$(l)).data; }
     function onShopList(l) { return signedIn() && uid() in shopList(l).members; }
+    // Invites by email (a shared shopping list or a cookbook): a member invites
+    // someone by the email they use for Cardamix. Only the sender and that
+    // person (once they've confirmed the email) can see it.
+    match /invites/{i} {
+      function mine() {
+        return resource.data.fromUid == uid()
+          || (request.auth.token.email_verified == true && resource.data.email == request.auth.token.email.lower());
+      }
+      allow get, list, delete: if signedIn() && mine();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['kind', 'target', 'email', 'fromUid', 'fromName', 'title', 'at'])
+        && request.resource.data.fromUid == uid()
+        && request.resource.data.email is string && request.resource.data.email.size() <= 254
+        && request.resource.data.email == request.resource.data.email.lower()
+        && request.resource.data.email.matches('[^@ ]+@[^@ ]+[.][^@ ]+')
+        && request.resource.data.fromName is string && request.resource.data.fromName.size() <= 40
+        && request.resource.data.title is string && request.resource.data.title.size() <= 60
+        && request.resource.data.at is int
+        && request.resource.data.target is string
+        && ((request.resource.data.kind == 'shop'
+              && uid() in get(/databases/$(database)/documents/shoppingLists/$(request.resource.data.target)).data.members)
+          || (request.resource.data.kind == 'book'
+              && uid() in get(/databases/$(database)/documents/cookbooks/$(request.resource.data.target)).data.members));
+    }
+
     match /shoppingLists/{l} {
       allow get: if signedIn();
       allow list: if signedIn() && uid() in resource.data.members;
