@@ -243,6 +243,9 @@ export default function ReceiptPage() {
         store,
       });
     saveShopping({ ...state, checked: [...checked], bought });
+    // A shared shopping list: the others see these ticked off too.
+    const newlyTicked = [...checked].filter((k) => !state.checked.includes(k));
+    void import("../lib/sharedShopping").then((m) => (m.sharedListId() ? Promise.all(newlyTicked.map((k) => m.setTick(k, true))) : undefined)).catch(() => {});
     if (id) rememberImported(id);
     try {
       sessionStorage.setItem(

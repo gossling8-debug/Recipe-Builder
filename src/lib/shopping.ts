@@ -12,6 +12,8 @@ export interface ShoppingState {
   opened?: string[];
   /** What was bought when each item was ticked, and the pantry before, so unticking can undo it. */
   bought?: Record<string, { text: string; before: PantryItem | null; price?: number; priceId?: string }>;
+  /** Copies of recipes that came from a shared list you've left (someone else's, so not in your recipe box). */
+  copies?: { id: string; title: string; scale: number; ingredients: SavedRecipe["ingredients"]; from: string }[];
 }
 
 const KEY = "recipe-builder.shopping";
@@ -53,11 +55,14 @@ export function addToShopping(id: string, scale: number, skip: number[] = []): v
   const s = loadShopping();
   const entry = skip.length ? { id, scale, skip: [...skip].sort((a, b) => a - b) } : { id, scale };
   saveShopping({ ...s, recipes: [...s.recipes.filter((r) => r.id !== id), entry] });
+  // A shared list gets it too (its ingredients, since the others can't see your recipes).
+  void import("./sharedShopping").then((m) => (m.sharedListId() ? m.putEntry(id, scale, entry.skip) : undefined)).catch(() => {});
 }
 
 export function removeFromShopping(id: string): void {
   const s = loadShopping();
   saveShopping({ ...s, recipes: s.recipes.filter((r) => r.id !== id) });
+  void import("./sharedShopping").then(async (m) => (m.sharedListId() ? m.removeEntry(await m.myEntryId(id)) : undefined)).catch(() => {});
 }
 
 export interface ShoppingItem {

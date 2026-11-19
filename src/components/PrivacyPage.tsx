@@ -79,6 +79,14 @@ export default function PrivacyPage() {
           you trust.
         </p>
 
+        <h3>Shared shopping lists</h3>
+        <p>
+          If you share your shopping list, everyone on it sees the same list: the ingredients of the recipes on it (a copy, not your
+          recipe box), each recipe's name, who added it, what's been ticked off and by whom, and the name you choose. Your pantry, prices,
+          budget and everything else stay yours. Anyone with the list's invite link can join, so share it only with people you trust.
+          When you stop sharing (or delete your account), your recipes and ticks come off the list and you keep a copy of it.
+        </p>
+
         <h3>The Mix</h3>
         <p>
           A recipe you publish to The Mix — the recipe as you cook it, the name you publish under and when you published it — can be seen
