@@ -44,6 +44,7 @@ import { shareText } from "../lib/share";
 import { applySwaps } from "../lib/swaps";
 import type { SavedRecipe } from "../lib/schema";
 import { Loading } from "./LogoLoader";
+import { PasteInvite } from "./PasteInvite";
 
 function useCloud(): CloudState {
   const [s, setS] = useState(cloudState());
@@ -160,8 +161,9 @@ export function FamilyPage() {
           </button>
         ))}
         {books?.length === 0 && !creating && (
-          <p className="muted small">To join someone else's cookbook, open the invite link they send you.</p>
+          <p className="muted small">To join someone else's cookbook, open the invite link they send you, or paste it below.</p>
         )}
+        {books && !creating && <PasteInvite what="a cookbook" />}
         {error && <div className="callout error">{error}</div>}
       </main>
     </>

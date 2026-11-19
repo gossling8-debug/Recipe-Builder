@@ -1232,3 +1232,17 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .working .plain-loader { display: block; margin: 0 auto; width: 36px !important; height: 36px !important; }
 .animated-logo-toggle { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
 .animated-logo-toggle .logo-preview { margin-left: auto; }
+
+/* ---------- A newer version is ready (an app left open) ---------- */
+.update-bar {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 92px); z-index: 21;
+  transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px);
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 12px;
+  background: var(--ink); color: var(--ink-text); font-size: 15px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+}
+.update-bar .btn { min-height: 36px; padding: 6px 14px; background: var(--ink-text); color: var(--ink); border-color: transparent; }
+.invite-note { margin: 12px 16px 0; }
+.invite-note .button-row { margin-top: 8px; }
+.paste-invite { margin-top: 8px; }
+.invite-url { word-break: break-all; user-select: all; -webkit-user-select: all; font-weight: 600; }
