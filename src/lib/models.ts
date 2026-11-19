@@ -23,7 +23,7 @@ export const MODELS: ModelOption[] = [
   {
     id: "claude-opus-5-5",
     label: "Expert",
-    blurb: "Claude Opus 5.5 — the most capable; most reliable on faded or messy handwriting.",
+    blurb: "The most capable; most reliable on faded or messy handwriting.",
     inPerM: 4,
     outPerM: 20,
     effort: "medium",
@@ -33,7 +33,7 @@ export const MODELS: ModelOption[] = [
   {
     id: "claude-sonnet-5-5",
     label: "Advanced",
-    blurb: "Claude Sonnet 5.5 — very good on handwriting and most cards.",
+    blurb: "Very good on handwriting and most cards.",
     inPerM: 2,
     outPerM: 10,
     effort: "medium",
@@ -43,7 +43,7 @@ export const MODELS: ModelOption[] = [
   {
     id: "claude-haiku-5-5",
     label: "Standard",
-    blurb: "Claude Haiku 5.5 — great for printed cards and websites; may misread hard handwriting. Uses the least AI.",
+    blurb: "Great for printed cards and websites; may misread hard handwriting. Uses the least AI.",
     inPerM: 0.1,
     outPerM: 0.5,
     effort: "high",

@@ -6,6 +6,7 @@ import Icon from "./Icon";
 import CloudSection from "./CloudSection";
 import AppLockSection from "./AppLockSection";
 import AddToHomeScreen from "./AddToHomeScreen";
+import OwnKeySection from "./OwnKeySection";
 import LogoLoader, {
   ANIMATED_LOGO,
   animatedLogoOn,
@@ -20,7 +21,7 @@ import {
   type TextSize,
 } from "../lib/textSize";
 import { applyTheme, getTheme, THEMES, type Theme } from "../lib/theme";
-import { getApiKey, ownKey, setApiKey } from "../lib/settings";
+import { ownKey } from "../lib/settings";
 import { href } from "../lib/route";
 import {
   ALLERGEN_GROUPS,
@@ -28,13 +29,7 @@ import {
   saveAvoid,
   type AvoidList,
 } from "../lib/avoid";
-import {
-  availableModels,
-  costOf,
-  getModel,
-  MODELS,
-  setModel,
-} from "../lib/models";
+import { availableModels, costOf, getModel, setModel } from "../lib/models";
 import { allowanceFor } from "../lib/subscription";
 import { amAdmin } from "../lib/mix";
 import { restartTour } from "../lib/tour";
@@ -63,21 +58,12 @@ export default function Settings() {
     if (signedIn) amAdmin().then(setAdmin, () => {});
   }, [signedIn]);
   useEffect(() => subscribeCloud((c) => setSignedIn(!!c.uid)), []);
-  const [key, setKey] = useState(getApiKey());
-  const [saved, setSaved] = useState(false);
-  const [keyError, setKeyError] = useState("");
   const [textSize, setTextSize] = useState<TextSize>(getTextSize());
   const [animatedLogo, setAnimatedLogoState] = useState(animatedLogoOn);
   const [theme, setTheme] = useState<Theme>(getTheme());
   const [avoid, setAvoid] = useState<AvoidList>(loadAvoid);
   const [modelId, setModelId] = useState(getModel().id);
   const usage = loadUsage();
-  const monthStart = new Date(
-    new Date().getFullYear(),
-    new Date().getMonth(),
-    1,
-  ).getTime();
-  const thisMonth = usage.filter((u) => u.at >= monthStart);
   const avgFor = (id: string) => {
     const scans = usage.filter(
       (u) =>
@@ -115,16 +101,6 @@ export default function Settings() {
       .then(setPersisted, () => setPersisted(null));
     storageMode().then(setMode, () => {});
   }, []);
-
-  function save() {
-    setKeyError(
-      setApiKey(key)
-        ? ""
-        : "This browser won't let the app remember your key, so it's kept only until you close the app.",
-    );
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
 
   async function doExport() {
     try {
@@ -362,7 +338,7 @@ export default function Settings() {
         <section>
           <h3>Recipe reader</h3>
           <p className="muted small">
-            Which Claude model reads your cards, websites and text. Budget
+            How carefully Cardamix reads your cards, websites and text. Standard
             stretches your AI much further but may misread messy handwriting —
             you can always fix a mistake with Edit.
           </p>
@@ -414,91 +390,8 @@ export default function Settings() {
           )}
         </section>
 
-        <details className="advanced">
-          <summary>Your own API key (advanced)</summary>
-          <section>
-            <h3>Your own Anthropic key</h3>
-            <p className="muted small">
-              Optional, for advanced users. With your own key, AI is billed to
-              your Anthropic account instead of using your monthly allowance,
-              and the Expert model is available. Create one at
-              console.anthropic.com → API Keys. It's stored only on this phone.
-              Leave it empty to use Cardamix's AI.
-            </p>
-            <input
-              className="text-input"
-              type="password"
-              autoComplete="off"
-              placeholder="sk-ant-…"
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-            />
-            <div className="button-row">
-              <button className="btn primary" onClick={save}>
-                {saved ? "Saved ✓" : "Save key"}
-              </button>
-            </div>
-            {keyError && <div className="callout warn">{keyError}</div>}
-          </section>
-
-          {ownKey() && (
-            <section>
-              <h3>Spending</h3>
-              {usage.length === 0 ? (
-                <p className="muted small">
-                  Nothing yet. After your first scan this shows what the app has
-                  cost you.
-                </p>
-              ) : (
-                <>
-                  <p>
-                    This month:{" "}
-                    <strong>
-                      {money(thisMonth.reduce((s, u) => s + u.cost, 0))}
-                    </strong>{" "}
-                    <span className="muted">
-                      ({thisMonth.length}{" "}
-                      {thisMonth.length === 1 ? "request" : "requests"})
-                    </span>
-                  </p>
-                  <ul className="usage-list small">
-                    {usage
-                      .slice(-5)
-                      .reverse()
-                      .map((u, i) => (
-                        <li key={i}>
-                          <span>
-                            {
-                              {
-                                scan: "Card scan",
-                                website: "Website",
-                                text: "Pasted text",
-                                substitutes: "Substitutes",
-                                nutrition: "Nutrition",
-                                receipt: "Receipt",
-                                pantryRecipe: "Pantry recipe",
-                                memory: "Memory page",
-                                create: "Created recipe",
-                              }[u.kind]
-                            }{" "}
-                            ·{" "}
-                            {MODELS.find((m) => m.id === u.model)?.label ??
-                              u.model}
-                          </span>
-                          <span>{money(u.cost)}</span>
-                        </li>
-                      ))}
-                  </ul>
-                </>
-              )}
-              <p className="muted small">
-                Estimates from Anthropic's list prices and the size of each
-                request. Your exact bill is in the Anthropic Console. Cheapest
-                to most expensive: pasted text, websites, card photos.
-              </p>
-            </section>
-          )}
-        </details>
+        {/* Your own Anthropic key lives on the owner dashboard now; a key already saved on this phone can still be removed here. */}
+        {ownKey() && <OwnKeySection />}
 
         <p className="small settings-footer">
           <button
