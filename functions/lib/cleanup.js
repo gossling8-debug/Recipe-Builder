@@ -71,7 +71,11 @@ export async function leaveBook(db, bookDoc, uid) {
 }
 
 /** Everything an account left in the database (its plan and Stripe records are handled separately). */
-export async function deleteUserData(db, uid) {
+export async function deleteUserData(db, uid, email) {
+  // Invites they sent, and any sent to them.
+  await deleteAll(db.collection("invites").where("fromUid", "==", uid));
+  if (email) await deleteAll(db.collection("invites").where("email", "==", String(email).toLowerCase()));
+
   // The Mix: their recipes (with others' votes on them), then their votes on others'.
   const owned = await db.collection("mixOwners").where("uid", "==", uid).get();
   for (const d of owned.docs) {

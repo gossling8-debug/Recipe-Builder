@@ -45,6 +45,8 @@ import { applySwaps } from "../lib/swaps";
 import type { SavedRecipe } from "../lib/schema";
 import { Loading } from "./LogoLoader";
 import { PasteInvite } from "./PasteInvite";
+import { EmailInviteForm, InvitesWaiting } from "./Invites";
+import { clearInvitesFor } from "../lib/invites";
 
 function useCloud(): CloudState {
   const [s, setS] = useState(cloudState());
@@ -107,6 +109,7 @@ export function FamilyPage() {
     <>
       <Header title="Cookbooks" back={href({ name: "library" })} returnToPrevious />
       <main className="page">
+        <InvitesWaiting kinds={["book"]} />
         {feature("mix") && (
           <a className="plan-strip mix-link" href={href({ name: "mix" })}>
             <Icon name="share" size={18} />
@@ -188,6 +191,7 @@ export function BookPage({ id }: { id: string }) {
   const myUid = book && s.uid;
   const owner = !!book && book.owner === s.uid;
   const [renaming, setRenaming] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const [tab, setTab] = useState<"recipes" | "memories">("recipes");
   const [adding, setAdding] = useState(false);
   const [memoryCount, setMemoryCount] = useState<number | null>(null);
@@ -270,7 +274,7 @@ export function BookPage({ id }: { id: string }) {
                   <Icon name="edit" />
                 </button>
               )}
-              <button className="icon-btn" onClick={() => invite(book, showToast)} aria-label="Invite someone">
+              <button className="icon-btn" onClick={() => setInviting(true)} aria-label="Invite someone">
                 <Icon name="share" />
               </button>
             </>
@@ -285,10 +289,22 @@ export function BookPage({ id }: { id: string }) {
             <CookbookCover book={book} isOwner={owner} />
             <p className="muted small book-members">
               {book.members.length} {book.members.length === 1 ? "member" : "members"}: {book.members.map((m) => book.names[m] ?? "someone").join(", ")} ·{" "}
-              <button className="link-btn small" onClick={() => invite(book, showToast)}>
+              <button className="link-btn small" onClick={() => setInviting(true)}>
                 Invite
               </button>
             </p>
+            {inviting && (
+              <div className="plan-card">
+                <EmailInviteForm
+                  kind="book"
+                  target={book.id}
+                  title={book.name}
+                  fromName={(s.uid && book.names[s.uid]) || ""}
+                  onLink={() => void invite(book, showToast)}
+                  onClose={() => setInviting(false)}
+                />
+              </div>
+            )}
             <div className="segmented book-tabs" role="tablist">
               <button role="tab" aria-selected={tab === "recipes"} className={tab === "recipes" ? "chip active" : "chip"} onClick={() => setTab("recipes")}>
                 Recipes{recipes ? ` · ${recipes.length}` : ""}
@@ -578,13 +594,18 @@ export function JoinPage({ id }: { id: string }) {
   }, [on, id]);
 
   useEffect(() => {
-    if (book && s.uid && book.members.includes(s.uid)) navigate({ name: "family", book: id }, true);
+    if (book === null) void clearInvitesFor("book", id).catch(() => {}); // deleted: the invite's no use any more
+    if (book && s.uid && book.members.includes(s.uid)) {
+      void clearInvitesFor("book", id).catch(() => {});
+      navigate({ name: "family", book: id }, true);
+    }
   }, [book, s.uid, id]);
 
   async function join() {
     if (!book) return;
     try {
       await joinCookbook(book, myName);
+      void clearInvitesFor("book", id).catch(() => {});
       navigate({ name: "family", book: id }, true);
     } catch (e) {
       setError(errText(e));

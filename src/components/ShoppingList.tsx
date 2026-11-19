@@ -1,3 +1,4 @@
+import { InvitesWaiting } from "./Invites";
 import { feature } from "../lib/features";
 import { useEffect, useMemo, useState } from "react";
 import Header from "./Header";
@@ -337,6 +338,7 @@ export default function ShoppingList() {
             <Icon name="camera" size={18} /> Import a receipt
           </a>
         )}
+        {myUid && !sharing && <InvitesWaiting kinds={["shop"]} />}
         {myUid && <SharedListCard list={shared.list} toast={showToast} />}
         {(all === null || (sharing && shared.entries === null)) && <Loading />}
         {all !== null && !(sharing && shared.entries === null) && entries.length === 0 && stapleItems.length === 0 && (

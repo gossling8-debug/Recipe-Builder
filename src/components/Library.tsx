@@ -1,3 +1,4 @@
+import { InvitesWaiting } from "./Invites";
 import { useThawReminders } from "./ThawList";
 import { dueNow, groupThaw } from "../lib/thaw";
 import { feature } from "../lib/features";
@@ -253,6 +254,7 @@ export default function Library() {
       />
       <main className="page">
         <h1 className="page-title">Recipes</h1>
+        <InvitesWaiting kinds={["shop", "book"]} />
         {(() => {
           const soon = feature("pantry") ? useSoon(all) : [];
           if (!soon.length) return null;

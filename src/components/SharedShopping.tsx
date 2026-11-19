@@ -8,6 +8,8 @@ import { shareText } from "../lib/share";
 import { getSharedList, inviteLink, joinSharedList, leaveSharedList, sharedListId, startSharing, type SharedList } from "../lib/sharedShopping";
 import { Loading } from "./LogoLoader";
 import { PasteInvite } from "./PasteInvite";
+import { EmailInviteForm } from "./Invites";
+import { cleanEmail, clearInvitesFor, sendInvite } from "../lib/invites";
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -18,7 +20,7 @@ async function myUsualName(): Promise<string> {
   return (uid && books.map((b) => b.names[uid]).find(Boolean)) || "";
 }
 
-async function sendInvite(id: string, toast: (m: string) => void) {
+async function sendLink(id: string, toast: (m: string) => void) {
   const r = await shareText("Our shopping list", `Shop together on Cardamix — open this to join our shopping list:\n${inviteLink(id)}`);
   if (r === "copied") toast("Invite link copied — send it to them");
   if (r === "failed") toast("Sharing isn't available here — copy the link from the address bar instead");
@@ -32,7 +34,9 @@ export function SharedListCard({ list, toast }: { list: SharedList | null; toast
   const id = sharedListId();
   const uid = cloudState().uid;
   const [open, setOpen] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -69,10 +73,22 @@ export function SharedListCard({ list, toast }: { list: SharedList | null; toast
             </>
           )}
         </p>
+        {inviting && (
+          <EmailInviteForm
+            kind="shop"
+            target={id}
+            title="a shopping list"
+            fromName={(uid && list?.names[uid]) || ""}
+            onLink={() => void sendLink(id, toast)}
+            onClose={() => setInviting(false)}
+          />
+        )}
         <div className="button-row">
-          <button className="btn" disabled={busy} onClick={() => void sendInvite(id, toast)}>
-            Invite someone
-          </button>
+          {!inviting && (
+            <button className="btn" disabled={busy} onClick={() => setInviting(true)}>
+              Invite someone
+            </button>
+          )}
           <button
             className="link-btn small"
             disabled={busy}
@@ -111,24 +127,57 @@ export function SharedListCard({ list, toast }: { list: SharedList | null; toast
             <span>Your name, as they'll see it</span>
             <input className="text-input" value={name} maxLength={40} placeholder="e.g. Sam" onChange={(e) => setName(e.target.value)} />
           </label>
+          <label className="field">
+            <span>Their email — the one they use for Cardamix</span>
+            <input
+              className="text-input"
+              type="email"
+              inputMode="email"
+              autoComplete="off"
+              autoCapitalize="none"
+              value={email}
+              placeholder="name@example.com"
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
           <div className="button-row">
             <button
               className="btn primary"
-              disabled={busy}
+              disabled={busy || !email.trim()}
               onClick={() =>
                 void run(async () => {
+                  if (!cleanEmail(email)) throw new Error("That doesn't look like an email address.");
                   await startSharing(name);
                   const nowId = sharedListId();
-                  if (nowId) await sendInvite(nowId, toast);
+                  if (nowId) {
+                    await sendInvite("shop", nowId, email, name, "a shopping list");
+                    toast("Invite sent — it'll be waiting for them next time they open Cardamix");
+                  }
                 })
               }
             >
-              {busy ? "Starting…" : "Share & send invite"}
+              {busy ? "Starting…" : "Share & invite"}
             </button>
             <button className="link-btn small" disabled={busy} onClick={() => setOpen(false)}>
               Cancel
             </button>
           </div>
+          <p className="muted small">
+            No Cardamix account yet?{" "}
+            <button
+              className="link-btn small"
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  await startSharing(name);
+                  const nowId = sharedListId();
+                  if (nowId) await sendLink(nowId, toast);
+                })
+              }
+            >
+              Share with a link instead
+            </button>
+          </p>
           <p className="muted small">They'll see the ingredients on this list and your name — nothing else from your recipes.</p>
         </>
       )}
@@ -150,6 +199,10 @@ export function ShopJoinPage({ id }: { id: string }) {
     getSharedList(id).then(setList, () => setList(null));
     void myUsualName().then((n) => n && setName(n));
   }, [id]);
+  // An invite to a list that's been stopped is no use any more.
+  useEffect(() => {
+    if (list === null) void clearInvitesFor("shop", id).catch(() => {});
+  }, [list, id]);
   useEffect(() => {
     if (list && uid && list.members.includes(uid) && current === id) navigate({ name: "shopping" }, true);
   }, [list, uid, current, id]);
@@ -161,6 +214,7 @@ export function ShopJoinPage({ id }: { id: string }) {
     try {
       if (current && current !== id) await leaveSharedList();
       await joinSharedList(list, name);
+      void clearInvitesFor("shop", id).catch(() => {});
       navigate({ name: "shopping" }, true);
     } catch (e) {
       setError(errText(e));
