@@ -3,6 +3,7 @@ import { scaleAmount } from "./quantity";
 import { ingredientName, isTapWater, nameKey } from "./shopping";
 import { estimateUseBy, freshness, useByFor, type StorageKind } from "./shelfLife";
 import type { ScannedRecipe } from "./schema";
+import { forgetRescued, noteRescued, type Rescued } from "./rescued";
 
 /**
  * The pantry: roughly how much of each ingredient should be on hand.
@@ -164,6 +165,7 @@ export function useForRecipe(recipe: ScannedRecipe, scale: number): { changes: U
   const pantry = { ...loadPantry() };
   const changes: UseResult[] = [];
   const undo: Record<string, PantryItem | null> = {};
+  const rescued: Omit<Rescued, "at">[] = [];
   for (const ing of recipe.ingredients) {
     const key = nameKey(ingredientName(ing));
     const item = pantry[key];
@@ -173,6 +175,10 @@ export function useForRecipe(recipe: ScannedRecipe, scale: number): { changes: U
     const left = subtract(item.qty, used, ing.name);
     if (!left) continue; // can't compare (e.g. pounds vs cups of something with no known weight)
     if (!(key in undo)) undo[key] = item;
+    // About to go bad, and used: food saved (for "You saved $X").
+    const fresh = item.useBy !== undefined ? freshness(item.useBy) : "ok";
+    const usedHere = subtract(item.qty, left, ing.name);
+    if ((fresh === "today" || fresh === "soon") && usedHere && !isEmpty(usedHere)) rescued.push({ key, name: item.name, qty: usedHere });
     if (isEmpty(left)) {
       delete pantry[key];
       changes.push({ name: item.name, left: "used up" });
@@ -182,10 +188,12 @@ export function useForRecipe(recipe: ScannedRecipe, scale: number): { changes: U
     }
   }
   savePantry(pantry);
+  noteRescued(rescued);
   return { changes, undo };
 }
 
 export function restore(undo: Record<string, PantryItem | null>): void {
+  forgetRescued(Object.keys(undo));
   const p = { ...loadPantry() };
   for (const [k, v] of Object.entries(undo)) {
     if (v) p[k] = v;

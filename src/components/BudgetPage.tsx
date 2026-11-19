@@ -3,6 +3,7 @@ import Header from "./Header";
 import Icon from "./Icon";
 import SpendingEditor from "./SpendingEditor";
 import FastFoodSection from "./FastFoodSection";
+import SavingsCard from "./SavingsCard";
 import { listRecipes } from "../lib/db";
 import { isDinner, realServings } from "../lib/autoPlan";
 import { cheapestStores, dollars, getBudget, parsePrice, periodStarts, recipeCost, setBudget, spendingByStore, spentSince, unitText } from "../lib/prices";
@@ -145,6 +146,7 @@ export default function BudgetPage() {
         />
 
         <FastFoodSection starts={starts} groceries={{ week, month }} />
+        <SavingsCard recipes={recipes} />
 
         <a className="btn" href={href({ name: "prices" })}>
           <Icon name="receipt" size={18} /> Price tracker
