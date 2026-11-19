@@ -1255,3 +1255,14 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .budget-plan h3 { margin: 0 0 8px; font-size: 16px; }
 .budget-plan-fields { display: grid; grid-template-columns: minmax(90px, 1fr) 2fr; gap: 10px; }
 .budget-plan .callout p { margin: 6px 0 0; }
+
+/* ---------- You saved (Budget) ---------- */
+.savings-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.savings-head h3 { margin: 0; }
+.savings-total { margin: 8px 0 4px; font-size: 15px; }
+.savings-total strong { font-size: 32px; font-family: var(--serif, Georgia, serif); color: var(--accent); margin-right: 4px; }
+.savings-rows { list-style: none; padding: 0; margin: 8px 0; }
+.savings-rows li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.savings-amount { font-weight: 600; white-space: nowrap; }
+.savings-how { padding-left: 18px; }
+.savings-how li { margin: 6px 0; }
