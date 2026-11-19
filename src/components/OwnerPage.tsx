@@ -1,15 +1,36 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
+import OwnKeySection from "./OwnKeySection";
 import { href } from "../lib/route";
 import { amAdmin } from "../lib/mix";
-import { clearErrorReports, confirmEmailFor, KIND_LABELS, ownerStats, type OwnerStats } from "../lib/owner";
+import {
+  clearErrorReports,
+  confirmEmailFor,
+  KIND_LABELS,
+  ownerStats,
+  type OwnerStats,
+} from "../lib/owner";
 import { Loading } from "./LogoLoader";
 
 const money = (n: number) => `$${n.toFixed(2)}`;
-const when = (t: number) => new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const when = (t: number) =>
+  new Date(t).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 // "plus" also covers the testing period and gifted Plus, so it isn't labeled monthly.
-const PLAN_NAMES: Record<string, string> = { free: "Free", plus: "Plus", plus_yearly: "Plus yearly" };
-const errText = (e: unknown) => ((e as { message?: string })?.message ?? String(e)).replace(/\s*\[\d+\]$/, "");
+const PLAN_NAMES: Record<string, string> = {
+  free: "Free",
+  plus: "Plus",
+  plus_yearly: "Plus yearly",
+};
+const errText = (e: unknown) =>
+  ((e as { message?: string })?.message ?? String(e)).replace(
+    /\s*\[\d+\]$/,
+    "",
+  );
 
 /** The owner dashboard (admins only): accounts, Plus, AI cost this month, The Mix and error reports. */
 export default function OwnerPage() {
@@ -37,7 +58,12 @@ export default function OwnerPage() {
   }, []);
 
   async function clear() {
-    if (!confirm("Delete all error reports? Read them first: this can't be undone.")) return;
+    if (
+      !confirm(
+        "Delete all error reports? Read them first: this can't be undone.",
+      )
+    )
+      return;
     setBusy(true);
     try {
       await clearErrorReports();
@@ -49,12 +75,23 @@ export default function OwnerPage() {
   }
 
   const s = stats;
-  const free = s ? Math.max(0, s.accounts.total - s.plus.monthly - s.plus.yearly - s.plus.comp - s.plus.beta) : 0;
+  const free = s
+    ? Math.max(
+        0,
+        s.accounts.total -
+          s.plus.monthly -
+          s.plus.yearly -
+          s.plus.comp -
+          s.plus.beta,
+      )
+    : 0;
   return (
     <>
       <Header title="Owner dashboard" back={href({ name: "settings" })} />
       <main className="page owner">
-        {allowed === false && <div className="callout">Only the app's owner can see this page.</div>}
+        {allowed === false && (
+          <div className="callout">Only the app's owner can see this page.</div>
+        )}
         {error && <div className="callout error">{error}</div>}
         {allowed && !s && !error && <Loading />}
         {s && (
@@ -75,7 +112,9 @@ export default function OwnerPage() {
                 <Stat n={s.accounts.new30} label="new in 30 days" />
               </div>
               <p className="muted small">
-                {s.accounts.active30} active in the last 30 days · {s.accounts.verified} of {s.accounts.total} confirmed their email.
+                {s.accounts.active30} active in the last 30 days ·{" "}
+                {s.accounts.verified} of {s.accounts.total} confirmed their
+                email.
               </p>
             </section>
 
@@ -84,11 +123,16 @@ export default function OwnerPage() {
               <div className="owner-grid">
                 <Stat n={s.plus.monthly} label="paying monthly" />
                 <Stat n={s.plus.yearly} label="paying yearly" />
-                <Stat n={money(s.plus.revenuePerMonth)} label="a month, before Stripe fees" />
+                <Stat
+                  n={money(s.plus.revenuePerMonth)}
+                  label="a month, before Stripe fees"
+                />
               </div>
               <p className="muted small">
-                Free Plus: {s.plus.beta} in the testing period, {s.plus.comp} gifted. On the free plan: {free}.
-                {s.plus.beta > 0 && " (The testing period gives everyone Plus until it's switched off.)"}
+                Free Plus: {s.plus.beta} in the testing period, {s.plus.comp}{" "}
+                gifted. On the free plan: {free}.
+                {s.plus.beta > 0 &&
+                  " (The testing period gives everyone Plus until it's switched off.)"}
               </p>
             </section>
 
@@ -116,8 +160,11 @@ export default function OwnerPage() {
                 {Object.entries(s.ai.byPlan)
                   .map(([p, v]) => `${PLAN_NAMES[p] ?? p} ${money(v)}`)
                   .join(" · ") || "none yet"}
-                .{s.ai.topSpends.length > 0 && ` Highest single accounts: ${s.ai.topSpends.map(money).join(", ")}.`} Requests made with
-                someone's own API key aren't included. Your exact bill is in the Anthropic Console.
+                .
+                {s.ai.topSpends.length > 0 &&
+                  ` Highest single accounts: ${s.ai.topSpends.map(money).join(", ")}.`}{" "}
+                Requests made with someone's own API key aren't included. Your
+                exact bill is in the Anthropic Console.
               </p>
             </section>
 
@@ -131,12 +178,15 @@ export default function OwnerPage() {
               </div>
               {s.content.mixReported > 0 && (
                 <p className="small">
-                  <a href={href({ name: "mix" })}>Open The Mix</a> to look at reported recipes and take them down.
+                  <a href={href({ name: "mix" })}>Open The Mix</a> to look at
+                  reported recipes and take them down.
                 </p>
               )}
             </section>
 
             <ConfirmSomeone />
+
+            <OwnKeySection />
 
             <section>
               <h3>Error reports</h3>
@@ -149,9 +199,15 @@ export default function OwnerPage() {
                 <ul className="owner-errors">
                   {s.errors.groups.map((g, i) => (
                     <li key={i}>
-                      <button className="owner-error" onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
+                      <button
+                        className="owner-error"
+                        onClick={() => setOpen(open === i ? null : i)}
+                        aria-expanded={open === i}
+                      >
                         <span className="owner-error-count">{g.count}×</span>
-                        <span className="owner-error-msg">{g.message || "(no message)"}</span>
+                        <span className="owner-error-msg">
+                          {g.message || "(no message)"}
+                        </span>
                       </button>
                       {open === i && (
                         <div className="owner-error-detail small">
@@ -197,8 +253,9 @@ function ConfirmSomeone() {
     <section>
       <h3>Confirm someone's email</h3>
       <p className="muted small">
-        If someone's confirmation email never arrives, enter their account's email exactly. Then they tap “I've confirmed it” in the app
-        (or sign out and back in).
+        If someone's confirmation email never arrives, enter their account's
+        email exactly. Then they tap “I've confirmed it” in the app (or sign out
+        and back in).
       </p>
       <form
         className="owner-confirm"
@@ -208,7 +265,11 @@ function ConfirmSomeone() {
           setNote("");
           try {
             const r = await confirmEmailFor(email.trim());
-            setNote(r.already ? `${email.trim()} was already confirmed.` : `Confirmed ${email.trim()}.`);
+            setNote(
+              r.already
+                ? `${email.trim()} was already confirmed.`
+                : `Confirmed ${email.trim()}.`,
+            );
             setEmail("");
           } catch (err) {
             setNote(errText(err));
@@ -216,8 +277,19 @@ function ConfirmSomeone() {
           setBusy(false);
         }}
       >
-        <input className="text-input" type="email" placeholder="their@email.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Their email" />
-        <button className="btn primary" type="submit" disabled={busy || !email.trim()}>
+        <input
+          className="text-input"
+          type="email"
+          placeholder="their@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          aria-label="Their email"
+        />
+        <button
+          className="btn primary"
+          type="submit"
+          disabled={busy || !email.trim()}
+        >
           {busy ? "Confirming…" : "Confirm"}
         </button>
       </form>
