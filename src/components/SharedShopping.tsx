@@ -7,6 +7,7 @@ import { href, navigate } from "../lib/route";
 import { shareText } from "../lib/share";
 import { getSharedList, inviteLink, joinSharedList, leaveSharedList, sharedListId, startSharing, type SharedList } from "../lib/sharedShopping";
 import { Loading } from "./LogoLoader";
+import { PasteInvite } from "./PasteInvite";
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -94,9 +95,12 @@ export function SharedListCard({ list, toast }: { list: SharedList | null; toast
   return (
     <div className="plan-card shared-list-card">
       {!open ? (
-        <button className="link-btn small" onClick={() => setOpen(true)}>
-          <Icon name="share" size={16} /> Shop together — share this list live
-        </button>
+        <>
+          <button className="link-btn small" onClick={() => setOpen(true)}>
+            <Icon name="share" size={16} /> Shop together — share this list live
+          </button>
+          <PasteInvite what="a shopping list" />
+        </>
       ) : (
         <>
           <p className="small">

@@ -297,7 +297,9 @@ export function useSharedShopping(): { id: string | null; list: SharedList | nul
     const on = () => setId(sharedListId());
     window.addEventListener("shared-shopping-changed", on);
     window.addEventListener("storage", on);
+    window.addEventListener("state-synced", on); // joined on another phone, or in the browser
     return () => {
+      window.removeEventListener("state-synced", on);
       window.removeEventListener("shared-shopping-changed", on);
       window.removeEventListener("storage", on);
     };

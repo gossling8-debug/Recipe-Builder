@@ -11,6 +11,9 @@ import { requestPersistentStorage } from "./lib/db";
 import Library from "./components/Library";
 import PlanWatcher from "./components/PlanWatcher";
 import { startCloud } from "./lib/cloud";
+import { InviteInBrowserNote } from "./components/PasteInvite";
+import { startUpdateCheck } from "./lib/appUpdate";
+import UpdateBar from "./components/UpdateBar";
 import TabBar from "./components/TabBar";
 import { Loading } from "./components/LogoLoader";
 
@@ -146,6 +149,7 @@ export default function App() {
   useEffect(() => {
     requestPersistentStorage().catch(() => {});
     preloadScreens();
+    startUpdateCheck();
     startCloud().catch(() => {});
     void import("./lib/sharedShopping").then((m) => m.startSharedSync()).catch(() => {});
     const on = () => {
@@ -159,8 +163,12 @@ export default function App() {
   return (
     <>
       {locked && <LockScreen onUnlock={() => setLocked(false)} />}
+      <UpdateBar />
       {needsAccount ? (
-        <AccountScreen cloud={cloud} />
+        <>
+          {(route.name === "join" || route.name === "shopjoin") && <InviteInBrowserNote />}
+          <AccountScreen cloud={cloud} />
+        </>
       ) : (
         <>
           <PlanWatcher />
