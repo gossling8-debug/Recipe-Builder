@@ -22,6 +22,11 @@ export const AI_URL = import.meta.env.VITE_FIREBASE_EMULATOR
   ? "http://127.0.0.1:5001/demo-recipe-builder/us-central1/ai"
   : "https://us-central1-recipe-relief.cloudfunctions.net/ai";
 
+/** Where the app's server functions are (for links, e.g. a book's preview PDF). */
+export const FUNCTIONS_URL = import.meta.env.VITE_FIREBASE_EMULATOR
+  ? "http://127.0.0.1:5001/demo-recipe-builder/us-central1"
+  : "https://us-central1-recipe-relief.cloudfunctions.net";
+
 export const firebaseConfig: FirebaseOptions | null = import.meta.env.VITE_FIREBASE_EMULATOR
   ? { apiKey: "demo-key", authDomain: "demo-recipe-builder.firebaseapp.com", projectId: "demo-recipe-builder", appId: "demo" }
   : PROJECT;

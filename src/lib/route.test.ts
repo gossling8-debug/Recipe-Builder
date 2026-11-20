@@ -26,3 +26,10 @@ describe("routes", () => {
     expect(JSON.parse(JSON.stringify(back))).toEqual(JSON.parse(JSON.stringify(r)));
   });
 });
+
+describe("printed book routes", () => {
+  it("round-trips, with the order when back from paying", () => {
+    for (const r of [{ name: "book" }, { name: "book", id: "b1" }, { name: "book", id: "b1", order: "o-9" }] as const)
+      expect(parseRoute(href(r as Route))).toEqual({ id: undefined, order: undefined, ...r });
+  });
+});

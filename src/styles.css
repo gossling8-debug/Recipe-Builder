@@ -1272,3 +1272,17 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .household-list { list-style: none; padding: 0; margin: 8px 0; }
 .household-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .household-invite { margin-top: 12px; }
+
+/* ---------- Printed cookbook ---------- */
+.book-page textarea.text-input { resize: vertical; }
+.book-list, .book-recipes { list-style: none; padding: 0; margin: 8px 0; }
+.book-list li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.book-recipes { max-height: 340px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; padding: 4px 12px; }
+.book-recipes li label { display: flex; gap: 10px; align-items: center; padding: 8px 0; }
+.book-covers { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0; }
+.book-cover { flex: 0 0 auto; width: 84px; height: 84px; border-radius: 10px; border: 2px solid var(--line); padding: 0; overflow: hidden; background: var(--card, #fff); }
+.book-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.book-cover.active { border-color: var(--accent); }
+.book-cover.none { font-size: 13px; color: var(--muted); }
+.book-promo { display: flex; gap: 12px; align-items: flex-start; text-decoration: none; color: inherit; margin-top: 16px; }
+.book-order { margin-top: 8px; }

@@ -167,6 +167,13 @@ export function FamilyPage() {
           <p className="muted small">To join someone else's cookbook, open the invite link they send you, or paste it below.</p>
         )}
         {books && !creating && <PasteInvite what="a cookbook" />}
+        <a className="plan-card book-promo" href={href({ name: "book" })}>
+          <Icon name="book" size={20} />
+          <span>
+            <strong>Print a hardcover cookbook</strong>
+            <span className="muted small"> — your recipes and photos in a real book, posted to your door. A lovely family gift.</span>
+          </span>
+        </a>
         {error && <div className="callout error">{error}</div>}
       </main>
     </>

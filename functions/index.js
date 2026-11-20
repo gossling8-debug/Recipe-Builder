@@ -535,3 +535,197 @@ export const removeFromHousehold = onCall({ ...opts }, async (req) => {
   await recheck([who]);
   return { ok: true };
 });
+
+// ---------- printed cookbooks (Lulu) ----------
+// The book's settings are saved in the account (users/{uid}/books/{id}); the PDFs are built here
+// from the recipes backed up there, for the preview and for Lulu (which fetches them by a secret link).
+// Lulu's keys are set on the owner dashboard (config/lulu, readable only here).
+//   bookOrders/{id} { uid, bookId, title, pages, status, shipping, address, charge, stripeSession, lulu, fileKey, createdAt }
+import { buildCover, buildInterior, MAX_PAGES, previewCoverSize } from "./lib/bookPdf.js";
+import { BOOK_PRICE_CENTS, chargeCents, lulu, luluAddress, SHIPPING, toCentsUp } from "./lib/lulu.js";
+import { randomBytes } from "node:crypto";
+
+const EMULATOR = process.env.FUNCTIONS_EMULATOR === "true";
+async function luluClient() {
+  const c = (await db.doc("config/lulu").get()).data();
+  if (!c?.key || !c?.secret) throw new HttpsError("failed-precondition", "Printed books aren't set up yet.");
+  return lulu({ key: c.key, secret: c.secret, base: process.env.LULU_BASE_URL || (c.env === "production" ? "https://api.lulu.com" : "https://api.sandbox.lulu.com") });
+}
+
+/** The book's settings and its recipes (first photo each, when photos are on), from the account. */
+async function bookContent(uid, bookId) {
+  const spec = (await db.doc(`users/${uid}/books/${bookId}`).get()).data();
+  if (!spec) throw new HttpsError("not-found", "That book isn't saved yet.");
+  const ids = (spec.recipeIds ?? []).slice(0, 200);
+  const photo = async (id) => (await db.doc(`users/${uid}/photos/${id}_0`).get()).data()?.data ?? null;
+  const recipes = [];
+  for (const id of ids) {
+    const d = (await db.doc(`users/${uid}/recipes/${id}`).get()).data();
+    if (!d?.recipe || d.deleted) continue;
+    recipes.push({ ...d.recipe, photo: spec.includePhotos && d.photoCount ? await photo(id) : null });
+  }
+  if (!recipes.length) throw new HttpsError("failed-precondition", "Pick at least one recipe for the book.");
+  const book = {
+    title: String(spec.title ?? "").slice(0, 80),
+    subtitle: String(spec.subtitle ?? "").slice(0, 120),
+    dedication: String(spec.dedication ?? "").slice(0, 400),
+    includePhotos: !!spec.includePhotos,
+    cover: spec.coverRecipeId ? await photo(spec.coverRecipeId) : null,
+  };
+  return { book, recipes };
+}
+const fileKeyFor = (orderId, part, key) => createHmacHex(key, `${orderId}:${part}`);
+import { createHmac } from "node:crypto";
+const createHmacHex = (key, text) => createHmac("sha256", key).update(text).digest("hex").slice(0, 32);
+
+/**
+ * The book's PDFs. Preview: ?book=ID&part=interior|cover&token=<sign-in token>.
+ * For Lulu: ?order=ID&part=…&key=… (a link only Lulu is given).
+ */
+export const bookFile = onRequest({ ...opts, memory: "1GiB", timeoutSeconds: 300 }, async (req, res) => {
+  try {
+    const part = req.query.part === "cover" ? "cover" : "interior";
+    let uid, bookId, size = null;
+    if (req.query.order) {
+      const o = (await db.doc(`bookOrders/${String(req.query.order)}`).get()).data();
+      if (!o || req.query.key !== fileKeyFor(String(req.query.order), part, o.fileKey)) return res.status(404).send("Not found");
+      uid = o.uid;
+      bookId = o.bookId;
+      size = o.coverSize ?? null;
+    } else {
+      const user = await getAuth().verifyIdToken(String(req.query.token ?? ""));
+      uid = user.uid;
+      bookId = String(req.query.book ?? "");
+    }
+    const { book, recipes } = await bookContent(uid, bookId);
+    const inside = buildInterior(book, recipes);
+    const pdf = part === "interior" ? inside.pdf : buildCover(book, size ?? previewCoverSize(inside.pages));
+    res.set("content-type", "application/pdf");
+    res.set("content-disposition", `inline; filename="${part}.pdf"`);
+    res.set("cache-control", "private, no-store");
+    res.send(Buffer.from(pdf));
+  } catch (e) {
+    res.status(e instanceof HttpsError ? 400 : 401).send(e instanceof HttpsError ? e.message : "Sign in again.");
+  }
+});
+
+/** How many pages the book comes to, and what it costs delivered. */
+export const bookQuote = onCall({ ...opts, memory: "1GiB", timeoutSeconds: 120 }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const { book, recipes } = await bookContent(req.auth.uid, String(req.data?.bookId ?? ""));
+  const pages = buildInterior(book, recipes).pages;
+  if (pages > MAX_PAGES) throw new HttpsError("failed-precondition", `This book comes to ${pages} pages; the most is ${MAX_PAGES}. Take a few recipes out (or turn photos off).`);
+  if (!req.data?.address) return { pages };
+  const shipping = SHIPPING.includes(req.data?.shipping) ? req.data.shipping : "MAIL";
+  let address;
+  try {
+    address = luluAddress(req.data.address);
+  } catch (e) {
+    throw new HttpsError("invalid-argument", e.message);
+  }
+  const cost = await (await luluClient()).cost(pages, address, shipping).catch((e) => {
+    throw new HttpsError("unavailable", `Couldn't get a price from the printer. ${e.status === 400 ? "Check the address." : "Try again in a minute."}`);
+  });
+  return { pages, shipping, book: BOOK_PRICE_CENTS / 100, delivery: toCentsUp(cost.shipping + cost.tax) / 100, total: chargeCents(cost.shipping + cost.tax) / 100 };
+});
+
+/** Pay for the book (Stripe), then it's sent to the printer. */
+export const bookCheckout = onCall({ ...opts, memory: "1GiB", timeoutSeconds: 120, secrets: [STRIPE_SECRET_KEY] }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  if (!req.auth.token.email) throw new HttpsError("failed-precondition", "Your account needs an email address for delivery updates.");
+  const bookId = String(req.data?.bookId ?? "");
+  const { book, recipes } = await bookContent(req.auth.uid, bookId);
+  const pages = buildInterior(book, recipes).pages;
+  if (pages > MAX_PAGES) throw new HttpsError("failed-precondition", `This book comes to ${pages} pages; the most is ${MAX_PAGES}.`);
+  const shipping = SHIPPING.includes(req.data?.shipping) ? req.data.shipping : "MAIL";
+  let address;
+  try {
+    address = luluAddress(req.data?.address);
+  } catch (e) {
+    throw new HttpsError("invalid-argument", e.message);
+  }
+  const client = await luluClient();
+  const [cost, coverSize] = await Promise.all([client.cost(pages, address, shipping), client.coverSize(pages)]);
+  // Never sell at a loss: printing has to fit inside the book's price.
+  if (cost.print + cost.fulfillment > BOOK_PRICE_CENTS / 100 - 5) throw new HttpsError("failed-precondition", "This book is too long to print at this price. Take a few recipes out.");
+  const charge = chargeCents(cost.shipping + cost.tax);
+  const ref = db.collection("bookOrders").doc();
+  const order = { uid: req.auth.uid, email: req.auth.token.email, bookId, title: book.title || "Our Family Recipes", pages, shipping, address, charge, coverSize, status: "awaiting_payment", fileKey: randomBytes(24).toString("hex"), createdAt: Date.now() };
+  const origin = allowedOrigin(req.rawRequest.get("origin"));
+  const back = `${origin}/#/book/${encodeURIComponent(bookId)}?order=${ref.id}`;
+  if (!hasStripe()) {
+    if (!EMULATOR) throw new HttpsError("failed-precondition", "Payments aren't set up yet.");
+    await ref.set({ ...order, testPaid: true }); // the emulator has no Stripe: tests skip paying
+    return { url: back, orderId: ref.id };
+  }
+  const s = stripe();
+  const customer = await ensureCustomer(s, req.auth.uid, req.auth.token.email);
+  const session = await s.checkout.sessions.create({
+    mode: "payment",
+    customer,
+    line_items: [
+      { price_data: { currency: "usd", unit_amount: BOOK_PRICE_CENTS, product_data: { name: `Printed cookbook: ${order.title}`.slice(0, 120), description: `${pages}-page 8.5 × 11 in hardcover, full colour` } }, quantity: 1 },
+      { price_data: { currency: "usd", unit_amount: charge - BOOK_PRICE_CENTS, product_data: { name: "Delivery and tax" } }, quantity: 1 },
+    ],
+    client_reference_id: req.auth.uid,
+    metadata: { bookOrder: ref.id },
+    success_url: back,
+    cancel_url: `${origin}/#/book/${encodeURIComponent(bookId)}`,
+  });
+  await ref.set({ ...order, stripeSession: session.id });
+  return { url: session.url, orderId: ref.id };
+});
+
+/** After paying: check the payment, then send the book to the printer (once). */
+export const bookConfirm = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY] }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const ref = db.doc(`bookOrders/${String(req.data?.orderId ?? "")}`);
+  const o = (await ref.get()).data();
+  if (!o || o.uid !== req.auth.uid) throw new HttpsError("not-found", "That order isn't there.");
+  if (o.lulu) return { status: o.status };
+  const paid = o.testPaid && EMULATOR ? true : o.stripeSession && hasStripe() ? (await stripe().checkout.sessions.retrieve(o.stripeSession)).payment_status === "paid" : false;
+  if (!paid) return { status: "awaiting_payment" };
+  // Only one printer order, even if this is called twice at once.
+  const claimed = await db.runTransaction(async (tx) => {
+    const fresh = (await tx.get(ref)).data();
+    if (fresh.lulu || fresh.status === "sending") return false;
+    tx.update(ref, { status: "sending", paidAt: Date.now() });
+    return true;
+  });
+  if (!claimed) return { status: "sending" };
+  const base = `${EMULATOR ? "http" : "https"}://${req.rawRequest.get("host")}${EMULATOR ? "/" + process.env.GCLOUD_PROJECT + "/us-central1" : ""}/bookFile`;
+  const url = (part) => `${base}?order=${ref.id}&part=${part}&key=${fileKeyFor(ref.id, part, o.fileKey)}`;
+  try {
+    const job = await (await luluClient()).print({ externalId: ref.id, email: o.email, shipping: o.shipping, address: o.address, title: o.title, interiorUrl: url("interior"), coverUrl: url("cover") });
+    await ref.update({ lulu: String(job.id), status: "printing", luluStatus: job.status?.name ?? null });
+    return { status: "printing" };
+  } catch (e) {
+    await ref.update({ status: "paid_not_sent", error: String(e.message).slice(0, 300) });
+    throw new HttpsError("unavailable", "Your payment went through, but the printer didn't take the order yet. We'll sort it out — you don't need to pay again.");
+  }
+});
+
+/** Where the book is: printing, shipped (with tracking), or a problem. */
+export const bookStatus = onCall({ ...opts }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const ref = db.doc(`bookOrders/${String(req.data?.orderId ?? "")}`);
+  const o = (await ref.get()).data();
+  if (!o || o.uid !== req.auth.uid) throw new HttpsError("not-found", "That order isn't there.");
+  if (!o.lulu) return { status: o.status };
+  const job = await (await luluClient()).status(o.lulu).catch(() => null);
+  const name = job?.status?.name ?? o.luluStatus ?? null;
+  const tracking = (job?.line_items ?? []).flatMap((l) => l.tracking_urls ?? []).slice(0, 3);
+  const status = name === "SHIPPED" ? "shipped" : ["REJECTED", "CANCELED", "ERROR"].includes(name) ? "problem" : "printing";
+  await ref.update({ luluStatus: name, status, tracking });
+  return { status, tracking };
+});
+
+/** Owner dashboard: Lulu's keys (kept where only the server can read them). */
+export const ownerSetLulu = onCall({ ...opts }, async (req) => {
+  await requireAdmin(req);
+  const key = String(req.data?.key ?? "").trim(), secret = String(req.data?.secret ?? "").trim();
+  const env = req.data?.env === "production" ? "production" : "sandbox";
+  if (!key || !secret) throw new HttpsError("invalid-argument", "Paste both the client key and the client secret.");
+  await db.doc("config/lulu").set({ key, secret, env, setAt: Date.now() });
+  return { ok: true, env };
+});
