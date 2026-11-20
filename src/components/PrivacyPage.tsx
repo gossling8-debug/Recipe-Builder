@@ -94,6 +94,13 @@ export default function PrivacyPage() {
           someone off the plan; anyone can leave. When the plan or an account ends, the household is removed.
         </p>
 
+        <h3>Printed cookbooks</h3>
+        <p>
+          When you order a printed cookbook, the recipes, photos and wording you chose are sent to our print partner, Lulu, along with your
+          name, delivery address, phone number (for the carrier) and email (for delivery updates). Payment is handled by Stripe; we never
+          see your card. Your order is kept so you can track it, and deleted with your account.
+        </p>
+
         <h3>Invites by email</h3>
         <p>
           When you invite someone to a shared shopping list or a cookbook by email, we store their email address, your name, and the

@@ -21,6 +21,11 @@ service cloud.firestore {
         || (owner.matches('household_.+')
           && uid() in get(/databases/$(database)/documents/households/$(owner.split('household_')[1])).data.members));
     }
+    // Printed cookbook orders (written only by the server).
+    match /bookOrders/{o} {
+      allow read: if signedIn() && uid() == resource.data.uid;
+      allow list: if signedIn() && uid() == resource.data.uid;
+    }
     // Who shares a Family plan (written only by the server).
     match /households/{payer} {
       allow read: if signedIn() && uid() in resource.data.members;
