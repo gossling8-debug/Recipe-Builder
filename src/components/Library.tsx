@@ -254,7 +254,7 @@ export default function Library() {
       />
       <main className="page">
         <h1 className="page-title">Recipes</h1>
-        <InvitesWaiting kinds={["shop", "book"]} />
+        <InvitesWaiting kinds={["shop", "book", "household"]} />
         {(() => {
           const soon = feature("pantry") ? useSoon(all) : [];
           if (!soon.length) return null;

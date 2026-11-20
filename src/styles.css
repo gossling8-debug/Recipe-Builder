@@ -1266,3 +1266,9 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .savings-amount { font-weight: 600; white-space: nowrap; }
 .savings-how { padding-left: 18px; }
 .savings-how li { margin: 6px 0; }
+
+/* ---------- Cardamix Family household (Plus page) ---------- */
+.plus-tier { margin: 8px 0 12px; }
+.household-list { list-style: none; padding: 0; margin: 8px 0; }
+.household-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.household-invite { margin-top: 12px; }

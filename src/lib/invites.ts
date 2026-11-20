@@ -9,7 +9,7 @@ import { fb, user } from "./cloud";
  * Firestore invites/{id}: { kind, target, email, fromUid, fromName, title, at }.
  * Only the sender and the invited person (email confirmed) can see one.
  */
-export type InviteKind = "shop" | "book";
+export type InviteKind = "shop" | "book" | "household";
 export interface Invite {
   id: string;
   kind: InviteKind;

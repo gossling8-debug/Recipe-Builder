@@ -11,10 +11,13 @@
  *  - mixVote:       rates or reports a Mix recipe, privately (only totals are public).
  *  - deleteMyData / accountDeleted: remove everything an account left, server-side.
  *  - mixDeleted:    clears the private votes on a Mix recipe once it's taken down.
+ *  - joinHousehold / leaveHousehold / removeFromHousehold: who shares a Family plan.
  *
  * Firestore (written only here; people can read their own):
  *   plans/{uid}     { plan, source ("stripe" | "comp" | "beta" | "none"), status, interval ("month" | "year"), renews, cancelsAt, checkedAt }
  *   aiUsage/{uid}   { month, spent, uses, counts: { scan, create, … }, limit, plan, minute, minuteCount }
+ *   aiUsage/household_{payer}   the same, shared by everyone on one Family plan
+ *   households/{payer} { owner, members[], names{uid: name}, createdAt }   (Family plan members; readable by them)
  *   customers/{uid} { stripeId }   (not readable by the app)
  *   mixVotes/{mixId}_{uid} { mixId, uid, stars, reportedAt, reason, at }   (readable by that person and admins)
  */
@@ -31,7 +34,7 @@ import { nextVote, parseVote, voteDelta } from "./lib/mixVotes.js";
 import { randomUUID } from "node:crypto";
 import {
   ALLOWANCE, MAX_BODY_BYTES, allowanceCheck, allowanceKey, allowedBeta, allowedOrigin, checkRequest, costOf, estimateCost, freeCheck,
-  isBeta, isComp, planFromSubscriptions, plusEmailOk, reserveUsage, retryAllowed, settleUsage,
+  HOUSEHOLD_MAX, isBeta, isComp, planFromSubscriptions, plusEmailOk, reserveUsage, retryAllowed, settleUsage, usageId,
 } from "./lib/guard.js";
 
 initializeApp();
@@ -41,10 +44,21 @@ const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const PLUS_EMAILS = defineSecret("PLUS_EMAILS");
 
 const ANTHROPIC_BASE = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com"; // tests point this at a fake
+// Stripe prices can't be changed, so a new price gets a new lookup key.
+// Family's keys start "cardamix_family" — that's how a subscription is known to be Family (guard.js tierOf).
 const PRICES = {
-  // Stripe prices can't be changed, so a new price gets a new lookup key.
-  monthly: { lookup: "cardamix_plus_monthly_449", amount: 449, interval: "month" },
-  yearly: { lookup: "cardamix_plus_yearly_3499", amount: 3499, interval: "year" },
+  plus: {
+    monthly: { lookup: "cardamix_plus_monthly_449", amount: 449, interval: "month" },
+    yearly: { lookup: "cardamix_plus_yearly_3499", amount: 3499, interval: "year" },
+  },
+  family: {
+    monthly: { lookup: "cardamix_family_monthly_899", amount: 899, interval: "month" },
+    yearly: { lookup: "cardamix_family_yearly_6999", amount: 6999, interval: "year" },
+  },
+};
+const PRODUCTS = {
+  plus: { name: "Cardamix Plus", description: "Every Cardamix feature, and much more AI each month." },
+  family: { name: "Cardamix Family", description: `Everything in Plus for up to ${HOUSEHOLD_MAX} people in one household, plus Family features, with a shared AI allowance.` },
 };
 const DAY = 86_400_000;
 // invoker "public": anyone may *call* these (each one checks the sign-in itself).
@@ -56,7 +70,31 @@ const stripe = () => new Stripe(STRIPE_SECRET_KEY.value());
 const hasStripe = () => !!STRIPE_SECRET_KEY.value()?.startsWith("sk_");
 
 // ---------- plan ----------
+/** Your plan: your own (Stripe, gifted, testing period), or Family through your household's payer. */
 async function computePlan(uid, email, verified) {
+  const own = await computeOwnPlan(uid, email, verified);
+  if (own.plan === "family") return own;
+  return (await householdPlan(uid)) ?? own;
+}
+
+/** On someone else's Family plan: theirs, while their Family subscription is live. */
+async function householdPlan(uid) {
+  const q = await db.collection("households").where("members", "array-contains", uid).limit(1).get();
+  const h = q.docs[0];
+  if (!h || h.id === uid) return null; // the payer's own plan comes from Stripe
+  const owner = h.id;
+  let op = (await db.doc(`plans/${owner}`).get()).data();
+  if (!op || Date.now() - (op.checkedAt ?? 0) > DAY) {
+    const u = await getAuth().getUser(owner).catch(() => null);
+    if (!u) return null;
+    op = await savePlan(owner, u.email, u.emailVerified);
+  }
+  return op.plan === "family" && op.source === "stripe"
+    ? { plan: "family", source: "household", owner, status: op.status, interval: op.interval ?? null, renews: null, cancelsAt: null }
+    : null;
+}
+
+async function computeOwnPlan(uid, email, verified) {
   // Gifted and testing-period Plus need a confirmed email (accounts made before VERIFY_PLUS_FROM keep it),
   // so throwaway accounts can't each get Plus's AI.
   let emailOk = !!verified;
@@ -75,7 +113,7 @@ async function computePlan(uid, email, verified) {
   if (!cust?.stripeId || !hasStripe()) return free;
   const subs = await stripe().subscriptions.list({ customer: cust.stripeId, status: "all", limit: 10 });
   const fromStripe = planFromSubscriptions(subs.data);
-  return fromStripe.plan === "plus" ? fromStripe : free;
+  return fromStripe.plan !== "free" ? fromStripe : free;
 }
 async function savePlan(uid, email, verified) {
   const p = { ...(await computePlan(uid, email, verified)), checkedAt: Date.now() };
@@ -137,7 +175,8 @@ export const ai = onRequest({ ...opts, secrets: [ANTHROPIC_API_KEY, STRIPE_SECRE
 
   // Check and reserve in one step, so requests sent at once can't all slip under the limits:
   // the worst-case cost, the count and the per-minute count are taken now and settled after.
-  const usageRef = db.doc(`aiUsage/${user.uid}`);
+  // Family: one allowance for the whole household, kept under the payer's id.
+  const usageRef = db.doc(`aiUsage/${usageId(user.uid, planDoc)}`);
   const id = randomUUID();
   const limit = ALLOWANCE[plan] ?? ALLOWANCE.free;
   let counted = null; // the kind counted for this request (null for an allowed retry)
@@ -302,14 +341,17 @@ export const mixDeleted = functionsV1.firestore.document("mix/{id}").onDelete(as
 
 // ---------- Stripe ----------
 async function ensurePrices(s) {
-  const found = await s.prices.list({ lookup_keys: Object.values(PRICES).map((p) => p.lookup), active: true, limit: 10 });
+  const all = Object.values(PRICES).flatMap((tier) => Object.values(tier));
+  const found = await s.prices.list({ lookup_keys: all.map((p) => p.lookup), active: true, limit: 10 });
   const byKey = Object.fromEntries(found.data.map((p) => [p.lookup_key, p.id]));
-  if (Object.values(PRICES).every((p) => byKey[p.lookup])) return byKey;
-  const product = await s.products.create({ name: "Cardamix Plus", description: "Every Cardamix feature, and much more AI each month." });
-  for (const p of Object.values(PRICES)) {
-    if (byKey[p.lookup]) continue;
-    const price = await s.prices.create({ product: product.id, currency: "usd", unit_amount: p.amount, recurring: { interval: p.interval }, lookup_key: p.lookup, transfer_lookup_key: true });
-    byKey[p.lookup] = price.id;
+  for (const [tier, prices] of Object.entries(PRICES)) {
+    const missing = Object.values(prices).filter((p) => !byKey[p.lookup]);
+    if (!missing.length) continue;
+    const product = await s.products.create({ ...PRODUCTS[tier], metadata: { tier } });
+    for (const p of missing) {
+      const price = await s.prices.create({ product: product.id, currency: "usd", unit_amount: p.amount, recurring: { interval: p.interval }, lookup_key: p.lookup, transfer_lookup_key: true });
+      byKey[p.lookup] = price.id;
+    }
   }
   return byKey;
 }
@@ -326,16 +368,28 @@ export const checkout = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY, PLUS_EMAI
   if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   if (!hasStripe()) throw new HttpsError("failed-precondition", "Payments aren't set up yet.");
   const interval = req.data?.interval === "yearly" ? "yearly" : "monthly";
-  const current = await savePlan(req.auth.uid, req.auth.token.email);
-  if (current.plan === "plus" && current.source !== "beta") throw new HttpsError("already-exists", "You already have Plus.");
+  const tier = req.data?.tier === "family" ? "family" : "plus";
+  const name = tier === "family" ? "Cardamix Family" : "Plus";
+  const current = await savePlan(req.auth.uid, req.auth.token.email, req.auth.token.email_verified);
+  if (current.source === "household") throw new HttpsError("already-exists", "You're already on your household's Family plan.");
+  if (current.source === "comp") throw new HttpsError("already-exists", "Your account already has everything, for free.");
   const s = stripe();
   const prices = await ensurePrices(s);
+  if (current.source === "stripe" && current.plan !== "free") {
+    if (current.plan === tier) throw new HttpsError("already-exists", `You already have ${name}.`);
+    if (tier === "plus") throw new HttpsError("failed-precondition", "To move from Family to Plus, use Manage subscription.");
+    // Plus → Family: the same subscription moves to the Family price (Stripe charges the difference).
+    const sub = await s.subscriptions.retrieve(current.subscription);
+    await s.subscriptions.update(sub.id, { items: [{ id: sub.items.data[0].id, price: prices[PRICES.family[interval].lookup] }], proration_behavior: "create_prorations" });
+    await savePlan(req.auth.uid, req.auth.token.email, req.auth.token.email_verified);
+    return { upgraded: true };
+  }
   const customer = await ensureCustomer(s, req.auth.uid, req.auth.token.email);
   const origin = allowedOrigin(req.rawRequest.get("origin"));
   const session = await s.checkout.sessions.create({
     mode: "subscription",
     customer,
-    line_items: [{ price: prices[PRICES[interval].lookup], quantity: 1 }],
+    line_items: [{ price: prices[PRICES[tier][interval].lookup], quantity: 1 }],
     allow_promotion_codes: true,
     client_reference_id: req.auth.uid,
     success_url: `${origin}/#/plus/done`,
@@ -348,7 +402,7 @@ async function ensurePortal(s) {
   const configs = await s.billingPortal.configurations.list({ active: true, limit: 1 });
   if (configs.data.length) return;
   await s.billingPortal.configurations.create({
-    business_profile: { headline: "Cardamix Plus" },
+    business_profile: { headline: "Cardamix" },
     features: {
       invoice_history: { enabled: true },
       payment_method_update: { enabled: true },
@@ -412,3 +466,72 @@ export const accountDeleted = functionsV1
     await closeAccount(user.uid, true);
     await deleteUserData(db, user.uid, user.email);
   });
+
+// ---------- households (Cardamix Family) ----------
+// The payer invites people by email (invites, kind "household", target = the payer's id).
+// Joining needs that invite, for the email you've confirmed — the server checks, then adds you.
+const cleanName = (v) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, 40);
+async function myHousehold(uid) {
+  const q = await db.collection("households").where("members", "array-contains", uid).limit(1).get();
+  return q.docs[0] ?? null;
+}
+/** Someone's plan changed because of their household: work it out again on their next request. */
+const recheck = (uids) => Promise.all(uids.map((u) => db.doc(`plans/${u}`).delete()));
+
+export const joinHousehold = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY, PLUS_EMAILS] }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = req.auth.uid;
+  if (!req.auth.token.email_verified || !req.auth.token.email) throw new HttpsError("failed-precondition", "Confirm your email first, then try again.");
+  const owner = String(req.data?.owner ?? "");
+  if (!owner || owner === uid) throw new HttpsError("invalid-argument", "That invite doesn't work.");
+  const email = req.auth.token.email.toLowerCase();
+  const invites = (await db.collection("invites").where("email", "==", email).get()).docs.filter(
+    (d) => d.data().kind === "household" && d.data().target === owner,
+  );
+  if (!invites.length) throw new HttpsError("not-found", "This invite isn't there any more. Ask for a new one.");
+  const current = await myHousehold(uid);
+  if (current && current.id !== owner)
+    throw new HttpsError("failed-precondition", "You're already in another household's Family plan. Leave it first (on the Plus page).");
+  await db.runTransaction(async (tx) => {
+    const ref = db.doc(`households/${owner}`);
+    const h = (await tx.get(ref)).data();
+    const members = h?.members ?? [owner];
+    if (members.includes(uid)) return;
+    if (members.length >= HOUSEHOLD_MAX) throw new HttpsError("resource-exhausted", `A Family plan has room for ${HOUSEHOLD_MAX} people, and this one is full.`);
+    const names = h?.names ?? { [owner]: cleanName(invites[0].data().fromName) || "Someone" };
+    tx.set(ref, { owner, members: [...members, uid], names: { ...names, [uid]: cleanName(req.data?.name) || "Someone" }, createdAt: h?.createdAt ?? Date.now() });
+  });
+  await Promise.all(invites.map((d) => d.ref.delete()));
+  return savePlan(uid, req.auth.token.email, true);
+});
+
+/** Leave the household you're in. The payer leaving ends the household (everyone goes back to their own plan). */
+export const leaveHousehold = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY, PLUS_EMAILS] }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = req.auth.uid;
+  const h = await myHousehold(uid);
+  if (h) await leaveHouseholdDoc(h, uid);
+  return savePlan(uid, req.auth.token.email, req.auth.token.email_verified);
+});
+async function leaveHouseholdDoc(h, uid) {
+  const d = h.data();
+  if (h.id === uid) {
+    await h.ref.delete();
+    await recheck((d.members ?? []).filter((m) => m !== uid));
+    return;
+  }
+  await h.ref.update({ members: FieldValue.arrayRemove(uid), [`names.${uid}`]: FieldValue.delete() });
+  await recheck([uid]);
+}
+
+/** The payer takes someone off their Family plan. */
+export const removeFromHousehold = onCall({ ...opts }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const who = String(req.data?.uid ?? "");
+  const ref = db.doc(`households/${req.auth.uid}`);
+  const h = (await ref.get()).data();
+  if (!h || !who || who === req.auth.uid || !(h.members ?? []).includes(who)) throw new HttpsError("not-found", "They're not on your Family plan.");
+  await ref.update({ members: FieldValue.arrayRemove(who), [`names.${who}`]: FieldValue.delete() });
+  await recheck([who]);
+  return { ok: true };
+});

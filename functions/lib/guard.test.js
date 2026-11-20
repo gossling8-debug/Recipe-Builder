@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addUsage, allowanceCheck, allowanceKey, allowedOrigin, checkRequest, costOf, freeCheck, FREE_LIMITS, isBeta, isComp, monthKey, planFromSubscriptions } from "./guard.js";
+import { addUsage, allowanceCheck, allowanceKey, allowedOrigin, checkRequest, costOf, freeCheck, FREE_LIMITS, isBeta, isComp, monthKey, planFromSubscriptions, usageId } from "./guard.js";
 
 const ok = { model: "claude-sonnet-5-5", max_tokens: 6000, messages: [{ role: "user", content: "hi" }] };
 const NOV = Date.UTC(2026, 10, 12, 10, 0);
@@ -203,5 +203,23 @@ describe("gifted and testing-period Plus", () => {
     expect(plusEmailOk(false, VERIFY_PLUS_FROM + 1)).toBe(false);
     expect(plusEmailOk(false, VERIFY_PLUS_FROM - 86_400_000)).toBe(true); // made before: kept
     expect(plusEmailOk(false, 0)).toBe(false);
+  });
+});
+
+describe("Cardamix Family", () => {
+  const fam = (status = "active") => ({ id: "sub_f", status, items: { data: [{ price: { lookup_key: "cardamix_family_yearly_6999", recurring: { interval: "year" } } }] } });
+  const plus = { id: "sub_p", status: "active", items: { data: [{ price: { lookup_key: "cardamix_plus_monthly_449", recurring: { interval: "month" } } }] } };
+  it("knows a Family subscription by its price, and prefers it to Plus", () => {
+    expect(planFromSubscriptions([fam()])).toMatchObject({ plan: "family", interval: "year", subscription: "sub_f" });
+    expect(planFromSubscriptions([plus, fam()]).plan).toBe("family");
+    expect(planFromSubscriptions([plus, fam("canceled")]).plan).toBe("plus");
+  });
+  it("shares one allowance per household, kept under the payer", () => {
+    expect(allowanceKey("family", "month")).toBe("family");
+    expect(allowanceKey("family", "year")).toBe("family_yearly");
+    expect(usageId("u1", { plan: "family", source: "stripe" })).toBe("household_u1");
+    expect(usageId("u2", { plan: "family", source: "household", owner: "u1" })).toBe("household_u1");
+    expect(usageId("u3", { plan: "plus" })).toBe("u3");
+    expect(allowanceCheck("family", { month: monthKey(Date.now()), spent: 5 }).message).toMatch(/household/);
   });
 });

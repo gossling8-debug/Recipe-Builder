@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
 import { FEATURES } from "../lib/features";
 import { href } from "../lib/route";
-import { manageSubscription, myPlan, refreshMyPlan, upgrade, type MyPlan } from "../lib/subscription";
+import { HOUSEHOLD_MAX, manageSubscription, myPlan, refreshMyPlan, upgrade, type MyPlan } from "../lib/subscription";
 import Header from "./Header";
 import Icon from "./Icon";
+import HouseholdSection from "./HouseholdSection";
+import { InvitesWaiting } from "./Invites";
+
+const PRICE = {
+  plus: { yearly: "$34.99", monthly: "$4.49", perMonth: "$2.92" },
+  family: { yearly: "$69.99", monthly: "$8.99", perMonth: "$5.83" },
+};
 
 const dateText = (ms?: number | null) => (ms ? new Date(ms).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) : "");
 
@@ -11,6 +18,7 @@ const dateText = (ms?: number | null) => (ms ? new Date(ms).toLocaleDateString([
 export default function PlusPage({ done }: { done?: boolean }) {
   const [plan, setPlan] = useState<MyPlan>(myPlan);
   const [interval, setInterval] = useState<"monthly" | "yearly">("yearly");
+  const [tier, setTier] = useState<"plus" | "family">(() => (myPlan().plan === "plus" && myPlan().source === "stripe" ? "family" : "plus"));
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
@@ -51,11 +59,14 @@ export default function PlusPage({ done }: { done?: boolean }) {
   const plusFeatures = FEATURES.filter((f) => f.plan === "plus");
   const familyFeatures = FEATURES.filter((f) => f.plan === "family");
   const isPlus = plan.plan !== "free";
+  const isFamily = plan.plan === "family";
+  // Plus by subscription can move up to Family.
+  const canUpgradeToFamily = plan.plan === "plus" && plan.source === "stripe";
   const beta = plan.source === "beta"; // testing period: Plus is free, subscribing is optional
 
   return (
     <>
-      <Header title="Cardamix Plus" back={href({ name: "settings" })} />
+      <Header title="Your plan" back={href({ name: "settings" })} />
       <main className="page plus-page">
         {done && isPlus && (
           <div className="callout plan-card-plus">
@@ -69,9 +80,11 @@ export default function PlusPage({ done }: { done?: boolean }) {
 
         {isPlus ? (
           <section>
-            <h1 className="page-title">You have Plus</h1>
+            <h1 className="page-title">{isFamily ? "You have Cardamix Family" : "You have Plus"}</h1>
             {plan.source === "beta" ? (
               <p>Cardamix is in testing, so every account has Plus for free for now. Thanks for trying it!</p>
+            ) : plan.source === "household" ? (
+              <p>You're on your household's Family plan — everything is included, with an AI allowance you all share.</p>
             ) : plan.source === "comp" ? (
               <p>Your account has Plus for free.</p>
             ) : plan.cancelsAt ? (
@@ -90,22 +103,50 @@ export default function PlusPage({ done }: { done?: boolean }) {
             {plan.source === "stripe" && <p className="muted small">Change your card, see receipts or cancel — on Stripe's secure page.</p>}
           </section>
         ) : null}
-        {(!isPlus || beta) && (
+        <InvitesWaiting kinds={["household"]} />
+        {isFamily && <HouseholdSection plan={plan} />}
+        {(!isPlus || beta || canUpgradeToFamily) && plan.source !== "household" && (
           <section>
-            {beta ? <h3>Subscribe early (optional)</h3> : <h1 className="page-title">Cardamix Plus</h1>}
-            <p>Every feature, and far more AI each month.</p>
+            {beta ? <h3>Subscribe early (optional)</h3> : canUpgradeToFamily ? <h3>Move up to Cardamix Family</h3> : <h1 className="page-title">Choose a plan</h1>}
+            {!canUpgradeToFamily && (
+              <div className="segmented plus-tier" role="radiogroup" aria-label="Plan">
+                <button role="radio" aria-checked={tier === "plus"} className={tier === "plus" ? "chip active" : "chip"} onClick={() => setTier("plus")}>
+                  Plus · just you
+                </button>
+                <button role="radio" aria-checked={tier === "family"} className={tier === "family" ? "chip active" : "chip"} onClick={() => setTier("family")}>
+                  Family · up to {HOUSEHOLD_MAX}
+                </button>
+              </div>
+            )}
+            <p>
+              {tier === "family"
+                ? `Everything in Plus for up to ${HOUSEHOLD_MAX} people in your household — each with their own account — plus the Family features below, with one AI allowance you share.`
+                : "Every feature, and far more AI each month."}
+            </p>
             <div className="segmented plus-interval" role="radiogroup" aria-label="Billing">
               <button role="radio" aria-checked={interval === "yearly"} className={interval === "yearly" ? "chip active" : "chip"} onClick={() => setInterval("yearly")}>
-                Yearly · $34.99
+                Yearly · {PRICE[tier].yearly}
               </button>
               <button role="radio" aria-checked={interval === "monthly"} className={interval === "monthly" ? "chip active" : "chip"} onClick={() => setInterval("monthly")}>
-                Monthly · $4.49
+                Monthly · {PRICE[tier].monthly}
               </button>
             </div>
-            <p className="muted small">{interval === "yearly" ? "$2.92 a month, billed yearly — save 35%." : "Billed monthly. Cancel any time."}</p>
+            <p className="muted small">
+              {interval === "yearly" ? `${PRICE[tier].perMonth} a month, billed yearly — save 35%.` : "Billed monthly. Cancel any time."}
+              {canUpgradeToFamily && " Your Plus subscription switches over; you're only charged the difference."}
+            </p>
             <div className="button-row">
-              <button className="btn primary" disabled={busy || checking} onClick={run(() => upgrade(interval))}>
-                {busy ? "Opening checkout…" : "Upgrade to Plus"}
+              <button
+                className="btn primary"
+                disabled={busy || checking}
+                onClick={run(async () => {
+                  if ((await upgrade(interval, tier)) === "upgraded") {
+                    setPlan(myPlan());
+                    setBusy(false);
+                  }
+                })}
+              >
+                {busy ? "Opening checkout…" : tier === "family" ? "Get Cardamix Family" : "Upgrade to Plus"}
               </button>
             </div>
             <p className="muted small">
@@ -138,7 +179,7 @@ export default function PlusPage({ done }: { done?: boolean }) {
         </section>
         {familyFeatures.length > 0 && (
           <section>
-            <h3>Coming with Cardamix Family</h3>
+            <h3>{beta ? "Coming with Cardamix Family" : "Cardamix Family adds"}</h3>
             <p className="muted small">
               Everything in Plus for your whole household, and more. {beta ? "Included free while Cardamix is being tested." : ""}
             </p>

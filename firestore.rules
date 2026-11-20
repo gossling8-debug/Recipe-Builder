@@ -16,7 +16,14 @@ service cloud.firestore {
       allow read: if signedIn() && uid() == owner;
     }
     match /aiUsage/{owner} {
-      allow read: if signedIn() && uid() == owner;
+      // Your own, or your Family household's shared one (kept under the payer's id).
+      allow read: if signedIn() && (uid() == owner
+        || (owner.matches('household_.+')
+          && uid() in get(/databases/$(database)/documents/households/$(owner.split('household_')[1])).data.members));
+    }
+    // Who shares a Family plan (written only by the server).
+    match /households/{payer} {
+      allow read: if signedIn() && uid() in resource.data.members;
     }
 
     // The Mix: recipes anyone can publish for everyone signed in. A published
@@ -233,7 +240,8 @@ service cloud.firestore {
         && request.resource.data.title is string && request.resource.data.title.size() <= 60
         && request.resource.data.at is int
         && request.resource.data.target is string
-        && ((request.resource.data.kind == 'shop'
+        && ((request.resource.data.kind == 'household' && request.resource.data.target == uid())
+          || (request.resource.data.kind == 'shop'
               && uid() in get(/databases/$(database)/documents/shoppingLists/$(request.resource.data.target)).data.members)
           || (request.resource.data.kind == 'book'
               && uid() in get(/databases/$(database)/documents/cookbooks/$(request.resource.data.target)).data.members));

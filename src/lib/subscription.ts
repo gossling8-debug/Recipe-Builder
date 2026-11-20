@@ -7,7 +7,9 @@ import { fb, user } from "./cloud";
 
 export interface MyPlan {
   plan: "free" | "plus" | "family";
-  source?: "stripe" | "comp" | "beta" | "none";
+  /** "household": on someone else's Family plan (owner = who pays). */
+  source?: "stripe" | "comp" | "beta" | "none" | "household";
+  owner?: string;
   status?: string;
   /** Plus billed monthly or yearly. */
   interval?: "month" | "year" | null;
@@ -75,15 +77,20 @@ const friendly = (e: unknown) => {
 export async function refreshMyPlan(): Promise<MyPlan> {
   if (!(await user())) return myPlan();
   const p = await callable<MyPlan>("refreshPlan");
-  remember({ plan: p.plan, source: p.source, status: p.status, interval: p.interval ?? null, renews: p.renews, cancelsAt: p.cancelsAt });
+  remember({ plan: p.plan, source: p.source, owner: p.owner, status: p.status, interval: p.interval ?? null, renews: p.renews, cancelsAt: p.cancelsAt });
   return myPlan();
 }
 
-/** Starts Stripe Checkout for Plus; the page moves to Stripe. */
-export async function upgrade(interval: "monthly" | "yearly"): Promise<void> {
+/** Starts Stripe Checkout for Plus or Family (the page moves to Stripe); Plus → Family switches the subscription in place. */
+export async function upgrade(interval: "monthly" | "yearly", tier: "plus" | "family" = "plus"): Promise<"moved" | "upgraded"> {
   try {
-    const { url } = await callable<{ url: string }>("checkout", { interval });
-    location.assign(url);
+    const r = await callable<{ url?: string; upgraded?: boolean }>("checkout", { interval, tier });
+    if (r.upgraded) {
+      await refreshMyPlan();
+      return "upgraded";
+    }
+    if (r.url) location.assign(r.url);
+    return "moved";
   } catch (e) {
     throw new Error(friendly(e));
   }
@@ -113,17 +120,25 @@ export async function loadAiUsage(): Promise<AiUsage | null> {
   const u = await user();
   if (!u) return null;
   const { db, f } = await fb();
-  const snap = await f.getDoc(f.doc(db, "aiUsage", u.uid));
+  // Family: the household's shared allowance, kept under the payer's id.
+  const p = myPlan();
+  const id = p.plan === "family" ? `household_${p.owner ?? u.uid}` : u.uid;
+  const snap = await f.getDoc(f.doc(db, "aiUsage", id));
   const d = snap.data() as AiUsage | undefined;
   return d && d.month === new Date().toISOString().slice(0, 7) ? d : null;
 }
 
 /** Monthly AI allowance in dollars — kept in step with functions/lib/guard.js. */
-export const ALLOWANCE = { free: 0.4, plus: 2.5, plus_yearly: 2.25 };
+export const ALLOWANCE = { free: 0.4, plus: 2.5, plus_yearly: 2.25, family: 5, family_yearly: 4.5 };
+/** Accounts on one Family plan — kept in step with functions/lib/guard.js. */
+export const HOUSEHOLD_MAX = 6;
 /** Free accounts each month — kept in step with functions/lib/guard.js. */
 export const FREE_LIMITS = { scan: 5, create: 3 };
 /** The allowance that applies to you: free, Plus monthly or Plus yearly. */
-export const allowanceFor = (p: MyPlan = myPlan()) => (p.plan !== "free" ? (p.interval === "year" ? ALLOWANCE.plus_yearly : ALLOWANCE.plus) : ALLOWANCE.free);
+export const allowanceFor = (p: MyPlan = myPlan()) =>
+  p.plan === "family"
+    ? p.interval === "year" ? ALLOWANCE.family_yearly : ALLOWANCE.family
+    : p.plan !== "free" ? (p.interval === "year" ? ALLOWANCE.plus_yearly : ALLOWANCE.plus) : ALLOWANCE.free;
 /** How many free recipe adds / created recipes are left this month (usage from loadAiUsage). */
 export function freeLeft(kind: "scan" | "create", usage: AiUsage | null): number {
   return Math.max(0, FREE_LIMITS[kind] - (usage?.counts?.[kind] ?? 0));

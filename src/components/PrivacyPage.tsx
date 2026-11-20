@@ -87,6 +87,13 @@ export default function PrivacyPage() {
           When you stop sharing (or delete your account), your recipes and ticks come off the list and you keep a copy of it.
         </p>
 
+        <h3>Cardamix Family households</h3>
+        <p>
+          On a Family plan, everyone in the household can see who's on it (the names each person chose) and shares one monthly AI
+          allowance. Nothing else is shared: each person's recipes, lists, pantry and budget stay their own. The person who pays can take
+          someone off the plan; anyone can leave. When the plan or an account ends, the household is removed.
+        </p>
+
         <h3>Invites by email</h3>
         <p>
           When you invite someone to a shared shopping list or a cookbook by email, we store their email address, your name, and the
