@@ -34,6 +34,7 @@ const WeekPage = lazyScreen(() => import("./components/WeekPage"));
 const BigMealPage = lazyScreen(() => import("./components/BigMealPage"));
 const PrintPage = lazyScreen(() => import("./components/PrintPage"));
 const HistoryPage = lazyScreen(() => import("./components/HistoryPage"));
+const StackScan = lazyScreen(() => import("./components/StackScan"));
 const ReceiptPage = lazyScreen(() => import("./components/ReceiptPage"));
 const TonightPage = lazyScreen(() => import("./components/TonightPage"));
 const BudgetPage = lazyScreen(() => import("./components/BudgetPage"));
@@ -94,6 +95,8 @@ function Screen() {
       return <ReceiptPage />;
     case "history":
       return <HistoryPage />;
+    case "stack":
+      return <StackScan />;
     case "print":
       return <PrintPage id={route.id} />;
     case "meal":

@@ -1393,3 +1393,13 @@ main.page section > .h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600;
 .owner-funnel th { text-align: left; font-weight: 500; padding: 6px 8px 6px 0; }
 .owner-funnel td { padding: 6px 0 6px 8px; text-align: right; white-space: nowrap; }
 .owner-funnel tr + tr { border-top: 1px solid var(--line); }
+
+/* Scan a stack of cards */
+.stack-link { margin: 4px 0 12px; }
+.stack-summary { margin: 18px 0 6px; }
+.stack-list { list-style: none; padding: 0; margin: 0 0 12px; }
+.stack-card { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); }
+.stack-card img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: var(--line); }
+.stack-card.failed strong { color: var(--error); }
+.stack-actions { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
+.stack-card .icon { display: inline-block; vertical-align: -2px; margin-right: 4px; }
