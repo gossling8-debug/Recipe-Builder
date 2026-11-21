@@ -152,7 +152,7 @@ export default function Library() {
   ];
   // A remembered filter for a tag that no longer exists falls back to All.
   const activeFilter =
-    filter === "favorites" ? (hasFavorites ? filter : "all")
+    filter === "favorites" ? "all" // Favorites is the folder row now, not a filter
     : filter === "safe" ? (avoiding ? filter : "all")
     : filter === "canmake" ? (hasPantry ? filter : "all")
     : filter !== "all" && !tags.includes(filter) ? "all" : filter;
@@ -181,6 +181,7 @@ export default function Library() {
   // On the plain "All" view, favorites are one row pinned at the top; tapping it shows them (only there).
   const pinFavorites = activeFilter === "all" && !q && hasFavorites;
   const favoriteCount = all.filter((r) => r.favorite).length;
+  const [favOpen, setFavOpen] = useState(false);
   // Favorites live inside the Favorites row, not in the list below it as well.
   const rest = pinFavorites ? shown.filter((r) => !r.favorite) : shown;
 
@@ -363,24 +364,18 @@ export default function Library() {
           </div>
         )}
         {pinFavorites && (
-          <button className="favorites-folder" onClick={() => choose("filter", "favorites")}>
-            <Icon name="star" size={20} filled />
-            <strong>Favorites</strong>
-            <span className="muted">{favoriteCount}</span>
-            <span className="favorites-folder-arrow" aria-hidden>›</span>
-          </button>
-        )}
-        {activeFilter === "all" && !q && feature("notes") && <CookThisWeek recipes={all} />}
-        {activeFilter === "favorites" && !q && (
-          <div className="favorites-head">
-            <h2 className="list-heading">
-              <Icon name="star" size={14} filled /> Favorites
-            </h2>
-            <button className="link-btn small" onClick={() => choose("filter", "all")}>
-              Back to all recipes
+          <div className={favOpen ? "favorites-folder-wrap open" : "favorites-folder-wrap"}>
+            {/* Like a folder: tap to open, tap the same bar to close. */}
+            <button className="favorites-folder" aria-expanded={favOpen} onClick={() => setFavOpen(!favOpen)}>
+              <Icon name="star" size={20} filled />
+              <strong>Favorites</strong>
+              <span className="muted">{favoriteCount}</span>
+              <span className="favorites-folder-arrow" aria-hidden>›</span>
             </button>
+            {favOpen && <ul className="recipe-list favorites-list">{shown.filter((r) => r.favorite).map(row)}</ul>}
           </div>
         )}
+        {activeFilter === "all" && !q && feature("notes") && <CookThisWeek recipes={all} />}
         {rest.length > 0 && activeFilter === "all" && !q && (pinFavorites || (feature("notes") && all.length > 3)) && (
           <h2 className="list-heading list-heading-all">{pinFavorites ? "Other recipes" : "All recipes"}</h2>
         )}

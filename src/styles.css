@@ -1344,3 +1344,10 @@ main.page section > h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; 
 .favorites-folder .muted { margin-left: 2px; }
 .favorites-folder-arrow { margin-left: auto; color: var(--muted); font-size: 22px; line-height: 1; }
 .favorites-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.favorites-folder-wrap { margin: 4px 0 8px; }
+.favorites-folder-wrap .favorites-folder { margin: 0; }
+.favorites-folder-wrap.open .favorites-folder { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.favorites-folder-wrap.open .favorites-folder-arrow { transform: rotate(90deg); }
+.favorites-folder-arrow { transition: transform 0.15s; }
+.favorites-list { border: 1px solid var(--line); border-top: none; border-radius: 0 0 14px 14px; padding: 0 14px; margin: 0; }
+.favorites-list > li:last-child { border-bottom: none; }
