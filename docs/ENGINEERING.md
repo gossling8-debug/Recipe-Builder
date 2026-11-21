@@ -38,7 +38,7 @@ Every change is put in the highest tier of anything it touches.
    are fixed or answered in the PR. Tier-3 areas are also on the list for the periodic
    human security review.
 7. **Release, watch, learn**: merge only when every check is green; know how to roll back
-   ([RUNBOOK.md](RUNBOOK.md) — phase 2); watch the error reports after release; after any
+   ([RUNBOOK.md](RUNBOOK.md)); watch the error reports after release; after any
    incident, write down what happened and add the missing test or rule.
 
 ## 3. Rules for everyone (people and AI)
@@ -76,11 +76,11 @@ From the OWASP Top 10, OWASP ASVS 5.0 and the OWASP Top 10 for LLM Applications:
 | Standard | What it asks | Where Cardamix does it |
 |---|---|---|
 | NIST SSDF PO (prepare the organization) | Roles, requirements, toolchains | This document; `CLAUDE.md`; required checks |
-| NIST SSDF PS (protect the software) | Protect code and releases | No secrets in code; pinned actions; least-privilege workflows; branch protection (phase 2) |
+| NIST SSDF PS (protect the software) | Protect code and releases | No secrets in code; pinned actions; least-privilege workflows; branch protection (checks required before merging) |
 | NIST SSDF PW (produce well-secured software) | Threat modelling, review, testing | Tiers, checklist, layered tests, independent review |
 | NIST SSDF RV (respond to vulnerabilities) | Find, fix, learn | Dependabot, CodeQL, `SECURITY.md`, incident notes |
 | NIST SP 800-218A (AI) | Extra care for AI-generated code and AI features | Human approval of every merge; tests proven to fail; LLM checklist |
-| NIST CSF 2.0 (Govern, Identify, Protect, Detect, Respond, Recover) | A whole security programme | This framework; INVARIANTS; checks; error reports; runbook and backups (phase 2) |
+| NIST CSF 2.0 (Govern, Identify, Protect, Detect, Respond, Recover) | A whole security programme | This framework; INVARIANTS; checks; error reports; uptime check; [RUNBOOK.md](RUNBOOK.md); daily backups and point-in-time recovery |
 | ISO/IEC 27001:2022 Annex A 8.25–8.29, 8.32 | Secure development life cycle, secure coding, security testing, change management | Sections 2–4 |
 | OWASP ASVS 5.0 / Top 10 / CWE Top 25 | Web app security requirements | Checklist; database-rule tests; CodeQL `security-extended` |
 | OWASP Top 10 for LLM Applications | Prompt injection, unsafe output, cost abuse | Strict output format, plain-text display, server-side limits |
