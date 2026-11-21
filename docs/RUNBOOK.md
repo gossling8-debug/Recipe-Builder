@@ -37,10 +37,10 @@ If a deploy itself failed: GitHub → **Actions** → the failed run → **Re-ru
 
 ## 4. Get data back
 
-Database backups (as set on 21 Nov 2026): point-in-time recovery (any minute in the last
-7 days) and scheduled daily backups kept 98 days. Google Cloud → **Firestore** →
-**(default)** → **Disaster recovery**. Now and then, check that recent backups are listed
-there — a schedule that silently stopped is only found by looking.
+Database backups: point-in-time recovery (any minute in the last 7 days) and scheduled
+backups kept 98 days (both seen on 21 Nov 2026 in Google Cloud → **Firestore** →
+**(default)** → **Disaster recovery**). Now and then, open the **Backups** list there and
+check recent ones are actually listed — a schedule that stopped is only found by looking.
 
 A restore always goes into a **new** database (nothing is overwritten), so it's safe to try:
 pick the backup or the time, restore to a new database, check the data there, and then

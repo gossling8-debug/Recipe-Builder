@@ -56,12 +56,15 @@ jobs:
           PROBLEMS: ${{ steps.check.outputs.problems }}
         run: |
           title="Cardamix looks down"
-          # Only this check's own issue counts (the repository is public: anyone can open an issue with that title).
-          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --author "app/github-actions" --limit 100 --json number,title \
+          label="uptime-check"
+          # Only this check's own issue counts: it carries a label, and only people with write
+          # access can label issues (the repository is public: anyone can open one with that title).
+          gh label create "$label" --repo "$GITHUB_REPOSITORY" --color B60205 --description "Opened by the uptime check" 2>/dev/null || true
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label "$label" --limit 100 --json number,title \
             --jq "map(select(.title == \"$title\")) | .[0].number // empty")
           if [ -n "$PROBLEMS" ]; then
             if [ -z "$open" ]; then
-              gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$(printf 'The uptime check found a problem at %s UTC:\n\n%s\nWhat to do: docs/RUNBOOK.md. This issue closes by itself when everything answers again.' "$(date -u '+%Y-%m-%d %H:%M')" "$PROBLEMS")"
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --label "$label" --body "$(printf 'The uptime check found a problem at %s UTC:\n\n%s\nWhat to do: docs/RUNBOOK.md. This issue closes by itself when everything answers again.' "$(date -u '+%Y-%m-%d %H:%M')" "$PROBLEMS")"
               exit 1 # once, so the failed run is easy to find; later runs stay quiet (one email per outage)
             fi
           elif [ -n "$open" ]; then
