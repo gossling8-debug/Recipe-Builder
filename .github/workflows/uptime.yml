@@ -1,0 +1,69 @@
+name: Uptime check
+
+# Every 15 minutes: is Cardamix answering? If not, opens an issue (which emails the owner);
+# when it's back, the issue is closed with a note. Nothing here signs in, uses AI or costs
+# anything: the server checks expect "please sign in" answers, which prove it's up.
+# It only proves the site and the server answer — not that the database, Stripe or the AI
+# key work behind them (those show up in the owner dashboard's error reports).
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write # to open and close the outage issue
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check the app and the server
+        id: check
+        run: |
+          problems=""
+          check() { # name, expected status codes (regex), curl args…
+            name=$1; want=$2; shift 2
+            code=""
+            for attempt in 1 2 3; do # a single blip isn't an outage
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$@" || true)
+              [[ "$code" =~ ^($want)$ ]] && { echo "ok   $name ($code)"; return; }
+              [ "$attempt" -lt 3 ] && sleep 10
+            done
+            [ "$code" = "000" ] && code="" # curl's "no connection or timed out"
+            echo "FAIL $name (got ${code:-no answer})"
+            problems+="- **$name**: expected $want, got ${code:-no answer}"$'\n'
+          }
+          check "Website (cardamix.com)" "200" -L https://cardamix.com/
+          check "AI server" "401" -X POST -H 'content-type: application/json' -d '{}' \
+            https://us-central1-recipe-relief.cloudfunctions.net/ai/v1/messages
+          check "Plans server" "401" -X POST -H 'content-type: application/json' -d '{"data":{}}' \
+            https://us-central1-recipe-relief.cloudfunctions.net/refreshPlan
+          {
+            echo "problems<<EOF"
+            printf '%s' "$problems"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open or close the outage issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROBLEMS: ${{ steps.check.outputs.problems }}
+        run: |
+          title="Cardamix looks down"
+          # Only this check's own issue counts (the repository is public: anyone can open an issue with that title).
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --author "app/github-actions" --limit 100 --json number,title \
+            --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ -n "$PROBLEMS" ]; then
+            if [ -z "$open" ]; then
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$(printf 'The uptime check found a problem at %s UTC:\n\n%s\nWhat to do: docs/RUNBOOK.md. This issue closes by itself when everything answers again.' "$(date -u '+%Y-%m-%d %H:%M')" "$PROBLEMS")"
+              exit 1 # once, so the failed run is easy to find; later runs stay quiet (one email per outage)
+            fi
+          elif [ -n "$open" ]; then
+            gh issue close "$open" --repo "$GITHUB_REPOSITORY" --comment "Everything is answering again ($(date -u '+%Y-%m-%d %H:%M') UTC)."
+          fi
