@@ -14,7 +14,9 @@ export interface BookSpec {
   subtitle: string;
   dedication: string;
   recipeIds: string[];
+  /** The cover: a recipe's dish photo, or one uploaded just for the cover (coverPhoto wins). */
   coverRecipeId: string | null;
+  coverPhoto?: string | null;
   includePhotos: boolean;
   updatedAt: number;
 }

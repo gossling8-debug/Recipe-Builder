@@ -23,7 +23,8 @@ import {
   type BookOrder,
   type BookSpec,
 } from "../lib/book";
-import { listRecipes } from "../lib/db";
+import { listRecipes, saveRecipe } from "../lib/db";
+import { compressPhoto } from "../lib/image";
 import { href, navigate } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
 
@@ -198,7 +199,25 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
   }, [recipes, search]);
   if (!book || !recipes) return <Loading delay={0} />;
   const chosen = new Set(book.recipeIds);
-  const withPhotos = recipes.filter((r) => chosen.has(r.id) && r.photos.length > 0);
+  // Only photos of the food (the dish photo), never the scanned recipe cards.
+  const withPhotos = recipes.filter((r) => chosen.has(r.id) && !!r.dishPhoto);
+  const pickPhoto = (onFile: (f: File) => void) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = () => input.files?.[0] && onFile(input.files[0]);
+    input.click();
+  };
+  /** A dish photo for a recipe, picked here: saved on the recipe itself, so it shows everywhere. */
+  const addDishPhoto = (r: SavedRecipe) =>
+    pickPhoto((file) =>
+      void run(`photo-${r.id}`, async () => {
+        const updated = { ...r, dishPhoto: await compressPhoto(file, 1600, 0.82), updatedAt: Date.now() };
+        await saveRecipe(updated);
+        setRecipes((all) => (all ?? []).map((x) => (x.id === r.id ? updated : x)));
+        setPages(null);
+      }),
+    );
   const toggle = (rid: string) =>
     update({ recipeIds: chosen.has(rid) ? book.recipeIds.filter((x) => x !== rid) : [...book.recipeIds, rid], coverRecipeId: book.coverRecipeId === rid && chosen.has(rid) ? null : book.coverRecipeId });
   const addressOk = address.name && address.street1 && address.city && address.state && address.postcode && address.phone;
@@ -249,27 +268,56 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
                   <input type="checkbox" checked={chosen.has(r.id)} onChange={() => toggle(r.id)} />
                   <span>{r.title}</span>
                 </label>
+                {chosen.has(r.id) && book.includePhotos && (
+                  <span className="book-recipe-photo">
+                    {r.dishPhoto && <img src={r.dishPhoto} alt="" />}
+                    <button className="link-btn small" disabled={!!busy} onClick={() => addDishPhoto(r)}>
+                      {busy === `photo-${r.id}` ? "Saving…" : r.dishPhoto ? "Change" : "Add photo"}
+                    </button>
+                  </span>
+                )}
               </li>
             ))}
           </ul>
-          <p className="muted small">The book is made from the recipes backed up to your account, as they are when it's printed.</p>
+          <p className="muted small">
+            {book.includePhotos ? "Each recipe shows a photo of the dish — yours from the recipe page, or add one here. Scanned recipe cards aren't printed. " : ""}
+            The book is made from the recipes backed up to your account, as they are when it's printed.
+          </p>
         </section>
 
-        {withPhotos.length > 0 && (
-          <section>
-            <h3>Cover photo</h3>
-            <div className="book-covers">
-              <button className={book.coverRecipeId === null ? "book-cover none active" : "book-cover none"} onClick={() => update({ coverRecipeId: null })}>
-                No photo
+        <section>
+          <h3>Cover photo</h3>
+          <div className="book-covers">
+            <button
+              className={!book.coverRecipeId && !book.coverPhoto ? "book-cover none active" : "book-cover none"}
+              onClick={() => update({ coverRecipeId: null, coverPhoto: null })}
+            >
+              No photo
+            </button>
+            {book.coverPhoto && (
+              <button className="book-cover active" aria-label="Your cover photo">
+                <img src={book.coverPhoto} alt="" />
               </button>
-              {withPhotos.map((r) => (
-                <button key={r.id} className={book.coverRecipeId === r.id ? "book-cover active" : "book-cover"} onClick={() => update({ coverRecipeId: r.id })} aria-label={r.title}>
-                  <img src={r.photos[0]} alt="" />
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
+            )}
+            {withPhotos.map((r) => (
+              <button
+                key={r.id}
+                className={!book.coverPhoto && book.coverRecipeId === r.id ? "book-cover active" : "book-cover"}
+                onClick={() => update({ coverRecipeId: r.id, coverPhoto: null })}
+                aria-label={r.title}
+              >
+                <img src={r.dishPhoto} alt="" />
+              </button>
+            ))}
+            <button
+              className="book-cover none"
+              disabled={!!busy}
+              onClick={() => pickPhoto((file) => void run("cover-photo", async () => update({ coverPhoto: await compressPhoto(file, 1600, 0.8), coverRecipeId: null })))}
+            >
+              {busy === "cover-photo" ? "…" : "Upload a photo"}
+            </button>
+          </div>
+        </section>
 
         <section>
           <div className="button-row">
