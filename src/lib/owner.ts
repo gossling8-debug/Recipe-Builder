@@ -4,7 +4,18 @@ import { callable } from "./subscription";
 export interface OwnerStats {
   at: number;
   accounts: { total: number; verified: number; new7: number; new30: number; active7: number; active30: number };
-  plus: { monthly: number; yearly: number; comp: number; beta: number; revenuePerMonth: number };
+  plus: {
+    monthly: number;
+    yearly: number;
+    familyMonthly?: number;
+    familyYearly?: number;
+    household?: number;
+    comp: number;
+    beta: number;
+    revenuePerMonth: number;
+  };
+  /** Toward upgrading: how many reached each step (first time), and of them how many pay now. */
+  upgrade?: Record<"cardSeen" | "cardDismissed" | "plansOpened" | "limitHit" | "samplesTried", { reached: number; payNow: number }> & { paying: number };
   ai: { month: string; spent: number; uses: number; people: number; byKind: Record<string, number>; byPlan: Record<string, number>; topSpends: number[] };
   content: { mixRecipes: number; mixReported: number; mixHidden: number; cookbooks: number };
   errors: {

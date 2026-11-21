@@ -1,3 +1,4 @@
+import { noteStep } from "../lib/funnel";
 import { getPeople } from "../lib/autoPlan";
 import { hasPlus } from "../lib/features";
 import {
@@ -169,6 +170,9 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
   const kindNow = mode === "create" ? "create" : "scan";
   const left = counted && usage !== undefined ? freeLeft(kindNow, usage) : null;
   const outOfFree = left === 0;
+  useEffect(() => {
+    if (outOfFree) void noteStep("limitHit");
+  }, [outOfFree]);
   // Free plan: AI needs a confirmed email address.
   const [cloud, setCloud] = useState(cloudState());
   useEffect(() => subscribeCloud(setCloud), []);

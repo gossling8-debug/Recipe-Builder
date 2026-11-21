@@ -54,6 +54,17 @@ service cloud.firestore {
     }
     // Error reports from the app: a short technical note, no account id or
     // recipe content. Signed-in people can add one; only admins can read them.
+    // The first time someone reaches each step toward upgrading (times only), for the
+    // owner dashboard's totals. Each person writes only their own; only the server reads them.
+    function stepOk(d, k) { return !(k in d) || d[k] is int; }
+    match /funnel/{owner} {
+      allow create, update: if signedIn() && uid() == owner
+        && request.resource.data.keys().hasOnly(['cardSeen', 'cardDismissed', 'plansOpened', 'limitHit', 'samplesTried'])
+        && stepOk(request.resource.data, 'cardSeen') && stepOk(request.resource.data, 'cardDismissed')
+        && stepOk(request.resource.data, 'plansOpened') && stepOk(request.resource.data, 'limitHit')
+        && stepOk(request.resource.data, 'samplesTried');
+    }
+
     match /errors/{id} {
       allow read, delete: if isAdmin();
       allow create: if signedIn()

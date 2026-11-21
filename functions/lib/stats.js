@@ -7,11 +7,13 @@ import { monthKey } from "./guard.js";
 
 const DAY = 86_400_000;
 const PRICE = { month: 4.49, year: 34.99 };
+const FAMILY_PRICE = { month: 8.99, year: 69.99 };
 
 /**
  * @param {object} i
  * @param {{ created: number, lastActive: number, verified: boolean }[]} i.users   from Firebase Auth
- * @param {{ plan?: string, source?: string, interval?: string }[]} i.plans        plans/{uid}
+ * @param {{ uid?: string, plan?: string, source?: string, interval?: string }[]} i.plans        plans/{uid}
+ * @param {{ uid?: string, cardSeen?: number, cardDismissed?: number, plansOpened?: number, limitHit?: number, samplesTried?: number }[]} [i.funnel]  funnel/{uid}
  * @param {{ month?: string, spent?: number, uses?: number, counts?: Record<string, number>, plan?: string }[]} i.usage  aiUsage/{uid}
  * @param {{ reportCount?: number, reporters?: Record<string, boolean> }[]} i.mix                       mix/{id}
  * @param {number} i.cookbooks
@@ -19,7 +21,7 @@ const PRICE = { month: 4.49, year: 34.99 };
  * @param {number} [i.now]
  * @param {number} [i.hideAfter]  reports that hide a Mix recipe
  */
-export function summarize({ users, plans, usage, mix, cookbooks, errors, now = Date.now(), hideAfter = 3 }) {
+export function summarize({ users, plans, usage, mix, cookbooks, errors, funnel = [], now = Date.now(), hideAfter = 3 }) {
   const since = (days) => now - days * DAY;
   const accounts = {
     total: users.length,
@@ -33,13 +35,36 @@ export function summarize({ users, plans, usage, mix, cookbooks, errors, now = D
   const paying = plans.filter((p) => p.plan === "plus" && p.source === "stripe");
   const monthly = paying.filter((p) => p.interval !== "year").length;
   const yearly = paying.filter((p) => p.interval === "year").length;
+  const payingFamily = plans.filter((p) => p.plan === "family" && p.source === "stripe");
+  const familyMonthly = payingFamily.filter((p) => p.interval !== "year").length;
+  const familyYearly = payingFamily.filter((p) => p.interval === "year").length;
   const plus = {
     monthly,
     yearly,
+    familyMonthly,
+    familyYearly,
+    household: plans.filter((p) => p.source === "household").length, // on someone else's Family plan
     comp: plans.filter((p) => p.plan === "plus" && p.source === "comp").length,
     beta: plans.filter((p) => p.plan === "plus" && p.source === "beta").length,
     // Before Stripe's fees; yearly spread over 12 months.
-    revenuePerMonth: round(monthly * PRICE.month + (yearly * PRICE.year) / 12),
+    revenuePerMonth: round(
+      monthly * PRICE.month + (yearly * PRICE.year) / 12 + familyMonthly * FAMILY_PRICE.month + (familyYearly * FAMILY_PRICE.year) / 12,
+    ),
+  };
+
+  // Toward upgrading: how many reached each step (the first time), and of those, how many pay now.
+  const pays = new Set(plans.filter((p) => p.source === "stripe" && (p.plan === "plus" || p.plan === "family")).map((p) => p.uid));
+  const step = (k) => {
+    const reached = funnel.filter((f) => typeof f[k] === "number");
+    return { reached: reached.length, payNow: reached.filter((f) => pays.has(f.uid)).length };
+  };
+  const upgrade = {
+    cardSeen: step("cardSeen"),
+    cardDismissed: step("cardDismissed"),
+    plansOpened: step("plansOpened"),
+    limitHit: step("limitHit"),
+    samplesTried: step("samplesTried"),
+    paying: pays.size,
   };
 
   const month = monthKey(now);
@@ -87,7 +112,7 @@ export function summarize({ users, plans, usage, mix, cookbooks, errors, now = D
     groups: [...groups.values()].sort((a, b) => b.count - a.count || b.lastAt - a.lastAt).slice(0, 15),
   };
 
-  return { at: now, accounts, plus, ai, content, errors: errorsOut };
+  return { at: now, accounts, plus, upgrade, ai, content, errors: errorsOut };
 }
 
 const round = (n) => Math.round(n * 100) / 100;

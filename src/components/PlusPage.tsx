@@ -1,3 +1,4 @@
+import { noteStep } from "../lib/funnel";
 import { useEffect, useState } from "react";
 import { FEATURES } from "../lib/features";
 import { href } from "../lib/route";
@@ -37,6 +38,7 @@ export default function PlusPage({ done }: { done?: boolean }) {
         const p = await refreshMyPlan();
         if (stop) return;
         setPlan(p);
+        if (p.plan === "free" && !done) void noteStep("plansOpened");
         if (p.source === "stripe" && p.interval === "month") setInterval("monthly");
         if (p.plan === "free" && --tries > 0) return void setTimeout(check, 2500);
       } catch {

@@ -258,16 +258,18 @@ async function allUsers() {
 
 export const ownerStats = onCall({ ...opts, timeoutSeconds: 60 }, async (req) => {
   await requireAdmin(req);
-  const [users, plans, usage, mix, cookbooks, errors] = await Promise.all([
+  const [users, plans, usage, mix, cookbooks, errors, funnel] = await Promise.all([
     allUsers(),
     db.collection("plans").select("plan", "source", "interval").get(),
     db.collection("aiUsage").select("month", "spent", "uses", "counts", "plan").get(),
     db.collection("mix").select("reportCount", "reporters").get(),
     db.collection("cookbooks").count().get(),
     db.collection("errors").orderBy("at", "desc").limit(500).get(),
+    db.collection("funnel").get(),
   ]);
   const data = (q) => q.docs.map((d) => d.data());
-  return summarize({ users, plans: data(plans), usage: data(usage), mix: data(mix), cookbooks: cookbooks.data().count, errors: data(errors) });
+  const withId = (q) => q.docs.map((d) => ({ ...d.data(), uid: d.id })); // to match steps with plans; never returned
+  return summarize({ users, plans: withId(plans), usage: data(usage), mix: data(mix), cookbooks: cookbooks.data().count, errors: data(errors), funnel: withId(funnel) });
 });
 
 /**

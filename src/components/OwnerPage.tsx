@@ -84,6 +84,9 @@ export default function OwnerPage() {
         s.accounts.total -
           s.plus.monthly -
           s.plus.yearly -
+          (s.plus.familyMonthly ?? 0) -
+          (s.plus.familyYearly ?? 0) -
+          (s.plus.household ?? 0) -
           s.plus.comp -
           s.plus.beta,
       )
@@ -122,22 +125,50 @@ export default function OwnerPage() {
             </section>
 
             <section>
-              <h3>Plus</h3>
+              <h3>Paying</h3>
               <div className="owner-grid">
-                <Stat n={s.plus.monthly} label="paying monthly" />
-                <Stat n={s.plus.yearly} label="paying yearly" />
+                <Stat n={s.plus.monthly} label="Plus monthly" />
+                <Stat n={s.plus.yearly} label="Plus yearly" />
+                <Stat n={s.plus.familyMonthly ?? 0} label="Family monthly" />
+                <Stat n={s.plus.familyYearly ?? 0} label="Family yearly" />
                 <Stat
                   n={money(s.plus.revenuePerMonth)}
                   label="a month, before Stripe fees"
                 />
               </div>
               <p className="muted small">
-                Free Plus: {s.plus.beta} in the testing period, {s.plus.comp}{" "}
+                {s.plus.household ?? 0} more on someone's Family plan. Free Plus: {s.plus.beta} in the testing period, {s.plus.comp}{" "}
                 gifted. On the free plan: {free}.
                 {s.plus.beta > 0 &&
                   " (The testing period gives everyone Plus until it's switched off.)"}
               </p>
             </section>
+
+            {s.upgrade && (
+              <section>
+                <h3>Toward upgrading</h3>
+                <p className="muted small">People who reached each step at least once, and how many of them pay now.</p>
+                <table className="owner-funnel">
+                  <tbody>
+                    {(
+                      [
+                        ["samplesTried", "Tried the sample recipes"],
+                        ["limitHit", "Used up the free recipe adds"],
+                        ["cardSeen", "Saw the Plus card"],
+                        ["cardDismissed", "Tapped “Not now”"],
+                        ["plansOpened", "Opened the plans page (on the free plan)"],
+                      ] as const
+                    ).map(([k, label]) => (
+                      <tr key={k}>
+                        <th scope="row">{label}</th>
+                        <td>{s.upgrade![k].reached}</td>
+                        <td className="muted">{s.upgrade![k].reached ? `${s.upgrade![k].payNow} pay now (${Math.round((100 * s.upgrade![k].payNow) / s.upgrade![k].reached)}%)` : ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            )}
 
             <section>
               <h3>AI this month</h3>

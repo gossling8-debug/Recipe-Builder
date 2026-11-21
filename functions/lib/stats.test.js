@@ -75,3 +75,44 @@ describe("owner dashboard summary", () => {
     expect(JSON.stringify(s)).not.toMatch(/example\.com|u1/);
   });
 });
+
+describe("Family and the steps toward upgrading", () => {
+  const base2 = { users: [], usage: [], mix: [], cookbooks: 0, errors: [], now: Date.parse("2026-11-21T12:00:00Z") };
+  it("counts paying Family in subscribers and revenue, and household members apart", () => {
+    const s = summarize({
+      ...base2,
+      plans: [
+        { plan: "plus", source: "stripe", interval: "month" },
+        { plan: "family", source: "stripe", interval: "month" },
+        { plan: "family", source: "stripe", interval: "year" },
+        { plan: "family", source: "household" },
+      ],
+    });
+    expect(s.plus).toMatchObject({ monthly: 1, yearly: 0, familyMonthly: 1, familyYearly: 1, household: 1 });
+    expect(s.plus.revenuePerMonth).toBe(19.31); // 4.49 + 8.99 + 69.99 / 12
+  });
+  it("counts each step once per person, and how many of them pay now, without naming anyone", () => {
+    const s = summarize({
+      ...base2,
+      plans: [
+        { uid: "a", plan: "plus", source: "stripe", interval: "month" },
+        { uid: "b", plan: "free", source: "none" },
+        { uid: "c", plan: "family", source: "stripe", interval: "year" },
+      ],
+      funnel: [
+        { uid: "a", cardSeen: 1, plansOpened: 2 },
+        { uid: "b", cardSeen: 1, cardDismissed: 2, limitHit: 3 },
+        { uid: "c", samplesTried: 1, plansOpened: 2 },
+      ],
+    });
+    expect(s.upgrade).toEqual({
+      cardSeen: { reached: 2, payNow: 1 },
+      cardDismissed: { reached: 1, payNow: 0 },
+      plansOpened: { reached: 2, payNow: 2 },
+      limitHit: { reached: 1, payNow: 0 },
+      samplesTried: { reached: 1, payNow: 1 },
+      paying: 2,
+    });
+    expect(JSON.stringify(s)).not.toMatch(/"uid"|"a"|"b"|"c"/);
+  });
+});
