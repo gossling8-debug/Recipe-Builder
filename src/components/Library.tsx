@@ -178,10 +178,10 @@ export default function Library() {
       : b.createdAt - a.createdAt,
     );
 
-  // On the plain "All" view, favorites are pinned in their own section at the top.
+  // On the plain "All" view, favorites are one row pinned at the top; tapping it shows them.
   const pinFavorites = activeFilter === "all" && !q && hasFavorites;
-  const favorites = pinFavorites ? shown.filter((r) => r.favorite) : [];
-  const rest = pinFavorites ? shown.filter((r) => !r.favorite) : shown;
+  const favoriteCount = all.filter((r) => r.favorite).length;
+  const rest = shown;
 
   const row = (r: SavedRecipe) => (
     <li key={r.id} className="recipe-row">
@@ -332,7 +332,6 @@ export default function Library() {
           <div className="filters" role="group" aria-label="Show">
             {[
               ["all", "All"],
-              ...(hasFavorites ? [["favorites", "Favorites"]] : []),
               ...(hasPantry ? [["canmake", "Can make now"]] : []),
               ...(avoiding ? [["safe", "Fits my avoid list"]] : []),
               ...tags.map((t) => [t, t]),
@@ -362,15 +361,26 @@ export default function Library() {
             </label>
           </div>
         )}
-        {activeFilter === "all" && !q && feature("notes") && <CookThisWeek recipes={all} />}
-        {favorites.length > 0 && (
-          <>
-            <h2 className="list-heading">Favorites</h2>
-            <ul className="recipe-list">{favorites.map(row)}</ul>
-            {rest.length > 0 && <h2 className="list-heading">All recipes</h2>}
-          </>
+        {pinFavorites && (
+          <button className="favorites-folder" onClick={() => choose("filter", "favorites")}>
+            <Icon name="star" size={20} filled />
+            <strong>Favorites</strong>
+            <span className="muted">{favoriteCount}</span>
+            <span className="favorites-folder-arrow" aria-hidden>›</span>
+          </button>
         )}
-        {rest.length > 0 && !pinFavorites && activeFilter === "all" && !q && feature("notes") && all.length > 3 && (
+        {activeFilter === "all" && !q && feature("notes") && <CookThisWeek recipes={all} />}
+        {activeFilter === "favorites" && !q && (
+          <div className="favorites-head">
+            <h2 className="list-heading">
+              <Icon name="star" size={14} filled /> Favorites
+            </h2>
+            <button className="link-btn small" onClick={() => choose("filter", "all")}>
+              Show all recipes
+            </button>
+          </div>
+        )}
+        {rest.length > 0 && activeFilter === "all" && !q && (pinFavorites || (feature("notes") && all.length > 3)) && (
           <h2 className="list-heading list-heading-all">All recipes</h2>
         )}
         {rest.length > 0 && <ul className="recipe-list">{rest.map(row)}</ul>}
