@@ -552,17 +552,24 @@ async function luluClient() {
   return lulu({ key: c.key, secret: c.secret, base: process.env.LULU_BASE_URL || (c.env === "production" ? "https://api.lulu.com" : "https://api.sandbox.lulu.com") });
 }
 
-/** The book's settings and its recipes (first photo each, when photos are on), from the account. */
+/**
+ * The book's settings and its recipes, from the account. Photos are the dish
+ * photos people took of the food (never the scanned recipe cards).
+ */
 async function bookContent(uid, bookId) {
   const spec = (await db.doc(`users/${uid}/books/${bookId}`).get()).data();
   if (!spec) throw new HttpsError("not-found", "That book isn't saved yet.");
   const ids = (spec.recipeIds ?? []).slice(0, 200);
-  const photo = async (id) => (await db.doc(`users/${uid}/photos/${id}_0`).get()).data()?.data ?? null;
+  const isPhoto = (v) => typeof v === "string" && /^data:image\/(jpeg|png);base64,/.test(v);
   const recipes = [];
+  const dish = {};
   for (const id of ids) {
     const d = (await db.doc(`users/${uid}/recipes/${id}`).get()).data();
     if (!d?.recipe || d.deleted) continue;
-    recipes.push({ ...d.recipe, photo: spec.includePhotos && d.photoCount ? await photo(id) : null });
+    const photo = isPhoto(d.recipe.dishPhoto) ? d.recipe.dishPhoto : null;
+    dish[id] = photo;
+    const { dishPhoto: _d, ...recipe } = d.recipe;
+    recipes.push({ ...recipe, photo: spec.includePhotos ? photo : null });
   }
   if (!recipes.length) throw new HttpsError("failed-precondition", "Pick at least one recipe for the book.");
   const book = {
@@ -570,7 +577,7 @@ async function bookContent(uid, bookId) {
     subtitle: String(spec.subtitle ?? "").slice(0, 120),
     dedication: String(spec.dedication ?? "").slice(0, 400),
     includePhotos: !!spec.includePhotos,
-    cover: spec.coverRecipeId ? await photo(spec.coverRecipeId) : null,
+    cover: isPhoto(spec.coverPhoto) ? spec.coverPhoto : spec.coverRecipeId ? (dish[spec.coverRecipeId] ?? null) : null,
   };
   return { book, recipes };
 }

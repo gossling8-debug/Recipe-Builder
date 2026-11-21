@@ -1286,3 +1286,6 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .book-cover.none { font-size: 13px; color: var(--muted); }
 .book-promo { display: flex; gap: 12px; align-items: flex-start; text-decoration: none; color: inherit; margin-top: 16px; }
 .book-order { margin-top: 8px; }
+.book-recipes li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.book-recipe-photo { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.book-recipe-photo img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
