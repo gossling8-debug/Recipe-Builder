@@ -736,3 +736,13 @@ export const ownerSetLulu = onCall({ ...opts }, async (req) => {
   await db.doc("config/lulu").set({ key, secret, env, setAt: Date.now() });
   return { ok: true, env };
 });
+
+/** Owner dashboard: app-wide settings for everyone (config/app, readable by all). */
+export const ownerSetAppConfig = onCall({ ...opts }, async (req) => {
+  await requireAdmin(req);
+  const patch = {};
+  if (typeof req.data?.animatedLogo === "boolean") patch.animatedLogo = req.data.animatedLogo;
+  if (!Object.keys(patch).length) throw new HttpsError("invalid-argument", "Nothing to change.");
+  await db.doc("config/app").set({ ...patch, updatedAt: Date.now() }, { merge: true });
+  return { ok: true };
+});

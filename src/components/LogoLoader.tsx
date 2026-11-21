@@ -18,26 +18,27 @@ const reducedMotion = () => {
  * motion) for people who've asked their phone for reduced motion.
  */
 /**
- * The animated logo for everyone, unless they turn it off in Settings →
- * Appearance (which brings back the plain spinner). To take it out for
- * everyone, set this to false: the plain spinner shows everywhere and the
- * Settings switch disappears.
+ * The animated logo, for everyone. The owner turns it on or off for all
+ * users on the owner dashboard (config/app.animatedLogo, see appConfig.ts);
+ * off brings back the plain spinner. Setting this to false takes it out in
+ * the code itself.
  */
 export const ANIMATED_LOGO = true;
 
-const PLAIN_KEY = "recipe-builder.plainLoader"; // "1": this person turned it off
+const OFF_KEY = "recipe-builder.logoOffForAll"; // "1": the owner turned it off (kept from config/app)
 export function animatedLogoOn(): boolean {
   if (!ANIMATED_LOGO) return false;
   try {
-    return localStorage.getItem(PLAIN_KEY) !== "1";
+    return localStorage.getItem(OFF_KEY) !== "1";
   } catch {
     return true;
   }
 }
-export function setAnimatedLogo(on: boolean): void {
+/** Keeps the owner's setting on this phone, so it applies from the first screen. */
+export function rememberAnimatedLogo(on: boolean): void {
   try {
-    if (on) localStorage.removeItem(PLAIN_KEY);
-    else localStorage.setItem(PLAIN_KEY, "1");
+    if (on) localStorage.removeItem(OFF_KEY);
+    else localStorage.setItem(OFF_KEY, "1");
   } catch {
     /* this visit only */
   }
