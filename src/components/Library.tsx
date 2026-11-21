@@ -30,6 +30,7 @@ import Icon from "./Icon";
 import CookThisWeek from "./CookThisWeek";
 import Tour from "./Tour";
 import UpNext from "./UpNext";
+import UpgradeCard from "./UpgradeCard";
 import { finishTour, queueAddTour, tourDone } from "../lib/tour";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 import { href, navigate } from "../lib/route";
@@ -311,6 +312,7 @@ export default function Library() {
         {error && <div className="callout error">{error}</div>}
         {mode === "memory" && <div className="callout error">{STORAGE_MODE_TEXT.memory}</div>}
         {mode === "local" && <div className="callout warn small">{STORAGE_MODE_TEXT.local}</div>}
+        <UpgradeCard show={!!cloud.uid && !!cloud.emailVerified && all.length > 0 && !(tourReady && !tourClosed)} />
         {recipes && recipes.length > 0 && (
           <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
         )}

@@ -1375,3 +1375,14 @@ main.page section > h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; 
 .today-card .plan-strip + .plan-strip-row, .today-card .plan-strip-row + .plan-strip { border-top: 1px solid color-mix(in srgb, var(--text) 10%, transparent); }
 .empty-actions { margin-top: 16px; }
 .samples-note { margin: 4px 0 12px; }
+
+/* Free plan: what Plus adds (home screen). */
+.upgrade-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 0 0 16px; background: var(--accent-soft); }
+.upgrade-card ul { list-style: none; padding: 0; margin: 8px 0 12px; }
+.upgrade-card li { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
+.upgrade-card li .icon { color: var(--accent); flex-shrink: 0; }
+.upgrade-card .button-row { margin: 0; }
+.family-quote p { margin: 0 0 10px; }
+.upgrade-card li { font-size: 15px; }
+.upgrade-card .button-row { display: flex; flex-direction: row; gap: 10px; }
+.upgrade-card .button-row .btn { flex: 1; margin: 0; }
