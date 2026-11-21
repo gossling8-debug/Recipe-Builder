@@ -72,6 +72,8 @@ export async function leaveBook(db, bookDoc, uid) {
 
 /** Everything an account left in the database (its plan and Stripe records are handled separately). */
 export async function deleteUserData(db, uid, email) {
+  // Which upgrade steps they reached (owner dashboard totals).
+  await db.doc(`funnel/${uid}`).delete();
   // Invites they sent, and any sent to them.
   await deleteAll(db.collection("invites").where("fromUid", "==", uid));
   if (email) await deleteAll(db.collection("invites").where("email", "==", String(email).toLowerCase()));

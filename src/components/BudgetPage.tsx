@@ -86,7 +86,7 @@ export default function BudgetPage() {
       <main className="page">
         {saved && <div className="callout small">{saved}</div>}
         <section className="budget-week">
-          <h3>Groceries this week</h3>
+          <h2 className="h3">Groceries this week</h2>
           {budget > 0 ? (
             <>
               <p className="budget-big">
@@ -157,7 +157,7 @@ export default function BudgetPage() {
 
         {plannedMeals > 0 && (
           <section>
-            <h3>Your planned dinners</h3>
+            <h2 className="h3">Your planned dinners</h2>
             <p>
               ≈ <strong>{dollars(planned)}</strong> for {plannedMeals} {plannedMeals === 1 ? "dinner" : "dinners"} in the next 7 days
               {budget > 0 && planned > 0 && <span className="muted"> ({Math.round((planned / budget) * 100)}% of your weekly budget)</span>}
@@ -176,7 +176,7 @@ export default function BudgetPage() {
         {/* Shown once there's something to show (no empty-state explanations). */}
         {stores.length > 0 && (
         <section>
-          <h3>Where it's cheapest</h3>
+          <h2 className="h3">Where it's cheapest</h2>
           {(
             <ul className="cheap-list">
               {stores.map((x) => (
@@ -207,7 +207,7 @@ export default function BudgetPage() {
 
         {cheapest.length > 0 && (
         <section>
-          <h3>Cheapest dinners</h3>
+          <h2 className="h3">Cheapest dinners</h2>
           {(
             <ul className="cheap-list">
               {cheapest.map(({ r, per, c }) => (

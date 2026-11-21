@@ -42,7 +42,7 @@ export default function Welcome({ onDone }: { onDone: () => void }) {
         <>
           <h1 className="page-title">Welcome to Cardamix</h1>
           <p>Snap a photo of any recipe card, cookbook page or screenshot, and it becomes a clean recipe you can cook from, scale and shop for.</p>
-          <h3>How many people do you usually cook for?</h3>
+          <h2 className="h3">How many people do you usually cook for?</h2>
           <div className="people-row">
             <button className="icon-btn small-btn" aria-label="Fewer people" disabled={people <= 1} onClick={() => setPeopleState(people - 1)}>
               −

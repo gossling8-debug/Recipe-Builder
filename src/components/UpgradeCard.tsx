@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { noteStep } from "../lib/funnel";
 import Icon from "./Icon";
 import { plan } from "../lib/features";
 import { href } from "../lib/route";
@@ -21,8 +22,13 @@ const hiddenUntil = (): number => {
  */
 export default function UpgradeCard({ show }: { show: boolean }) {
   const [hidden, setHidden] = useState(() => hiddenUntil() > Date.now());
-  if (!show || hidden || plan() !== "free") return null;
+  const visible = show && !hidden && plan() === "free";
+  useEffect(() => {
+    if (visible) void noteStep("cardSeen");
+  }, [visible]);
+  if (!visible) return null;
   const notNow = () => {
+    void noteStep("cardDismissed");
     setHidden(true);
     try {
       localStorage.setItem(KEY, String(Date.now() + HIDE_FOR));

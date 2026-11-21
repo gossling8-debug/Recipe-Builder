@@ -19,14 +19,14 @@ export default function TermsPage() {
           <a href={href({ name: "privacy" })}>privacy policy</a>, which explains what is stored and who can see it.
         </p>
 
-        <h3>Your account</h3>
+        <h2 className="h3">Your account</h2>
         <ul>
           <li>You must be at least 13 years old to use Cardamix.</li>
           <li>Keep your password private. You're responsible for what happens in your account.</li>
           <li>You can delete your account at any time in Settings → Account.</li>
         </ul>
 
-        <h3>Cardamix Plus</h3>
+        <h2 className="h3">Cardamix Plus</h2>
         <ul>
           <li>
             Plus is a subscription, billed monthly or yearly through Stripe at the price shown when you subscribe. It renews automatically
@@ -43,7 +43,7 @@ export default function TermsPage() {
           <li>We'll tell you at least 30 days before a price change affects your subscription. You can cancel before it takes effect.</li>
         </ul>
 
-        <h3>AI features and your monthly AI</h3>
+        <h2 className="h3">AI features and your monthly AI</h2>
         <ul>
           <li>
             Each plan includes a monthly amount of AI use (reading recipes, creating recipes, receipts and more). It resets each month,
@@ -55,7 +55,7 @@ export default function TermsPage() {
           <li>We may limit use that looks automated or abusive, to keep the service working for everyone.</li>
         </ul>
 
-        <h3>Recipes, nutrition and food safety</h3>
+        <h2 className="h3">Recipes, nutrition and food safety</h2>
         <ul>
           <li>
             Recipes read, created or suggested by AI can contain mistakes: amounts, times, temperatures or ingredients. Created recipes are
@@ -72,7 +72,7 @@ export default function TermsPage() {
           </li>
         </ul>
 
-        <h3>Your content</h3>
+        <h2 className="h3">Your content</h2>
         <ul>
           <li>
             Your recipes, photos, notes and memories stay yours. You give us permission only to store, sync and show them as the app needs
@@ -91,7 +91,7 @@ export default function TermsPage() {
           </li>
         </ul>
 
-        <h3>Rules for The Mix and shared cookbooks</h3>
+        <h2 className="h3">Rules for The Mix and shared cookbooks</h2>
         <p>When you publish to The Mix or share in a cookbook, don't post:</p>
         <ul>
           <li>anything that isn't a recipe (or a family memory, in a cookbook);</li>
@@ -105,7 +105,7 @@ export default function TermsPage() {
           break them repeatedly or seriously.
         </p>
 
-        <h3>The service</h3>
+        <h2 className="h3">The service</h2>
         <ul>
           <li>
             We work to keep Cardamix running and your data safe, but it's provided “as is”: it may sometimes be unavailable, and features
@@ -120,7 +120,7 @@ export default function TermsPage() {
           </li>
         </ul>
 
-        <h3>Changes and contact</h3>
+        <h2 className="h3">Changes and contact</h2>
         <p>
           If these terms change, the date at the top changes too; for important changes we'll tell you in the app. Using Cardamix after
           a change means you accept the new terms. Questions:{" "}

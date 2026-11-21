@@ -23,6 +23,7 @@ import SearchBox from "./SearchBox";
 import { useToast } from "./Toast";
 import { deleteWithUndo } from "../lib/undoDelete";
 import { addSamples, isSample, removeSamples } from "../lib/samples";
+import { noteStep } from "../lib/funnel";
 import { removeFromShopping } from "../lib/shopping";
 import Welcome from "./Welcome";
 import { welcomeDone } from "../lib/welcome";
@@ -98,6 +99,7 @@ export default function Library() {
   const [addingSamples, setAddingSamples] = useState(false);
   async function trySamples() {
     setAddingSamples(true);
+    void noteStep("samplesTried");
     await addSamples().catch(() => {});
     setRecipes(await listRecipes().catch(() => []));
     setAddingSamples(false);

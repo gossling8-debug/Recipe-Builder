@@ -12,7 +12,7 @@ export default function AppLookSection() {
   }, []);
   return (
     <section>
-      <h3>Loading logo</h3>
+      <h2 className="h3">Loading logo</h2>
       <label className="pick-row animated-logo-toggle">
         <input
           type="checkbox"

@@ -78,7 +78,7 @@ export default function AppLockSection() {
 
   return (
     <section>
-      <h3>App lock</h3>
+      <h2 className="h3">App lock</h2>
       {!lock && !mode && (
         <>
           <p className="muted small">Ask for a passcode{canFace ? " or Face ID" : ""} when the app opens, so others using this phone can't see your recipes and lists.</p>

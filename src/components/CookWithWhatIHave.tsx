@@ -54,7 +54,7 @@ export default function CookWithWhatIHave() {
 
   return (
     <section className="cook-with">
-      <h3 className="list-heading">Cook with what I have</h3>
+      <h2 className="list-heading h3">Cook with what I have</h2>
       <p className="muted small">
         Cardamix creates a brand-new recipe from your pantry, using up what's about to go bad first and skipping anything you avoid.
       </p>

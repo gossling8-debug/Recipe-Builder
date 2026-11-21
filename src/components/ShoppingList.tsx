@@ -350,7 +350,7 @@ export default function ShoppingList() {
 
         {(entries.length > 0 || stapleItems.length > 0) && (
           <>
-            {entries.length > 0 && <h3>For</h3>}
+            {entries.length > 0 && <h2 className="h3">For</h2>}
             <ul className="shop-recipes">
               {forRows.map((r) => (
                 <li key={r.key}>
@@ -367,7 +367,7 @@ export default function ShoppingList() {
             </ul>
 
             {feature("budget") && <SpendingEditor state={state} update={update} />}
-            <h3>To buy · {remaining.length}</h3>
+            <h2 className="h3">To buy · {remaining.length}</h2>
             {remaining.length > 0 && feature("walmart") && (
               <>
                 <StorePicker
@@ -406,7 +406,7 @@ export default function ShoppingList() {
 
             {inPantry.length > 0 && (
               <>
-                <h3>Already in your pantry · {inPantry.length}</h3>
+                <h2 className="h3">Already in your pantry · {inPantry.length}</h2>
                 <p className="muted small">
                   Left over from earlier shopping, so you shouldn't need to buy these. Tick one if you buy more anyway.
                 </p>
@@ -416,7 +416,7 @@ export default function ShoppingList() {
 
             {got.length > 0 && (
               <>
-                <h3>In the cart · {got.length}</h3>
+                <h2 className="h3">In the cart · {got.length}</h2>
                 <p className="muted small">
                   {feature("pantry") ? "Ticked items go into your pantry. " : ""}Tap “Change” to enter the size you bought
                   {feature("budget") ? " and what you paid — prices add up your spending and show what recipes cost" : ""}.

@@ -32,6 +32,11 @@ test("free → upgrade card → Plus → Family for only the difference", async 
   await expect(page.locator("nav.tabbar")).toContainText("Tonight");
   await expect(page.locator(".upgrade-card")).toHaveCount(0);
 
+  // The owner dashboard's "toward upgrading" steps were noted (times only).
+  const uid = await page.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find((k) => k.startsWith("firebase:authUser"))!)!).uid);
+  const doc = await (await fetch(`http://127.0.0.1:8080/v1/projects/demo-recipe-builder/databases/(default)/documents/funnel/${uid}`, { headers: { Authorization: "Bearer owner" } })).json();
+  expect(Object.keys(doc.fields ?? {}).sort()).toEqual(["cardSeen", "plansOpened"]);
+
   // Plus → Family: monthly stays monthly, and the amount is shown before anything is charged.
   await page.goto("./#/plus");
   await expect(page.getByText("Move up to Cardamix Family")).toBeVisible();

@@ -39,7 +39,7 @@ export default function HouseholdSection({ plan }: { plan: MyPlan }) {
   const full = members.length >= HOUSEHOLD_MAX;
   return (
     <section className="household">
-      <h3>Your household</h3>
+      <h2 className="h3">Your household</h2>
       {h === undefined ? (
         <p className="muted small">Loading…</p>
       ) : (

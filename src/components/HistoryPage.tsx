@@ -60,7 +60,7 @@ export default function HistoryPage() {
         )}
         {months.map((g) => (
           <section key={g.month}>
-            <h3>{g.month}</h3>
+            <h2 className="h3">{g.month}</h2>
             <ul className="history-list">
               {g.items.map((c) => (
                 <li key={`${c.recipe.id}-${c.at}`}>

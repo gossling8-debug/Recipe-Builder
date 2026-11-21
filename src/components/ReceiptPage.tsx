@@ -625,7 +625,7 @@ export default function ReceiptPage() {
                 ))}
               </div>
             )}
-            <h3>On your shopping list · {onList.length}</h3>
+            <h2 className="h3">On your shopping list · {onList.length}</h2>
             {onList.length === 0 ? (
               <p className="muted small">
                 None of these items are on your shopping list.
@@ -643,7 +643,7 @@ export default function ReceiptPage() {
             )}
             {offList.length > 0 && (
               <>
-                <h3>Not on your shopping list · {offList.length}</h3>
+                <h2 className="h3">Not on your shopping list · {offList.length}</h2>
                 <p className="muted small">
                   Food goes into your pantry with its price. Household items
                   aren't saved unless you tick them.

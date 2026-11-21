@@ -75,7 +75,7 @@ export default function TonightPage() {
 
         {meals.length > 0 && (
           <section>
-            <h3>On the menu</h3>
+            <h2 className="h3">On the menu</h2>
             {meals.map((m, i) => {
               const r = byId.get(m.id)!;
               const plan = plans[r.id];
@@ -118,14 +118,14 @@ export default function TonightPage() {
 
         {thawNow.length > 0 && (
           <section>
-            <h3>Thaw tonight</h3>
+            <h2 className="h3">Thaw tonight</h2>
             <ThawList reminders={thawNow} />
           </section>
         )}
 
         {fridge.filter((l) => !meals.some((m) => m.id === l.id) && byId.has(l.id)).length > 0 && (
           <section>
-            <h3>In your fridge</h3>
+            <h2 className="h3">In your fridge</h2>
             {fridge
               .filter((l) => !meals.some((m) => m.id === l.id) && byId.has(l.id))
               .map((l) =>
@@ -142,7 +142,7 @@ export default function TonightPage() {
 
         {recipes && meals.length === 0 && (
           <section>
-            <h3>Nothing planned yet</h3>
+            <h2 className="h3">Nothing planned yet</h2>
             {ready.length > 0 && (
               <>
                 <p className="small">You have everything for:</p>

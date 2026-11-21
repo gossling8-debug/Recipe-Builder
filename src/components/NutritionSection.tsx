@@ -76,7 +76,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
 
   return (
     <section id="nutrition">
-      <h3>Nutrition</h3>
+      <h2 className="h3">Nutrition</h2>
       {n && (
         <>
           {!current && <div className="callout warn small">This was estimated before the ingredients were edited.</div>}
@@ -140,7 +140,7 @@ export default function NutritionSection({ recipe, onSaved }: { recipe: SavedRec
           </table>
           <p className="muted small">{n.caveats} Amounts are per serving, so changing the size above doesn't change them.</p>
 
-          <h4>Make it healthier</h4>
+          <h3 className="h4">Make it healthier</h3>
           {n.healthier.length === 0 && <p className="small">This is already a fairly light recipe — no swaps worth making.</p>}
           <ul className="subs">
             {n.healthier.map((h, i) => {

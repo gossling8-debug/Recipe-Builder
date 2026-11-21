@@ -127,8 +127,8 @@ export default function Settings() {
       <Header title="Settings" back={href({ name: "library" })} />
       <main className="page">
         <section>
-          <h3>Display</h3>
-          <h4>Text size</h4>
+          <h2 className="h3">Display</h2>
+          <h3 className="h4">Text size</h3>
           <p className="muted small">
             Makes text, buttons and checkboxes bigger throughout the app.
           </p>
@@ -159,7 +159,7 @@ export default function Settings() {
               </button>
             ))}
           </div>
-          <h4>Light or Night</h4>
+          <h3 className="h4">Light or Night</h3>
           <p className="muted small">
             Night is a black background with white text — easier on the eyes in
             the dark. Automatic follows your phone.
@@ -188,14 +188,14 @@ export default function Settings() {
 
         {!isStandalone() && (
           <section>
-            <h3>Home screen</h3>
+            <h2 className="h3">Home screen</h2>
             <AddToHomeScreen />
           </section>
         )}
 
         {feature("avoid") && (
           <section>
-            <h3>Allergies &amp; ingredients to avoid</h3>
+            <h2 className="h3">Allergies &amp; ingredients to avoid</h2>
             <p className="muted small">
               Recipes that use these are flagged, you can filter them out of
               your list, and each recipe can suggest substitutes. Flags are a
@@ -276,7 +276,7 @@ export default function Settings() {
         <AiAllowance />
 
         <section>
-          <h3>Recipe reader</h3>
+          <h2 className="h3">Recipe reader</h2>
           <p className="muted small">
             How carefully Cardamix reads your cards, websites and text. Standard
             stretches your AI much further but may misread messy handwriting —
@@ -336,7 +336,7 @@ export default function Settings() {
         {ownKey() && <OwnKeySection />}
 
         <section>
-          <h3>Backup</h3>
+          <h2 className="h3">Backup</h2>
           <p className="muted small">
             {signedIn
               ? "Everything is backed up to your account automatically. A backup file is an extra copy of your recipes that you keep yourself."

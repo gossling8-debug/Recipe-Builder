@@ -16,7 +16,7 @@ export default function FeaturesSection() {
 
   return (
     <section className="features">
-      <h3>Features</h3>
+      <h2 className="h3">Features</h2>
       <p className="muted small">
         Turn off anything you don't use to keep the app simple. Turning a feature off only hides it — nothing is deleted, and turning it
         back on brings everything back.
@@ -30,7 +30,7 @@ export default function FeaturesSection() {
 
       {GROUPS.map((g) => (
         <div key={g} className="feature-group">
-          <h4>{g}</h4>
+          <h3 className="h4">{g}</h3>
           <ul className="feature-list">
             {FEATURES.filter((f) => f.group === g).map((f) => {
               const isLocked = locked(f.id);

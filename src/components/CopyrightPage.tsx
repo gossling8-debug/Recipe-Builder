@@ -18,7 +18,7 @@ export default function CopyrightPage() {
       <main className="page privacy">
         <h1 className="page-title">Copyright</h1>
 
-        <h3>Recipes and copyright</h3>
+        <h2 className="h3">Recipes and copyright</h2>
         <p>
           A list of ingredients is a set of facts. A cookbook's written instructions, stories, photos and layout can belong to its author or
           publisher. Cardamix is built with that in mind:
@@ -36,7 +36,7 @@ export default function CopyrightPage() {
           <li>Ordering a printed cookbook asks you to confirm you have the right to print every recipe in it.</li>
         </ul>
 
-        <h3>If your work was shared without permission</h3>
+        <h2 className="h3">If your work was shared without permission</h2>
         <p>
           Anyone can report a recipe in The Mix with <strong>Report → Copied from someone else</strong>. To send a formal copyright notice
           {email ? (
@@ -60,7 +60,7 @@ export default function CopyrightPage() {
           send a counter-notice to the same address; we follow the process set out in US law (the DMCA).
         </p>
 
-        <h3>Repeat infringers</h3>
+        <h2 className="h3">Repeat infringers</h2>
         <p>
           Each recipe taken down after a copyright notice counts against the account that published it. After three, that account can't
           publish to The Mix any more, and we may close accounts that keep infringing.
