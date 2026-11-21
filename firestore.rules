@@ -21,6 +21,11 @@ service cloud.firestore {
         || (owner.matches('household_.+')
           && uid() in get(/databases/$(database)/documents/households/$(owner.split('household_')[1])).data.members));
     }
+    // App-wide settings the owner sets (e.g. the loading logo): everyone reads them; only the server writes.
+    // (Other config documents, like config/lulu, stay unreadable.)
+    match /config/app {
+      allow read: if true;
+    }
     // Printed cookbook orders (written only by the server).
     match /bookOrders/{o} {
       allow read: if signedIn() && uid() == resource.data.uid;

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Header from "./Header";
 import OwnKeySection from "./OwnKeySection";
 import LuluKeysSection from "./LuluKeysSection";
+import AppLookSection from "./AppLookSection";
 import { href } from "../lib/route";
 import { amAdmin } from "../lib/mix";
 import {
@@ -189,6 +190,7 @@ export default function OwnerPage() {
 
             <OwnKeySection />
             <LuluKeysSection />
+            <AppLookSection />
 
             <section>
               <h3>Error reports</h3>

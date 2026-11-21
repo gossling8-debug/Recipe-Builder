@@ -7,11 +7,6 @@ import CloudSection from "./CloudSection";
 import AppLockSection from "./AppLockSection";
 import AddToHomeScreen from "./AddToHomeScreen";
 import OwnKeySection from "./OwnKeySection";
-import LogoLoader, {
-  ANIMATED_LOGO,
-  animatedLogoOn,
-  setAnimatedLogo,
-} from "./LogoLoader";
 import { isStandalone } from "../lib/homeScreen";
 import { cloudState, subscribeCloud } from "../lib/cloud";
 import {
@@ -59,7 +54,6 @@ export default function Settings() {
   }, [signedIn]);
   useEffect(() => subscribeCloud((c) => setSignedIn(!!c.uid)), []);
   const [textSize, setTextSize] = useState<TextSize>(getTextSize());
-  const [animatedLogo, setAnimatedLogoState] = useState(animatedLogoOn);
   const [theme, setTheme] = useState<Theme>(getTheme());
   const [avoid, setAvoid] = useState<AvoidList>(loadAvoid);
   const [modelId, setModelId] = useState(getModel().id);
@@ -204,22 +198,6 @@ export default function Settings() {
               </button>
             ))}
           </div>
-          {ANIMATED_LOGO && (
-            <label className="pick-row animated-logo-toggle">
-              <input
-                type="checkbox"
-                checked={animatedLogo}
-                onChange={(e) => {
-                  setAnimatedLogo(e.target.checked);
-                  setAnimatedLogoState(e.target.checked);
-                }}
-              />
-              <span>Animated logo while loading</span>
-              <span className="logo-preview">
-                <LogoLoader size={28} key={String(animatedLogo)} />
-              </span>
-            </label>
-          )}
         </section>
 
         <FeaturesSection />

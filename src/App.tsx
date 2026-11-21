@@ -155,6 +155,7 @@ export default function App() {
     startUpdateCheck();
     startCloud().catch(() => {});
     void import("./lib/sharedShopping").then((m) => m.startSharedSync()).catch(() => {});
+    void import("./lib/appConfig").then((m) => m.loadAppConfig()).catch(() => {}); // the owner's app-wide settings
     const on = () => {
       applyTextSize(getTextSize());
       applyTheme(getTheme(), false);
