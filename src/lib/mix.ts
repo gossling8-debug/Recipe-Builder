@@ -127,7 +127,13 @@ export async function publishToMix(
   const batch = f.writeBatch(db);
   batch.set(f.doc(db, "mix", id), { ...content, at: now, ratingSum: 0, ratingCount: 0, reportCount: 0 });
   batch.set(f.doc(db, "mixOwners", id), { uid: u.uid, recipeId: source.id });
-  await batch.commit();
+  try {
+    await batch.commit();
+  } catch (e) {
+    if ((await f.getDoc(f.doc(db, "mixBlocked", u.uid)).catch(() => null))?.exists())
+      throw new Error("Publishing to The Mix is turned off for your account after repeated copyright notices.");
+    throw e;
+  }
   if (mine?.legacy) await f.deleteDoc(f.doc(db, "mix", mine.id)).catch(() => {});
   return id;
 }
@@ -234,3 +240,9 @@ export function mixRating(m: MixRecipe): { average: number; count: number } | nu
   return m.ratingCount > 0 ? { average: m.ratingSum / m.ratingCount, count: m.ratingCount } : null;
 }
 export const reportCount = (m: MixRecipe) => m.reportCount;
+
+/** Owner: take a Mix recipe down after a copyright notice (counts a strike against whoever published it). */
+export async function copyrightTakedown(id: string, note: string): Promise<{ strikes: number; blocked: boolean }> {
+  const { callable } = await import("./subscription");
+  return callable("ownerCopyrightTakedown", { mixId: id, note });
+}

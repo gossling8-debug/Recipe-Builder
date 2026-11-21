@@ -121,6 +121,9 @@ export async function deleteUserData(db, uid, email) {
   // Printed cookbook orders (address, email).
   await deleteAll(db.collection("bookOrders").where("uid", "==", uid));
 
+  await db.doc(`copyrightStrikes/${uid}`).delete();
+  await db.doc(`mixBlocked/${uid}`).delete();
+
   // Their own recipes, photos and settings, and admin access.
   await db.recursiveDelete(db.doc(`users/${uid}`));
   await db.doc(`admins/${uid}`).delete();

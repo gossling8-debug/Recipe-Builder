@@ -26,6 +26,10 @@ service cloud.firestore {
     match /config/app {
       allow read: if true;
     }
+    // Publishing to The Mix turned off after repeated copyright notices (written only by the server).
+    match /mixBlocked/{u} {
+      allow get: if signedIn() && uid() == u;
+    }
     // Printed cookbook orders (written only by the server).
     match /bookOrders/{o} {
       allow read: if signedIn() && uid() == resource.data.uid;
@@ -90,6 +94,7 @@ service cloud.firestore {
     match /mix/{id} {
       allow read: if signedIn();
       allow create: if signedIn()
+        && !exists(/databases/$(database)/documents/mixBlocked/$(uid())) // repeated copyright notices
         && getAfter(mixOwnerDoc(id)).data.uid == uid()
         && request.resource.data.keys().hasOnly(['recipe', 'sourceUrl', 'byName', 'anonymous', 'at', 'updatedAt', 'ratingSum', 'ratingCount', 'reportCount'])
         && request.resource.data.ratingSum == 0 && request.resource.data.ratingCount == 0 && request.resource.data.reportCount == 0
@@ -97,6 +102,7 @@ service cloud.firestore {
         && okMixContent(request.resource.data);
       // The publisher changes the recipe, its link, their name or whether it's anonymous.
       allow update: if signedIn() && ownsMix(id)
+        && !exists(/databases/$(database)/documents/mixBlocked/$(uid()))
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipe', 'sourceUrl', 'byName', 'anonymous', 'updatedAt'])
         && okMixContent(request.resource.data);
       allow delete: if signedIn() && (ownsMix(id) || isAdmin());

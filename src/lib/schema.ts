@@ -59,6 +59,30 @@ export const RecipeSchema = z.object({
     .describe("Short notes about anything unreadable, guessed, or missing (e.g. an ingredient with no amount). Empty if none."),
 });
 
+/**
+ * Where a recipe that was read came from — so one copied from a published
+ * cookbook or magazine isn't republished word for word (The Mix, printed
+ * books). Asked for only when reading a recipe (ReadRecipeSchema).
+ */
+export const OriginSchema = z.object({
+  kind: z
+    .enum(["handwritten", "printed_book", "magazine", "printout", "website", "typed", "unknown"])
+    .describe(
+      'What the source is: "handwritten" (a card or notebook in someone\'s handwriting), "printed_book" (a page of a published, typeset cookbook — page numbers, running headers, publisher layout), "magazine" (a magazine or newspaper page, or a food package), "printout" (a page printed from a website or computer), "website", "typed" (pasted or typed text with no sign of where it came from), or "unknown".',
+    ),
+  book: z.string().nullable().describe("The published cookbook's or magazine's title if it's shown (running header or footer, cover, copyright line) or named in the text. null if not shown — don't guess."),
+  author: z.string().nullable().describe("The author or publisher if shown. null if not shown — don't guess."),
+});
+export type Origin = z.infer<typeof OriginSchema>;
+export const ReadRecipeSchema = RecipeSchema.extend({ origin: OriginSchema });
+
+/** From a published cookbook or magazine: someone else's writing, so not to be republished as is. */
+export const isPublishedSource = (o: Origin | undefined | null) => o?.kind === "printed_book" || o?.kind === "magazine";
+/** A saved recipe someone else wrote (a published cookbook's page), unless the cook said it's their own. */
+export const fromPublishedBook = (r: { origin?: Origin; ownWriting?: boolean; source?: string }) => !r.source && !r.ownWriting && isPublishedSource(r.origin);
+export const originLabel = (o: Origin | undefined | null) =>
+  o?.book ? `“${o.book}”${o.author ? ` by ${o.author}` : ""}` : o?.kind === "magazine" ? "a magazine" : "a published cookbook";
+
 export type Ingredient = z.infer<typeof IngredientSchema>;
 export type Segment = z.infer<typeof SegmentSchema>;
 export type Step = z.infer<typeof StepSchema>;
@@ -72,6 +96,10 @@ export interface SavedRecipe extends ScannedRecipe {
   photos: string[];
   /** Starred by the cook; shown in the Favorites section. */
   favorite?: boolean;
+  /** Where it was read from (cookbook page, handwritten card…), when known. */
+  origin?: Origin;
+  /** The cook said it's their own writing, though it was read as a published cookbook's page. */
+  ownWriting?: boolean;
   /** Web page the recipe was imported from. */
   source?: string;
   /** Estimated cost (US dollars) of reading this recipe with Claude. */

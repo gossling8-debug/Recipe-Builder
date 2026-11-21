@@ -3,6 +3,7 @@ import Header from "./Header";
 import OwnKeySection from "./OwnKeySection";
 import LuluKeysSection from "./LuluKeysSection";
 import AppLookSection from "./AppLookSection";
+import CopyrightEmailSection from "./CopyrightEmailSection";
 import { href } from "../lib/route";
 import { amAdmin } from "../lib/mix";
 import {
@@ -191,6 +192,7 @@ export default function OwnerPage() {
             <OwnKeySection />
             <LuluKeysSection />
             <AppLookSection />
+            <CopyrightEmailSection />
 
             <section>
               <h3>Error reports</h3>

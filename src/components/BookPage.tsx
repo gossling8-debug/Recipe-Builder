@@ -26,7 +26,7 @@ import {
 import { listRecipes, saveRecipe } from "../lib/db";
 import { compressPhoto } from "../lib/image";
 import { href, navigate } from "../lib/route";
-import type { SavedRecipe } from "../lib/schema";
+import { fromPublishedBook, type SavedRecipe } from "../lib/schema";
 
 const errText = (e: unknown) => (e instanceof Error ? e.message.replace(/ \[\d+\]$/, "") : String(e));
 const money = (n: number) => `$${n.toFixed(2)}`;
@@ -162,6 +162,7 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
   const [shipping, setShipping] = useState("MAIL");
   const [price, setPrice] = useState<{ total: number; delivery: number; book: number } | null>(null);
   const [orderState, setOrderState] = useState<string>("");
+  const [rights, setRights] = useState(false);
   const [toast, showToast] = useToast();
 
   useEffect(() => {
@@ -220,6 +221,7 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
     );
   const toggle = (rid: string) =>
     update({ recipeIds: chosen.has(rid) ? book.recipeIds.filter((x) => x !== rid) : [...book.recipeIds, rid], coverRecipeId: book.coverRecipeId === rid && chosen.has(rid) ? null : book.coverRecipeId });
+  const publishedCount = recipes.filter((r) => chosen.has(r.id) && fromPublishedBook(r)).length;
   const addressOk = address.name && address.street1 && address.city && address.state && address.postcode && address.phone;
 
   return (
@@ -266,7 +268,10 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
               <li key={r.id}>
                 <label>
                   <input type="checkbox" checked={chosen.has(r.id)} onChange={() => toggle(r.id)} />
-                  <span>{r.title}</span>
+                  <span>
+                    {r.title}
+                    {fromPublishedBook(r) && <span className="book-flag"> · from a published cookbook</span>}
+                  </span>
                 </label>
                 {chosen.has(r.id) && book.includePhotos && (
                   <span className="book-recipe-photo">
@@ -406,6 +411,19 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
                   ))}
                 </select>
               </label>
+              <label className="check-line book-rights">
+                <input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} />
+                <span className="small">
+                  I have the right to print these recipes: they're my family's or my own, or I have the author's permission.
+                  {publishedCount > 0 && (
+                    <strong>
+                      {" "}
+                      {publishedCount} {publishedCount === 1 ? "is" : "are"} from a published cookbook — the author's writing and photos are
+                      theirs, so leave {publishedCount === 1 ? "it" : "them"} out unless you have permission.
+                    </strong>
+                  )}
+                </span>
+              </label>
               {price && (
                 <div className="callout small">
                   Book {money(price.book)} + delivery and tax {money(price.delivery)} = <strong>{money(price.total)}</strong>
@@ -432,7 +450,7 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
                     {busy === "price" ? "Getting the price…" : "Get the price"}
                   </button>
                 ) : (
-                  <button className="btn primary" disabled={!!busy} onClick={() => void run("pay", () => orderBook(book, address, shipping))}>
+                  <button className="btn primary" disabled={!!busy || !rights} onClick={() => void run("pay", () => orderBook(book, address, shipping, rights))}>
                     {busy === "pay" ? "Opening checkout…" : `Pay ${money(price.total)}`}
                   </button>
                 )}
