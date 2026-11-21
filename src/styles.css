@@ -1289,3 +1289,5 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .book-recipes li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .book-recipe-photo { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .book-recipe-photo img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
+/* Settings: subheadings inside a section (Display) */
+main.page section > h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; }

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { href } from "../lib/route";
 import { deleteAccount, signOutHere } from "../lib/account";
-import { cloudState, subscribeCloud, syncNow, type CloudState } from "../lib/cloud";
+import { cloudState, subscribeCloud, type CloudState } from "../lib/cloud";
 import ChangeEmail from "./ChangeEmail";
 
 const ago = (ms?: number) => {
@@ -36,7 +35,7 @@ export default function CloudSection() {
     return (
       <section>
         <h3>Cloud backup &amp; sync</h3>
-        <p className="muted small">Not set up yet. Until it is, recipes are saved only on this phone — use Export backup below.</p>
+        <p className="muted small">Not set up yet. Until it is, recipes are saved only on this phone — use Export backup above.</p>
       </section>
     );
   }
@@ -56,9 +55,6 @@ export default function CloudSection() {
         {(s.status === "offline" || s.status === "error") && s.message}
       </p>
       <div className="button-row">
-        <button className="btn" disabled={busy || s.status === "syncing"} onClick={() => run(syncNow)}>
-          Sync now
-        </button>
         <button
           className="btn"
           disabled={busy}
@@ -67,11 +63,7 @@ export default function CloudSection() {
           Sign out
         </button>
       </div>
-      <p className="muted small">Backed up: recipes, photos, pantry, shopping list, week plan, prices and budget, and settings (except your Anthropic key). Signing out keeps everything in your account and on this phone.</p>
-      <p>
-        <a href={href({ name: "family" })}>Cookbooks</a>
-        <span className="muted small"> — share chosen recipes with family or friends</span>
-      </p>
+      <p className="muted small">Signing out keeps everything in your account and on this phone.</p>
       {message && <div className="callout small">{message}</div>}
       {!deleting ? (
         <button className="link-btn small" onClick={() => (setDeleting(true), setPassword(""), setMessage(""))}>
@@ -91,7 +83,7 @@ export default function CloudSection() {
           <p className="small">
             This deletes your account and everything it stored: recipes, photos, lists and settings; what you added to
             cookbooks (and cookbooks only you are in); recipes you published to The Mix, and your ratings and reports there —
-            and clears this phone. A Plus subscription is cancelled too. <strong>Export a backup first</strong> (below)
+            and clears this phone. A Plus subscription is cancelled too. <strong>Export a backup first</strong> (above)
             if you want a copy.
           </p>
           <input

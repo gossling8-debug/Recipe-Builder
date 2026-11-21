@@ -34,9 +34,6 @@ import { loadUsage, money } from "../lib/usage";
 import { exportBackup, importBackup } from "../lib/backup";
 import {
   storageErrorMessage,
-  storageMode,
-  STORAGE_MODE_TEXT,
-  type StorageMode,
 } from "../lib/db";
 
 export default function Settings() {
@@ -84,7 +81,6 @@ export default function Settings() {
       updateAvoid({ ...avoid, custom: [...avoid.custom, w] });
     setNewAvoid("");
   };
-  const [mode, setMode] = useState<StorageMode | null>(null);
   const [message, setMessage] = useState("");
   const [persisted, setPersisted] = useState<boolean | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -93,7 +89,6 @@ export default function Settings() {
     navigator.storage
       ?.persisted?.()
       .then(setPersisted, () => setPersisted(null));
-    storageMode().then(setMode, () => {});
   }, []);
 
   async function doExport() {
@@ -132,7 +127,8 @@ export default function Settings() {
       <Header title="Settings" back={href({ name: "library" })} />
       <main className="page">
         <section>
-          <h3>Text size</h3>
+          <h3>Display</h3>
+          <h4>Text size</h4>
           <p className="muted small">
             Makes text, buttons and checkboxes bigger throughout the app.
           </p>
@@ -163,17 +159,7 @@ export default function Settings() {
               </button>
             ))}
           </div>
-        </section>
-
-        {!isStandalone() && (
-          <section>
-            <h3>Home screen</h3>
-            <AddToHomeScreen />
-          </section>
-        )}
-
-        <section>
-          <h3>Appearance</h3>
+          <h4>Light or Night</h4>
           <p className="muted small">
             Night is a black background with white text — easier on the eyes in
             the dark. Automatic follows your phone.
@@ -200,7 +186,12 @@ export default function Settings() {
           </div>
         </section>
 
-        <FeaturesSection />
+        {!isStandalone() && (
+          <section>
+            <h3>Home screen</h3>
+            <AddToHomeScreen />
+          </section>
+        )}
 
         {feature("avoid") && (
           <section>
@@ -271,45 +262,16 @@ export default function Settings() {
           </section>
         )}
 
-        <AppLockSection />
 
-        <CloudSection />
 
-        <section>
-          <h3>Backup</h3>
-          <p className="muted small">
-            {signedIn
-              ? "Everything is backed up to your account automatically. A backup file is an extra copy of your recipes that you keep yourself."
-              : "Recipes are saved on this phone. Clearing this site's data in your browser settings (or deleting the app) erases them, so sign in to cloud backup above or export a backup now and then."}
-            {persisted === true &&
-              " This browser has agreed not to clear them on its own to free up space."}
-          </p>
-          {mode && (
-            <p className="small" data-testid="storage-mode">
-              <strong>Storage on this browser:</strong>{" "}
-              {STORAGE_MODE_TEXT[mode]}
-            </p>
-          )}
-          <div className="button-row">
-            <button className="btn" onClick={doExport}>
-              <Icon name="download" size={20} /> Export backup
-            </button>
-            <button className="btn" onClick={() => fileInput.current?.click()}>
-              <Icon name="upload" size={20} /> Restore backup
-            </button>
-          </div>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(e) => {
-              doImport(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-          {message && <div className="callout">{message}</div>}
-        </section>
+
+
+
+
+
+
+
+        <FeaturesSection />
 
         <AiAllowance />
 
@@ -368,8 +330,42 @@ export default function Settings() {
           )}
         </section>
 
+        <AppLockSection />
+
         {/* Your own Anthropic key lives on the owner dashboard now; a key already saved on this phone can still be removed here. */}
         {ownKey() && <OwnKeySection />}
+
+        <section>
+          <h3>Backup</h3>
+          <p className="muted small">
+            {signedIn
+              ? "Everything is backed up to your account automatically. A backup file is an extra copy of your recipes that you keep yourself."
+              : "Recipes are saved on this phone. Clearing this site's data in your browser settings (or deleting the app) erases them, so sign in to cloud backup below or export a backup now and then."}
+            {persisted === true &&
+              " This browser has agreed not to clear them on its own to free up space."}
+          </p>
+          <div className="button-row">
+            <button className="btn" onClick={doExport}>
+              <Icon name="download" size={20} /> Export backup
+            </button>
+            <button className="btn" onClick={() => fileInput.current?.click()}>
+              <Icon name="upload" size={20} /> Restore backup
+            </button>
+          </div>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => {
+              doImport(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          {message && <div className="callout">{message}</div>}
+        </section>
+
+        <CloudSection />
 
         <p className="small settings-footer">
           <button
