@@ -72,22 +72,10 @@ export function SharedListCard({ list, toast }: { list: SharedList | null; toast
             </>
           )}
         </p>
-        {inviting && (
-          <EmailInviteForm
-            kind="shop"
-            target={id}
-            title="a shopping list"
-            fromName={(uid && list?.names[uid]) || ""}
-            onLink={() => void sendLink(id, toast)}
-            onClose={() => setInviting(false)}
-          />
-        )}
         <div className="button-row">
-          {!inviting && (
-            <button className="btn" disabled={busy} onClick={() => setInviting(true)}>
-              Invite someone
-            </button>
-          )}
+          <button className="btn disclosure" aria-expanded={inviting} disabled={busy} onClick={() => setInviting(!inviting)}>
+            Invite someone
+          </button>
           <button
             className="link-btn small"
             disabled={busy}
@@ -102,6 +90,15 @@ export function SharedListCard({ list, toast }: { list: SharedList | null; toast
             Stop sharing
           </button>
         </div>
+        {inviting && (
+          <EmailInviteForm
+            kind="shop"
+            target={id}
+            title="a shopping list"
+            fromName={(uid && list?.names[uid]) || ""}
+            onLink={() => void sendLink(id, toast)}
+          />
+        )}
         {error && <div className="callout error small">{error}</div>}
       </div>
     );
@@ -109,13 +106,11 @@ export function SharedListCard({ list, toast }: { list: SharedList | null; toast
 
   return (
     <div className={open ? "plan-card shared-list-card" : "shared-list-link"}>
-      {!open ? (
-        <>
-          <button className="link-btn small" onClick={() => setOpen(true)}>
-            <Icon name="share" size={16} /> Shop together — share this list live
-          </button>
-        </>
-      ) : (
+      {/* Tap to open, tap the same line to close. */}
+      <button className="link-btn small disclosure" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <Icon name="share" size={16} /> Shop together — share this list live
+      </button>
+      {open && (
         <>
           <p className="small">
             <strong>Shop together.</strong> Share this list with someone you shop with: you both see the same list, and what either of
@@ -155,9 +150,6 @@ export function SharedListCard({ list, toast }: { list: SharedList | null; toast
               }
             >
               {busy ? "Starting…" : "Share & invite"}
-            </button>
-            <button className="link-btn small" disabled={busy} onClick={() => setOpen(false)}>
-              Cancel
             </button>
           </div>
           <p className="muted small">

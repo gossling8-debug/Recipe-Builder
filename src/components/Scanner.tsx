@@ -684,23 +684,25 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
               }}
             />
             <section className="scan-labels">
-              {showTags || tags.length ? (
+              {/* Tap to open, tap the same line to close (chosen labels stay chosen). */}
+              <button
+                className="link-btn small disclosure"
+                aria-expanded={showTags}
+                onClick={() => setShowTags(!showTags)}
+              >
+                <Icon name="plus" size={14} />{" "}
+                {tags.length
+                  ? `Labels: ${tags.join(", ")}`
+                  : "Choose labels (optional — Cardamix suggests some if you skip this)"}
+              </button>
+              {showTags && (
                 <>
-                  <h3>Labels</h3>
                   <p className="muted small">
                     Pick labels for this recipe, or leave them all off and
                     Cardamix will suggest some.
                   </p>
                   <TagPicker tags={tags} onChange={setTags} />
                 </>
-              ) : (
-                <button
-                  className="link-btn small"
-                  onClick={() => setShowTags(true)}
-                >
-                  <Icon name="plus" size={14} /> Choose labels (optional —
-                  Cardamix suggests some if you skip this)
-                </button>
               )}
             </section>
             {error && <div className="callout error">{error}</div>}

@@ -73,7 +73,10 @@ export default function AddToWeek({ recipeId }: { recipeId: string }) {
           {leftoversOn.length > 0 && `Leftovers ${leftoversOn.map((d) => d.name).join(", ")}`} · <a href={href({ name: "week" })}>See the week</a>
         </p>
       )}
-      {open ? (
+      <button className="btn plan-open disclosure" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <Icon name="calendar" size={18} /> {plannedOn.length ? "Add to another day" : "Add to my week"}
+      </button>
+      {open && (
         <div className="plan-card">
           <p className="small">Which day? (at the size shown above)</p>
           <div className="day-chips">
@@ -91,14 +94,7 @@ export default function AddToWeek({ recipeId }: { recipeId: string }) {
               </button>
             ))}
           </div>
-          <button className="link-btn small" onClick={() => setOpen(false)}>
-            Cancel
-          </button>
         </div>
-      ) : (
-        <button className="btn plan-open" onClick={() => setOpen(true)}>
-          <Icon name="calendar" size={18} /> {plannedOn.length ? "Add to another day" : "Add to my week"}
-        </button>
       )}
     </div>
   );

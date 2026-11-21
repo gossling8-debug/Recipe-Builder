@@ -87,15 +87,17 @@ export default function PlanMeal({ recipe, recipeId }: { recipe: ScannedRecipe &
     );
   }
 
-  if (!open) {
-    return (
-      <button className="btn plan-open" onClick={() => setOpen(true)}>
-        <Icon name="timer" size={18} /> Plan a meal time
-      </button>
-    );
-  }
+  // Tap to open, tap the same button to close.
+  const toggle = (
+    <button className="btn plan-open disclosure" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <Icon name="timer" size={18} /> Plan a meal time
+    </button>
+  );
+  if (!open) return toggle;
 
   return (
+    <>
+    {toggle}
     <div className="plan-card">
       <label className="plan-time">
         <span>What time do you want to eat?</span>
@@ -112,14 +114,12 @@ export default function PlanMeal({ recipe, recipeId }: { recipe: ScannedRecipe &
         </p>
       )}
       <div className="button-row">
-        <button className="btn" onClick={() => setOpen(false)}>
-          Cancel
-        </button>
         <button className="btn primary" onClick={save}>
           Save plan
         </button>
       </div>
     </div>
+    </>
   );
 }
 

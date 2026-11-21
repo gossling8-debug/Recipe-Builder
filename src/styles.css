@@ -1351,3 +1351,10 @@ main.page section > h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; 
 .favorites-folder-arrow { transition: transform 0.15s; }
 .favorites-list { border: 1px solid var(--line); border-top: none; border-radius: 0 0 14px 14px; padding: 0 14px; margin: 0; }
 .favorites-list > li:last-child { border-bottom: none; }
+
+/* ---------- Tap to open, tap the same button to close ---------- */
+.disclosure::after {
+  content: "›"; display: inline-block; margin-left: 8px; font-size: 1.15em; line-height: 1;
+  transition: transform 0.15s; opacity: 0.7;
+}
+.disclosure[aria-expanded="true"]::after { transform: rotate(90deg); }

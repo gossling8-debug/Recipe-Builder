@@ -371,11 +371,11 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
         </section>
 
         <section>
-          {!ordering ? (
-            <button className="btn primary" disabled={!book.recipeIds.length || !!busy} onClick={() => setOrdering(true)}>
-              <Icon name="bag" size={18} /> Order a printed copy
-            </button>
-          ) : (
+          {/* Tap to open, tap the same button to close. */}
+          <button className="btn primary disclosure" aria-expanded={ordering} disabled={!book.recipeIds.length || !!busy} onClick={() => setOrdering(!ordering)}>
+            <Icon name="bag" size={18} /> Order a printed copy
+          </button>
+          {ordering && (
             <div className="book-order">
               <h3>Delivery (US only)</h3>
               {(
@@ -454,9 +454,6 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
                     {busy === "pay" ? "Opening checkout…" : `Pay ${money(price.total)}`}
                   </button>
                 )}
-                <button className="link-btn small" disabled={!!busy} onClick={() => setOrdering(false)}>
-                  Cancel
-                </button>
               </div>
               <p className="muted small">
                 Printed and shipped by our print partner, Lulu. Delivery time depends on the speed you choose. Your address is used only for this
