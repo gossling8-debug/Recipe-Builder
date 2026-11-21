@@ -63,6 +63,7 @@ export default function PlusPage({ done }: { done?: boolean }) {
   // Plus by subscription can move up to Family.
   const canUpgradeToFamily = plan.plan === "plus" && plan.source === "stripe";
   const beta = plan.source === "beta"; // testing period: Plus is free, subscribing is optional
+  const gifted = plan.source === "comp"; // always has everything: sees the plans, can't buy
 
   return (
     <>
@@ -80,13 +81,13 @@ export default function PlusPage({ done }: { done?: boolean }) {
 
         {isPlus ? (
           <section>
-            <h1 className="page-title">{isFamily ? "You have Cardamix Family" : "You have Plus"}</h1>
+            <h1 className="page-title">{gifted ? "You have everything" : isFamily ? "You have Cardamix Family" : "You have Plus"}</h1>
             {plan.source === "beta" ? (
               <p>Cardamix is in testing, so every account has Plus for free for now. Thanks for trying it!</p>
             ) : plan.source === "household" ? (
               <p>You're on your household's Family plan — everything is included, with an AI allowance you all share.</p>
             ) : plan.source === "comp" ? (
-              <p>Your account has Plus for free.</p>
+              <p>Your account is gifted: every Plus and Family feature, free.</p>
             ) : plan.cancelsAt ? (
               <p>Your subscription is cancelled and ends on {dateText(plan.cancelsAt)}. You keep Plus until then.</p>
             ) : (
@@ -105,9 +106,20 @@ export default function PlusPage({ done }: { done?: boolean }) {
         ) : null}
         <InvitesWaiting kinds={["household"]} />
         {isFamily && <HouseholdSection plan={plan} />}
-        {(!isPlus || beta || canUpgradeToFamily) && plan.source !== "household" && (
+        {(!isPlus || beta || canUpgradeToFamily || gifted) && plan.source !== "household" && (
           <section>
-            {beta ? <h3>Subscribe early (optional)</h3> : canUpgradeToFamily ? <h3>Move up to Cardamix Family</h3> : <h1 className="page-title">Choose a plan</h1>}
+            {gifted ? (
+              <>
+                <h3>The plans others see</h3>
+                <p className="muted small">Your account is gifted, so there's nothing to buy — this is what everyone else is offered.</p>
+              </>
+            ) : beta ? (
+              <h3>Subscribe early (optional)</h3>
+            ) : canUpgradeToFamily ? (
+              <h3>Move up to Cardamix Family</h3>
+            ) : (
+              <h1 className="page-title">Choose a plan</h1>
+            )}
             {!canUpgradeToFamily && (
               <div className="segmented plus-tier" role="radiogroup" aria-label="Plan">
                 <button role="radio" aria-checked={tier === "plus"} className={tier === "plus" ? "chip active" : "chip"} onClick={() => setTier("plus")}>
@@ -135,6 +147,8 @@ export default function PlusPage({ done }: { done?: boolean }) {
               {interval === "yearly" ? `${PRICE[tier].perMonth} a month, billed yearly — save 35%.` : "Billed monthly. Cancel any time."}
               {canUpgradeToFamily && " Your Plus subscription switches over; you're only charged the difference."}
             </p>
+            {!gifted && (
+            <>
             <div className="button-row">
               <button
                 className="btn primary"
@@ -153,6 +167,8 @@ export default function PlusPage({ done }: { done?: boolean }) {
               Secure checkout by Stripe. Renews automatically until you cancel — cancel any time from this page. By upgrading you agree to
               the <a href={href({ name: "terms" })}>Terms of service</a>, including the refund policy.
             </p>
+            </>
+            )}
           </section>
         )}
         {error && <div className="callout error small">{error}</div>}
@@ -179,7 +195,7 @@ export default function PlusPage({ done }: { done?: boolean }) {
         </section>
         {familyFeatures.length > 0 && (
           <section>
-            <h3>{beta ? "Coming with Cardamix Family" : "Cardamix Family adds"}</h3>
+            <h3>{beta || gifted ? "Coming with Cardamix Family" : "Cardamix Family adds"}</h3>
             <p className="muted small">
               Everything in Plus for your whole household, and more. {beta ? "Included free while Cardamix is being tested." : ""}
             </p>
