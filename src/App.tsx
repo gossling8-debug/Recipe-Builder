@@ -15,6 +15,7 @@ import { InviteInBrowserNote } from "./components/PasteInvite";
 import { startUpdateCheck } from "./lib/appUpdate";
 import UpdateBar from "./components/UpdateBar";
 import TabBar from "./components/TabBar";
+import UndoBar from "./components/UndoBar";
 import { Loading } from "./components/LogoLoader";
 
 // Loaded when first opened (and fetched in the background soon after start).
@@ -189,6 +190,7 @@ export default function App() {
             <Screen key={RELOAD_ON_SYNC.has(route.name) ? synced : -1} />
           </Suspense>
           {!NO_TAB_BAR.has(route.name) && <TabBar current={route.name} />}
+          <UndoBar />
         </>
       )}
     </>

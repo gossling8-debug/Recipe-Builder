@@ -20,8 +20,9 @@ import { clearPlan, getPlan } from "../lib/plan";
 import { restore, useForRecipe, type PantryItem } from "../lib/pantry";
 import { TimerBar, useTimers } from "./Timers";
 import { activeSwaps, applySwaps } from "../lib/swaps";
-import { clearProgress, loadProgress, saveProgress } from "../lib/progress";
-import { deleteRecipe, getRecipe, listRecipes, newId, saveRecipe } from "../lib/db";
+import { loadProgress, saveProgress } from "../lib/progress";
+import { deleteWithUndo } from "../lib/undoDelete";
+import { getRecipe, listRecipes, newId, saveRecipe } from "../lib/db";
 import { family, makeVariant } from "../lib/variants";
 import { sameLabels, syncLabelsToCookbooks } from "../lib/family";
 import { syncLabelsToMix } from "../lib/mix";
@@ -30,7 +31,7 @@ import { duplicatesOf, markNotDuplicates, notDuplicates } from "../lib/duplicate
 import { href, navigate } from "../lib/route";
 import { recipeToText, shareText } from "../lib/share";
 import { recipeLink } from "../lib/link";
-import { loadShopping, removeFromShopping } from "../lib/shopping";
+import { loadShopping } from "../lib/shopping";
 import { useToast } from "./Toast";
 import { cleanTags, warningsKey, type SavedRecipe } from "../lib/schema";
 import { feature } from "../lib/features";
@@ -217,11 +218,10 @@ export default function RecipePage({ id }: { id: string }) {
     };
   }, []);
 
-  async function remove(asked = false) {
-    if (!recipe || (!asked && !confirm(`Delete “${recipe.title}”? This can't be undone.`))) return;
-    await deleteRecipe(recipe.id);
-    clearProgress(recipe.id);
-    removeFromShopping(recipe.id);
+  // Deleted right away; "Undo" shows for a few seconds on the recipe list.
+  async function remove() {
+    if (!recipe) return;
+    await deleteWithUndo(recipe);
     navigate({ name: "library" }, true);
   }
 
@@ -383,7 +383,7 @@ export default function RecipePage({ id }: { id: string }) {
                     key={recipe.id}
                     recipe={recipe}
                     onMarkedMade={() => freezeHalf() && showToast("Half is on your freezer list.")}
-                    onDelete={() => void remove(true)}
+                    onDelete={() => void remove()}
                     onSaved={async (updated) => {
                       setRecipe(updated);
                       await saveRecipe(updated);
