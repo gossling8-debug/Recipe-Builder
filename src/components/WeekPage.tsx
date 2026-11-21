@@ -8,6 +8,7 @@ import Header from "./Header";
 import Icon from "./Icon";
 import { useToast } from "./Toast";
 import { listRecipes } from "../lib/db";
+import { Loading } from "./LogoLoader";
 import { href } from "../lib/route";
 import { addToShopping } from "../lib/shopping";
 import {
@@ -245,6 +246,11 @@ export default function WeekPage() {
         }
       />
       <main className="page">
+        {/* Shown once the recipes are read, so nothing moves as they arrive. */}
+        {recipes === null ? (
+          <Loading delay={300} />
+        ) : (
+        <>
 
         {recipes?.length === 0 && (
           <p className="muted">Add some recipes first — then plan them here.</p>
@@ -619,6 +625,8 @@ export default function WeekPage() {
           </p>
         )}
         </div>
+        </>
+        )}
       </main>
       {toast}
     </>
