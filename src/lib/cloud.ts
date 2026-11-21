@@ -93,6 +93,8 @@ const stateDirty = new Set<string>();
 let stateTimer = 0;
 
 /** Called once when the app opens. Does nothing until cloud backup is set up. */
+let stopPlanWatch: (() => void) | null = null;
+
 export async function startCloud(): Promise<void> {
   if (!firebaseConfig || started) return;
   started = true;
@@ -117,9 +119,20 @@ export async function startCloud(): Promise<void> {
         await syncNow();
         announceChanges();
       } else void syncNow();
-      // Free or Plus comes from the server.
-      void import("./subscription").then((m) => m.refreshMyPlan()).catch(() => {});
-    } else set({ status: "signed-out", email: undefined, uid: undefined, lastSync: undefined, authKnown: true });
+      // Free or Plus comes from the server; then follow it, so changes show at once.
+      stopPlanWatch?.();
+      stopPlanWatch = null;
+      void import("./subscription")
+        .then(async (m) => {
+          await m.refreshMyPlan().catch(() => {});
+          if (auth.currentUser?.uid === u.uid) stopPlanWatch = await m.watchMyPlan(u.uid);
+        })
+        .catch(() => {});
+    } else {
+      stopPlanWatch?.();
+      stopPlanWatch = null;
+      set({ status: "signed-out", email: undefined, uid: undefined, lastSync: undefined, authKnown: true });
+    }
   });
 
   // Upload each change shortly after it's made (a burst of edits = one upload).

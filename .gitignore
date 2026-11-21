@@ -5,3 +5,5 @@ dist
 test-results
 functions/.env*
 functions/.secret.local
+e2e/.out
+playwright-report

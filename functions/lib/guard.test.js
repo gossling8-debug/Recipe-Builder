@@ -223,3 +223,13 @@ describe("Cardamix Family", () => {
     expect(allowanceCheck("family", { month: monthKey(Date.now()), spent: 5 }).message).toMatch(/household/);
   });
 });
+
+import { planEventCustomer } from "./guard.js";
+describe("Stripe messages", () => {
+  it("re-checks the plan only for messages about subscriptions and their payments", () => {
+    expect(planEventCustomer({ type: "customer.subscription.deleted", data: { object: { customer: "cus_1" } } })).toBe("cus_1");
+    expect(planEventCustomer({ type: "invoice.payment_failed", data: { object: { customer: { id: "cus_2" } } } })).toBe("cus_2");
+    expect(planEventCustomer({ type: "checkout.session.completed", data: { object: { customer: "cus_3" } } })).toBeNull();
+    expect(planEventCustomer({ type: "invoice.paid", data: { object: {} } })).toBeNull();
+  });
+});

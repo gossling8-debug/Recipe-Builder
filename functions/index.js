@@ -34,7 +34,7 @@ import { nextVote, parseVote, voteDelta } from "./lib/mixVotes.js";
 import { randomUUID } from "node:crypto";
 import {
   ALLOWANCE, MAX_BODY_BYTES, allowanceCheck, allowanceKey, allowedBeta, allowedOrigin, checkRequest, costOf, estimateCost, freeCheck,
-  HOUSEHOLD_MAX, isBeta, isComp, planFromSubscriptions, plusEmailOk, reserveUsage, retryAllowed, settleUsage, usageId,
+  HOUSEHOLD_MAX, isBeta, isComp, planEventCustomer, planFromSubscriptions, plusEmailOk, reserveUsage, retryAllowed, settleUsage, usageId,
 } from "./lib/guard.js";
 
 initializeApp();
@@ -42,6 +42,7 @@ const db = getFirestore();
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const PLUS_EMAILS = defineSecret("PLUS_EMAILS");
+const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET"); // "whsec_…" from Stripe's webhook settings; "none" until set up
 
 const ANTHROPIC_BASE = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com"; // tests point this at a fake
 // Stripe prices can't be changed, so a new price gets a new lookup key.
@@ -435,6 +436,36 @@ async function ensurePortal(s) {
     },
   });
 }
+
+// ---------- Stripe tells us when a subscription changes ----------
+// Otherwise a plan is only re-checked when the app opens, or once a day: a cancellation,
+// a failed card or an ended subscription could take up to a day to apply. Stripe signs each
+// message, so only Stripe can send one. The app sees the change at once (it watches plans/{uid}).
+export const stripeWebhook = onRequest({ ...opts, secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, PLUS_EMAILS] }, async (req, res) => {
+  if (req.method !== "POST") return void res.status(405).send("POST only");
+  const secret = STRIPE_WEBHOOK_SECRET.value();
+  if (!hasStripe() || !secret?.startsWith("whsec_")) return void res.status(503).send("Payments aren't set up yet.");
+  let event;
+  try {
+    event = stripe().webhooks.constructEvent(req.rawBody, req.get("stripe-signature") ?? "", secret);
+  } catch {
+    return void res.status(400).send("Bad signature.");
+  }
+  const customer = planEventCustomer(event);
+  if (!customer) return void res.json({ received: true });
+  const found = await db.collection("customers").where("stripeId", "==", customer).limit(1).get();
+  const uid = found.docs[0]?.id;
+  if (!uid) return void res.json({ received: true });
+  const recheck = async (id) => {
+    const u = await getAuth().getUser(id).catch(() => null);
+    if (u) await savePlan(id, u.email, u.emailVerified);
+  };
+  await recheck(uid);
+  // On a Family plan, everyone in the household follows the payer.
+  const household = (await db.doc(`households/${uid}`).get()).data();
+  for (const m of household?.members ?? []) if (m !== uid) await recheck(m);
+  res.json({ received: true });
+});
 
 export const billingPortal = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY] }, async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");

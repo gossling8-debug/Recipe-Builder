@@ -224,7 +224,24 @@ export const VERIFY_PLUS_FROM = Date.UTC(2026, 10, 15, 17, 0);
 export const plusEmailOk = (verified, createdAt) => !!verified || (createdAt > 0 && createdAt < VERIFY_PLUS_FROM);
 
 /** Plus or Family, from the subscription's price (Family prices' lookup keys start "cardamix_family"). */
-export const tierOf = (sub) => (/^cardamix_family/.test(sub?.items?.data?.[0]?.price?.lookup_key ?? "") ? "family" : "plus");
+/** Stripe messages that can change someone's plan (started, changed, cancelled, ended, paid, card failed). */
+export const PLAN_EVENTS = new Set([
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "customer.subscription.paused",
+  "customer.subscription.resumed",
+  "invoice.paid",
+  "invoice.payment_failed",
+]);
+/** The Stripe customer whose plan a message is about, or null if it isn't one that changes a plan. */
+export function planEventCustomer(event) {
+  if (!PLAN_EVENTS.has(event?.type)) return null;
+  const c = event.data?.object?.customer;
+  return (typeof c === "string" ? c : c?.id) || null;
+}
+
+export const tierOf =(sub) => (/^cardamix_family/.test(sub?.items?.data?.[0]?.price?.lookup_key ?? "") ? "family" : "plus");
 
 /** Plus or Family if a subscription is active (past_due keeps access while Stripe retries the card); Family wins over Plus. */
 export function planFromSubscriptions(subs) {

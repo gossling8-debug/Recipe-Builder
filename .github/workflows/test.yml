@@ -1,0 +1,53 @@
+name: Tests
+
+# Every pull request: the unit tests, then the click-through tests (the real app against the
+# Firebase emulators, with stand-ins for Claude and Stripe — nothing reaches either, and no
+# secrets are needed).
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      - uses: actions/setup-java@v4 # the database emulator runs on Java
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm ci
+        working-directory: functions
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Unit tests (app)
+        run: npm test
+      - name: Unit tests (server)
+        run: npx vitest run
+        working-directory: functions
+      - name: Install the test browser
+        run: npx playwright install --with-deps chromium
+      - name: Click-through tests
+        run: bash e2e/run.sh
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: click-through-results
+          path: |
+            playwright-report
+            test-results
+            e2e/.out/logs
+          retention-days: 7
