@@ -38,20 +38,20 @@ export default function RecipeTips({ recipe }: { recipe: ScannedRecipe }) {
         <div className="plan-card recipe-tips">
           {t.safe.length > 0 && (
             <>
-              <h4>Cook to</h4>
+              <h3 className="h4">Cook to</h3>
               {table(t.safe)}
             </>
           )}
           {t.steak.length > 0 && (
             <>
-              <h4>Steak doneness</h4>
+              <h3 className="h4">Steak doneness</h3>
               <p className="muted small">After resting — take it off the heat about 5°F early.</p>
               {table(t.steak)}
             </>
           )}
           {t.grill.length > 0 && (
             <>
-              <h4>On the grill</h4>
+              <h3 className="h4">On the grill</h3>
               {table(t.grill)}
             </>
           )}

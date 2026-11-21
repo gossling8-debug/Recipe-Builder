@@ -14,7 +14,7 @@ export default function LuluKeysSection() {
   const [busy, setBusy] = useState(false);
   return (
     <section>
-      <h3>Printed cookbooks (Lulu)</h3>
+      <h2 className="h3">Printed cookbooks (Lulu)</h2>
       <p className="muted small">
         Paste the client key and secret from Lulu's developer portal. They're stored where only the server can read them. Use Test first —
         test orders aren't printed or charged by Lulu.

@@ -88,7 +88,7 @@ export default function BigMealPage({ day, ids }: { day?: string; ids?: string[]
 
         {dishes.length > 0 && eatAt !== null && (
           <section>
-            <h3>Schedule · {dayOf(eatAt)}</h3>
+            <h2 className="h3">Schedule · {dayOf(eatAt)}</h2>
             <ol className="meal-timeline">
               {dishes.map((d) => (
                 <li key={d.recipe.id} className={d.startAt < now ? "late" : ""}>
@@ -136,7 +136,7 @@ export default function BigMealPage({ day, ids }: { day?: string; ids?: string[]
           </section>
         )}
 
-        <h3>Dishes {picked.size > 0 && <span className="muted small">· {picked.size} chosen</span>}</h3>
+        <h2 className="h3">Dishes {picked.size > 0 && <span className="muted small">· {picked.size} chosen</span>}</h2>
         {recipes === null && <Loading />}
         {recipes?.length === 0 && <p className="muted">Add some recipes first.</p>}
         <ul className="ingredients meal-pick">

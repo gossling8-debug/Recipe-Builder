@@ -12,7 +12,7 @@ export default function CopyrightEmailSection() {
   }, []);
   return (
     <section>
-      <h3>Copyright notices</h3>
+      <h2 className="h3">Copyright notices</h2>
       <p className="muted small">
         The address on the public <a href={href({ name: "copyright" })}>copyright page</a> where rights holders send notices. Use the same
         one you register as your copyright agent with the US Copyright Office. To take a Mix recipe down after a notice, open it and tap

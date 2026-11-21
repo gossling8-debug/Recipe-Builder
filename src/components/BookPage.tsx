@@ -117,7 +117,7 @@ function BookList() {
         {books === null && <Loading />}
         {books && books.length > 0 && (
           <section>
-            <h3>Your books</h3>
+            <h2 className="h3">Your books</h2>
             <ul className="book-list">
               {books.map((b) => (
                 <li key={b.id}>
@@ -130,7 +130,7 @@ function BookList() {
         )}
         {orders.length > 0 && (
           <section>
-            <h3>Orders</h3>
+            <h2 className="h3">Orders</h2>
             <ul className="book-list">
               {orders.map((o) => (
                 <OrderRow key={o.id} o={o} />
@@ -249,9 +249,9 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
         </section>
 
         <section>
-          <h3>
+          <h2 className="h3">
             Recipes <span className="muted small">· {book.recipeIds.length} chosen</span>
-          </h3>
+          </h2>
           <input className="text-input" type="search" placeholder="Search recipes or labels" value={search} onChange={(e) => setSearch(e.target.value)} />
           <div className="button-row">
             <button className="link-btn small" onClick={() => update({ recipeIds: [...new Set([...book.recipeIds, ...shown.map((r) => r.id)])] })}>
@@ -291,7 +291,7 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
         </section>
 
         <section>
-          <h3>Cover photo</h3>
+          <h2 className="h3">Cover photo</h2>
           <div className="book-covers">
             <button
               className={!book.coverRecipeId && !book.coverPhoto ? "book-cover none active" : "book-cover none"}
@@ -377,7 +377,7 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
             </button>
           ) : (
             <div className="book-order">
-              <h3>Delivery (US only)</h3>
+              <h2 className="h3">Delivery (US only)</h2>
               {(
                 [
                   ["name", "Name"],

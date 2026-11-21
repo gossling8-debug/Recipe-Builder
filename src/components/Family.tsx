@@ -689,7 +689,7 @@ export function ShareToFamily({ recipe }: { recipe: SavedRecipe }) {
 
   return (
     <section className="family-share">
-      <h3>Cookbooks</h3>
+      <h2 className="h3">Cookbooks</h2>
       {books.map((b) => (
         <p key={b.id} className="small family-row">
           {shared[b.id] ? (

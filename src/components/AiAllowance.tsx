@@ -19,7 +19,7 @@ export default function AiAllowance() {
     const creates = freeLeft("create", usage ?? null);
     return (
       <section>
-        <h3>Free AI this month</h3>
+        <h2 className="h3">Free AI this month</h2>
         <VerifyEmail compact />
         {usage === undefined ? (
           <p className="small">Checking…</p>
@@ -49,7 +49,7 @@ export default function AiAllowance() {
 
   return (
     <section>
-      <h3>AI this month</h3>
+      <h2 className="h3">AI this month</h2>
       <div className="ai-meter" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label="AI used this month">
         <span style={{ width: `${pct}%` }} />
       </div>

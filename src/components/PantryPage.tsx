@@ -97,7 +97,7 @@ export default function PantryPage() {
         <p className="muted small">What's on hand: ticking the shopping list adds to it, making a recipe uses it up. Tap an amount to correct it.</p>
 
         <section>
-          <h3 className="list-heading">Add something you have</h3>
+          <h2 className="list-heading h3">Add something you have</h2>
           <div className="pantry-add">
             <input className="text-input" placeholder="Ingredient, e.g. sugar" value={name} onChange={(e) => setName(e.target.value)} />
             <input className="text-input" placeholder="Amount, e.g. 4 lb" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -123,7 +123,7 @@ export default function PantryPage() {
 
         {soon.length > 0 && (
           <section className="use-soon">
-            <h3 className="list-heading">Use soon</h3>
+            <h2 className="list-heading h3">Use soon</h2>
             <ul>
               {soon.map(({ item, recipes }) => (
                 <li key={item.key} className={`fresh-${freshness(item.useBy!)}`}>
@@ -154,7 +154,7 @@ export default function PantryPage() {
 
         {items.length > 0 && ideas && ideas.length > 0 && (
           <section className="ideas">
-            <h3 className="list-heading">What can I make?</h3>
+            <h2 className="list-heading h3">What can I make?</h2>
             {(
               <ul className="idea-list">
                 {ideas.slice(0, 8).map((c) => {

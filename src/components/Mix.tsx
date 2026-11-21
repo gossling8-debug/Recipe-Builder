@@ -455,7 +455,7 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
 
   return (
     <section className="mix-publish">
-      <h3>The Mix</h3>
+      <h2 className="h3">The Mix</h2>
       {at !== null ? (
         <p className="small">
           <Icon name="check" size={16} /> Published in <a href={href({ name: "mix", id: pubId ?? "" })}>The Mix</a>

@@ -71,7 +71,7 @@ export default function MyNotes({
 
   return (
     <section className="my-notes">
-      <h3>My notes</h3>
+      <h2 className="h3">My notes</h2>
       <p className="small made-line">
         {last === undefined ? (
           <span className="muted">Not made yet.</span>

@@ -110,7 +110,7 @@ export default function OwnerPage() {
             </p>
 
             <section>
-              <h3>Accounts</h3>
+              <h2 className="h3">Accounts</h2>
               <div className="owner-grid">
                 <Stat n={s.accounts.total} label="accounts" />
                 <Stat n={s.accounts.active7} label="active this week" />
@@ -125,7 +125,7 @@ export default function OwnerPage() {
             </section>
 
             <section>
-              <h3>Paying</h3>
+              <h2 className="h3">Paying</h2>
               <div className="owner-grid">
                 <Stat n={s.plus.monthly} label="Plus monthly" />
                 <Stat n={s.plus.yearly} label="Plus yearly" />
@@ -146,7 +146,7 @@ export default function OwnerPage() {
 
             {s.upgrade && (
               <section>
-                <h3>Toward upgrading</h3>
+                <h2 className="h3">Toward upgrading</h2>
                 <p className="muted small">People who reached each step at least once, and how many of them pay now.</p>
                 <table className="owner-funnel">
                   <tbody>
@@ -171,7 +171,7 @@ export default function OwnerPage() {
             )}
 
             <section>
-              <h3>AI this month</h3>
+              <h2 className="h3">AI this month</h2>
               <div className="owner-grid">
                 <Stat n={money(s.ai.spent)} label="AI cost (list price)" />
                 <Stat n={s.ai.uses} label="requests" />
@@ -203,7 +203,7 @@ export default function OwnerPage() {
             </section>
 
             <section>
-              <h3>Recipes shared</h3>
+              <h2 className="h3">Recipes shared</h2>
               <div className="owner-grid">
                 <Stat n={s.content.mixRecipes} label="in The Mix" />
                 <Stat n={s.content.mixReported} label="reported" />
@@ -226,7 +226,7 @@ export default function OwnerPage() {
             <CopyrightEmailSection />
 
             <section>
-              <h3>Error reports</h3>
+              <h2 className="h3">Error reports</h2>
               <p className="muted small">
                 {s.errors.total === 0
                   ? "None. Crashes and errors people hit show up here."
@@ -288,7 +288,7 @@ function ConfirmSomeone() {
   const [note, setNote] = useState("");
   return (
     <section>
-      <h3>Confirm someone's email</h3>
+      <h2 className="h3">Confirm someone's email</h2>
       <p className="muted small">
         If someone's confirmation email never arrives, enter their account's
         email exactly. Then they tap “I've confirmed it” in the app (or sign out

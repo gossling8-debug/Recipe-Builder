@@ -107,11 +107,11 @@ export default function RecipeEditor(props: {
         </label>
       </div>
 
-      <h3>Labels</h3>
+      <h2 className="h3">Labels</h2>
       <p className="muted small">Tap to add or remove. Labels let you filter your recipes, and a Dinner label lets “Fill my week” pick it.</p>
       <TagPicker tags={tags} onChange={setTags} />
 
-      <h3>Ingredients</h3>
+      <h2 className="h3">Ingredients</h2>
       <p className="muted small">Each ingredient has its amount on top and its name below. Add notes after a comma: “butter, softened”.</p>
       <ul className="edit-list">
         {rows.map((r) => (
@@ -147,7 +147,7 @@ export default function RecipeEditor(props: {
 
       {stepsUpdated && <div className="callout small">{stepsUpdated}</div>}
 
-      <h3>Instructions</h3>
+      <h2 className="h3">Instructions</h2>
       <p className="muted small">
         Put ingredients in square brackets with the amount after a colon, like <code>[the flour: 2 cups]</code>. That's what
         shows the amount in the step and lets you cross it off. The name in brackets must match an ingredient above.
@@ -182,7 +182,7 @@ export default function RecipeEditor(props: {
         <Icon name="plus" size={18} /> Add step
       </button>
 
-      <h3>Notes</h3>
+      <h2 className="h3">Notes</h2>
       <textarea className="text-input" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
 
       {recipe.warnings.length > 0 && (

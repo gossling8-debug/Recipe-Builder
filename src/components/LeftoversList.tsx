@@ -9,7 +9,7 @@ export default function LeftoversList() {
   if (!list.length) return null;
   return (
     <section className="use-soon leftovers">
-      <h3 className="list-heading">Leftovers</h3>
+      <h2 className="list-heading h3">Leftovers</h2>
       <ul>
         {list.map((l) => (
           <li key={l.id} className={leftoverPast(l) ? "fresh-past" : l.frozen ? "" : "fresh-soon"}>

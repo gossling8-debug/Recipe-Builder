@@ -68,7 +68,7 @@ export default function Substitutes({ recipe, onSaved }: { recipe: SavedRecipe; 
 
   return (
     <section id="substitutes">
-      <h3>Substitutes</h3>
+      <h2 className="h3">Substitutes</h2>
       {saved && (
         <>
           {!current && (

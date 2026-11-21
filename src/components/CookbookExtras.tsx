@@ -134,7 +134,7 @@ export function CookbookCover({ book, isOwner }: { book: Cookbook; isOwner: bool
   if (editing) {
     return (
       <section className="book-cover editing">
-        <h3>Cover page</h3>
+        <h2 className="h3">Cover page</h2>
         <PhotoPicker
           photo={editing.photo}
           onChange={(photo) => setEditing({ ...editing, photo })}

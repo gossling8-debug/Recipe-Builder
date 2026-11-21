@@ -282,11 +282,11 @@ export default function RecipeView({
       )}
 
       <section>
-        <h3>Ingredients</h3>
+        <h2 className="h3">Ingredients</h2>
         {!preview && <p className="muted small">Tick what you already have — it stays off the shopping list.</p>}
         {groups.map((g, gi) => (
           <div key={gi}>
-            {g.section && <h4>{g.section}</h4>}
+            {g.section && <h3 className="h4">{g.section}</h3>}
             <ul className="ingredients">
               {g.items.map((i) => (
                 <li key={i}>
@@ -358,7 +358,7 @@ export default function RecipeView({
       )}
 
       <section>
-        <h3>Instructions</h3>
+        <h2 className="h3">Instructions</h2>
         {onStartCooking && (
           <button className="btn primary cook-btn no-print" onClick={onStartCooking}>
             Start cooking — one step at a time
@@ -440,7 +440,7 @@ export default function RecipeView({
 
       {recipe.notes && (
         <section>
-          <h3>Notes</h3>
+          <h2 className="h3">Notes</h2>
           <p className="notes">{recipe.notes}</p>
         </section>
       )}

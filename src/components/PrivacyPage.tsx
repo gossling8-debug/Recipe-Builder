@@ -19,7 +19,7 @@ export default function PrivacyPage() {
           <a href={href({ name: "terms" })}>terms of service</a>.
         </p>
 
-        <h3>On your phone</h3>
+        <h2 className="h3">On your phone</h2>
         <p>
           Everything you add — recipes, photos, notes, your pantry, shopping list, week plan, prices, budget, fast food spending and settings — is saved in
           your browser's storage on your device. It stays there until you delete it or clear this site's data. Your Anthropic API key is
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
           your phone itself — the app never receives any face data.
         </p>
 
-        <h3>When you use AI features</h3>
+        <h2 className="h3">When you use AI features</h2>
         <p>
           Reading a recipe card, importing a web page or pasted text, nutrition estimates, substitutes, receipt import, “Cook with what
           I have”, “Create a recipe” and typing out a cookbook memory page send what's needed for that task to Anthropic's Claude service.
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
           and its terms for API customers. Nothing is sent to Anthropic unless you start one of these features.
         </p>
 
-        <h3>Your account and cloud backup</h3>
+        <h2 className="h3">Your account and cloud backup</h2>
         <p>
           Cardamix needs an account, so your recipes are never only on one phone. Your email address and account are handled by
           Google Firebase Authentication. Passwords are
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
           or if required by law. Data is not end-to-end encrypted.
         </p>
 
-        <h3>Payments</h3>
+        <h2 className="h3">Payments</h2>
         <p>
           Cardamix Plus is paid through Stripe. Your card details go directly to Stripe and are never seen or stored by Cardamix. Cardamix
           keeps only your Stripe customer number and whether your subscription is active, so it knows to unlock Plus. Stripe handles
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
           .
         </p>
 
-        <h3>Cookbooks</h3>
+        <h2 className="h3">Cookbooks</h2>
         <p>
           Recipes, memories, photos and ratings you add to a shared cookbook (including its cover page), and the display name you
           choose, are visible to everyone in that cookbook. If you leave the name blank, the part of your email address before the @ is
@@ -79,7 +79,7 @@ export default function PrivacyPage() {
           you trust.
         </p>
 
-        <h3>Shared shopping lists</h3>
+        <h2 className="h3">Shared shopping lists</h2>
         <p>
           If you share your shopping list, everyone on it sees the same list: the ingredients of the recipes on it (a copy, not your
           recipe box), each recipe's name, who added it, what's been ticked off and by whom, and the name you choose. Your pantry, prices,
@@ -87,21 +87,21 @@ export default function PrivacyPage() {
           When you stop sharing (or delete your account), your recipes and ticks come off the list and you keep a copy of it.
         </p>
 
-        <h3>Cardamix Family households</h3>
+        <h2 className="h3">Cardamix Family households</h2>
         <p>
           On a Family plan, everyone in the household can see who's on it (the names each person chose) and shares one monthly AI
           allowance. Nothing else is shared: each person's recipes, lists, pantry and budget stay their own. The person who pays can take
           someone off the plan; anyone can leave. When the plan or an account ends, the household is removed.
         </p>
 
-        <h3>Printed cookbooks</h3>
+        <h2 className="h3">Printed cookbooks</h2>
         <p>
           When you order a printed cookbook, the recipes, photos and wording you chose are sent to our print partner, Lulu, along with your
           name, delivery address, phone number (for the carrier) and email (for delivery updates). Payment is handled by Stripe; we never
           see your card. Your order is kept so you can track it, and deleted with your account.
         </p>
 
-        <h3>Invites by email</h3>
+        <h2 className="h3">Invites by email</h2>
         <p>
           When you invite someone to a shared shopping list or a cookbook by email, we store their email address, your name, and the
           list or cookbook's name, so the invite can wait for them in Cardamix. Only you and they (once they've confirmed that email) can
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
           address for anything else.
         </p>
 
-        <h3>The Mix</h3>
+        <h2 className="h3">The Mix</h2>
         <p>
           A recipe you publish to The Mix — the recipe as you cook it, the name you publish under and when you published it — can be seen
           by anyone with a Cardamix account. Your email, account and photos and notes are never published: which recipes are yours is
@@ -119,7 +119,7 @@ export default function PrivacyPage() {
           address needs to be confirmed. You can take your recipes out of The Mix at any time; copies others already saved stay theirs.
         </p>
 
-        <h3>Error reports</h3>
+        <h2 className="h3">Error reports</h2>
         <p>
           If the app runs into an error on your device, it sends a short technical report so the problem can be found and fixed: the
           error message, a short technical trace of where in the app's code it happened, which screen you were on (for example
@@ -127,7 +127,7 @@ export default function PrivacyPage() {
           photos, email or account. Reports are kept for 30 days and only the app's administrators can see them.
         </p>
 
-        <h3>What the app's administrators see</h3>
+        <h2 className="h3">What the app's administrators see</h2>
         <p>
           Besides error reports, the administrators have a dashboard of totals: how many accounts there are and how many were active
           recently, how many have Plus, what AI has cost this month (overall, by feature and by plan, and the largest amounts spent by a
@@ -137,7 +137,7 @@ export default function PrivacyPage() {
           email addresses or recipes. If your confirmation email doesn't arrive, an administrator can mark your address as confirmed for you.
         </p>
 
-        <h3>Other services you choose to open</h3>
+        <h2 className="h3">Other services you choose to open</h2>
         <ul>
           <li>
             Store buttons on the shopping list (Walmart, Target, Kroger, Costco, Aldi and the other stores you can choose) open that
@@ -156,7 +156,7 @@ export default function PrivacyPage() {
           app loads.
         </p>
 
-        <h3>Deleting your data</h3>
+        <h2 className="h3">Deleting your data</h2>
         <ul>
           <li>
             <strong>Everything:</strong> Settings → Account → <em>Delete my account</em> permanently removes your account and everything
@@ -170,10 +170,10 @@ export default function PrivacyPage() {
           </li>
         </ul>
 
-        <h3>Children</h3>
+        <h2 className="h3">Children</h2>
         <p>Cardamix is not directed at children under 13, and cloud accounts are not meant for them.</p>
 
-        <h3>Changes and contact</h3>
+        <h2 className="h3">Changes and contact</h2>
         <p>
           If this policy changes, the date at the top changes too. Questions or requests:{" "}
           <a href={CONTACT} target="_blank" rel="noreferrer">

@@ -34,7 +34,7 @@ export default function OwnKeySection({ open = false }: { open?: boolean }) {
     <details className="advanced" open={open}>
       <summary>Your own API key (advanced)</summary>
       <section>
-        <h3>Your own Anthropic key</h3>
+        <h2 className="h3">Your own Anthropic key</h2>
         <p className="muted small">
           Optional, for advanced users. With your own key, AI is billed to your
           Anthropic account instead of using your monthly allowance, and the
@@ -60,7 +60,7 @@ export default function OwnKeySection({ open = false }: { open?: boolean }) {
 
       {ownKey() && (
         <section>
-          <h3>Spending</h3>
+          <h2 className="h3">Spending</h2>
           {usage.length === 0 ? (
             <p className="muted small">
               Nothing yet. After your first scan this shows what the app has

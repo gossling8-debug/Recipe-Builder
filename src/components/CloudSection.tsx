@@ -34,7 +34,7 @@ export default function CloudSection() {
   if (s.status === "off") {
     return (
       <section>
-        <h3>Cloud backup &amp; sync</h3>
+        <h2 className="h3">Cloud backup &amp; sync</h2>
         <p className="muted small">Not set up yet. Until it is, recipes are saved only on this phone — use Export backup above.</p>
       </section>
     );
@@ -44,7 +44,7 @@ export default function CloudSection() {
 
   return (
     <section>
-      <h3>Account</h3>
+      <h2 className="h3">Account</h2>
       <p>
         Signed in as <strong>{s.email}</strong>
       </p>

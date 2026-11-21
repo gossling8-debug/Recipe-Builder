@@ -63,7 +63,7 @@ export default function FastFoodSection({
   return (
     <>
       <section className="fast-food">
-        <h3>Fast food</h3>
+        <h2 className="h3">Fast food</h2>
         <p className="budget-big">
           <strong>{dollars(week)}</strong>{" "}
           <span className="muted">this week</span>

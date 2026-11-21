@@ -62,7 +62,7 @@ export default function SavingsCard({ recipes }: { recipes: SavedRecipe[] }) {
   return (
     <section className="savings-card">
       <div className="savings-head">
-        <h3>You saved</h3>
+        <h2 className="h3">You saved</h2>
         <div className="segmented small" role="tablist">
           <button role="tab" aria-selected={which === "this"} className={which === "this" ? "chip active" : "chip"} onClick={() => setWhich("this")}>
             This month

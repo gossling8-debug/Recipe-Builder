@@ -67,6 +67,9 @@ body {
 }
 a { color: var(--text); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 h1, h2, h3, h4 { line-height: 1.2; }
+/* Section headings are h2 and their sub-headings h3 (so the levels don't skip); they keep the look of h3 and h4. */
+.h3 { font-size: 1.17em; margin-block: 1em; }
+.h4 { font-size: 1em; margin-block: 1.33em; }
 .icon { display: block; flex: none; }
 
 /* ---------- Top bar ---------- */
@@ -190,11 +193,11 @@ h1, h2, h3, h4 { line-height: 1.2; }
   margin: 4px 0 6px;
 }
 .meta { color: var(--muted); margin: 0 0 4px; font-size: 15px; }
-.recipe h3 {
+.recipe .h3 {
   font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted);
   margin: 36px 0 4px; padding-bottom: 10px; border-bottom: 1px solid var(--line);
 }
-.recipe h4 { font-family: var(--serif); font-size: 17px; font-style: italic; font-weight: 500; margin: 18px 0 2px; }
+.recipe .h4 { font-family: var(--serif); font-size: 17px; font-style: italic; font-weight: 500; margin: 18px 0 2px; }
 
 /* Size control */
 .scale-row { display: flex; align-items: center; gap: 12px; margin: 18px 0 4px; }
@@ -264,7 +267,7 @@ h1, h2, h3, h4 { line-height: 1.2; }
 .original img { width: 100%; border-radius: 10px; margin-top: 12px; display: block; }
 
 /* ---------- Editor ---------- */
-.editor h3 {
+.editor .h3 {
   font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted);
   margin: 32px 0 6px;
 }
@@ -299,7 +302,7 @@ code {
 .fab-bar > .button-row .btn { flex: 1 1 0; }
 
 /* ---------- Settings ---------- */
-.page section > h3 {
+.page section > .h3 {
   font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted);
   margin: 28px 0 8px;
 }
@@ -789,7 +792,7 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .made-history li { display: flex; justify-content: space-between; align-items: center; min-height: 40px; border-bottom: 1px solid var(--line); }
 
 /* Features (Settings) */
-.feature-group h4 { margin: 16px 0 4px; font-size: 14px; }
+.feature-group .h4 { margin: 16px 0 4px; font-size: 14px; }
 .feature-list { list-style: none; padding: 0; margin: 0; }
 .feature-list li { border-bottom: 1px solid var(--line); }
 .feature-list li.locked { opacity: 0.55; }
@@ -840,9 +843,9 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .tip-bullets li { margin-bottom: 6px; }
 .tip-note { background: var(--accent-soft); border-radius: 10px; padding: 8px 10px; }
 .tips-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; }
-.recipe-tips h4 { margin: 10px 0 2px; font-size: 14px; }
-.recipe-tips h4:first-child { margin-top: 0; }
-.privacy h3 { margin-top: 24px; }
+.recipe-tips .h4 { margin: 10px 0 2px; font-size: 14px; }
+.recipe-tips .h4:first-child { margin-top: 0; }
+.privacy .h3 { margin-top: 24px; }
 .privacy ul { padding-left: 20px; }
 .privacy li { margin: 6px 0; }
 .settings-footer { margin: 28px 0 8px; text-align: center; }
@@ -1254,13 +1257,13 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 /* ---------- Plan on a budget (Week) ---------- */
 .budget-plan-open { margin-top: 12px; }
 .budget-plan { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
-.budget-plan h3 { margin: 0 0 8px; font-size: 16px; }
+.budget-plan .h3 { margin: 0 0 8px; font-size: 16px; }
 .budget-plan-fields { display: grid; grid-template-columns: minmax(90px, 1fr) 2fr; gap: 10px; }
 .budget-plan .callout p { margin: 6px 0 0; }
 
 /* ---------- You saved (Budget) ---------- */
 .savings-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.savings-head h3 { margin: 0; }
+.savings-head .h3 { margin: 0; }
 .savings-total { margin: 8px 0 4px; font-size: 15px; }
 .savings-total strong { font-size: 32px; font-family: var(--serif, Georgia, serif); color: var(--accent); margin-right: 4px; }
 .savings-rows { list-style: none; padding: 0; margin: 8px 0; }
@@ -1292,7 +1295,7 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .book-recipe-photo { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .book-recipe-photo img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
 /* Settings: subheadings inside a section (Display) */
-main.page section > h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; }
+main.page section > .h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; }
 .book-flag { color: var(--warn, #b45309); font-size: 13px; }
 .book-rights { margin: 12px 0; align-items: flex-start; }
 .mix-copyright p { margin: 0 0 8px; }
@@ -1311,8 +1314,8 @@ main.page section > h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; 
 .fold-summary { font-weight: 400; }
 .fold-body { padding: 0 0 14px; }
 /* A section inside a fold doesn't repeat its own heading when the fold already says it. */
-.fold.fold-single .fold-body > section > h3:first-child,
-.fold.fold-single .fold-body > div > section > h3:first-child { display: none; }
+.fold.fold-single .fold-body > section > .h3:first-child,
+.fold.fold-single .fold-body > div > section > .h3:first-child { display: none; }
 .fold .fold-body > section, .fold .fold-body > div > section { margin-top: 0; }
 @media print { .fold { display: none; } }
 

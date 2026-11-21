@@ -15,7 +15,7 @@ export default function StaplesSection() {
   };
   return (
     <section className="staples">
-      <h3 className="list-heading">Always keep</h3>
+      <h2 className="list-heading h3">Always keep</h2>
       <p className="muted small">
         When one of these is out, past its date, or down to about a quarter of what you last bought, it goes on your{" "}
         <a href={href({ name: "shopping" })}>shopping list</a> by itself.

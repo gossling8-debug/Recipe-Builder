@@ -118,13 +118,13 @@ export default function PlusPage({ done }: { done?: boolean }) {
           <section>
             {gifted ? (
               <>
-                <h3>The plans others see</h3>
+                <h2 className="h3">The plans others see</h2>
                 <p className="muted small">Your account is gifted, so there's nothing to buy — this is what everyone else is offered.</p>
               </>
             ) : beta ? (
-              <h3>Subscribe early (optional)</h3>
+              <h2 className="h3">Subscribe early (optional)</h2>
             ) : canUpgradeToFamily ? (
-              <h3>Move up to Cardamix Family</h3>
+              <h2 className="h3">Move up to Cardamix Family</h2>
             ) : (
               <h1 className="page-title">Choose a plan</h1>
             )}
@@ -224,7 +224,7 @@ export default function PlusPage({ done }: { done?: boolean }) {
         {error && <div className="callout error small">{error}</div>}
 
         <section>
-          <h3>Plus includes</h3>
+          <h2 className="h3">Plus includes</h2>
           <ul className="plus-list">
             <li>
               <Icon name="check" size={16} />
@@ -245,7 +245,7 @@ export default function PlusPage({ done }: { done?: boolean }) {
         </section>
         {familyFeatures.length > 0 && (
           <section>
-            <h3>{beta || gifted ? "Coming with Cardamix Family" : "Cardamix Family adds"}</h3>
+            <h2 className="h3">{beta || gifted ? "Coming with Cardamix Family" : "Cardamix Family adds"}</h2>
             <p className="muted small">
               Everything in Plus for your whole household, and more. {beta ? "Included free while Cardamix is being tested." : ""}
             </p>
