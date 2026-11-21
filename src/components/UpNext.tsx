@@ -1,4 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { HoldLink } from "./RecipeActions";
+import TodayActions from "./TodayActions";
+import { useToast } from "./Toast";
 import Icon from "./Icon";
 import WarnIcon from "./WarnIcon";
 import { href } from "../lib/route";
@@ -19,6 +22,17 @@ const SHOW = 2;
  */
 export default function UpNext({ recipes, thaw }: { recipes: SavedRecipe[]; thaw: ThawGroup[] }) {
   const byId = new Map(recipes.map((r) => [r.id, r]));
+  // Press and hold a line for its options (made it, move, swap, not today…).
+  const [holding, setHolding] = useState<string | null>(null);
+  const [toast, showToast] = useToast();
+  const [, refresh] = useState(0);
+  useEffect(() => {
+    const on = () => refresh((n) => n + 1);
+    for (const ev of ["week-changed", "recipes-changed", "state-synced"]) window.addEventListener(ev, on);
+    return () => {
+      for (const ev of ["week-changed", "recipes-changed", "state-synced"]) window.removeEventListener(ev, on);
+    };
+  }, []);
   const now = Date.now();
   const plans = Object.values(feature("mealTime") ? loadPlans() : {});
   const done = plans.filter((p) => {
@@ -78,23 +92,29 @@ export default function UpNext({ recipes, thaw }: { recipes: SavedRecipe[]; thaw
   }
 
   const all = [...lines.values()].sort((a, b) => Number(b.urgent) - Number(a.urgent) || a.sortAt - b.sortAt);
-  if (!all.length) return null;
+  const held = holding ? byId.get(holding) : undefined;
+  const sheet = held && (
+    <TodayActions recipe={held} recipes={recipes} thaw={thaw} onClose={() => setHolding(null)} onMessage={(m) => (showToast(m), refresh((n) => n + 1))} />
+  );
+  if (!all.length) return <>{sheet}{toast}</>;
   return (
     <>
       {all.slice(0, SHOW).map((l) => (
-        <a key={l.id} className={l.urgent ? "plan-strip use-soon-strip" : "plan-strip"} href={href({ name: "recipe", id: l.id })}>
+        <HoldLink key={l.id} className={l.urgent ? "plan-strip use-soon-strip" : "plan-strip"} href={href({ name: "recipe", id: l.id })} onHold={() => setHolding(l.id)}>
           {l.urgent ? <WarnIcon /> : <Icon name={l.parts.some((p) => p.startsWith("thaw") || p.startsWith("start")) ? "timer" : "calendar"} size={18} />}
           <span>
             <strong>{l.title}</strong>
             <span className="muted small"> · {l.parts.join(" · ")}</span>
           </span>
-        </a>
+        </HoldLink>
       ))}
       {all.length > SHOW && (
         <a className="link-btn small up-next-more" href={href({ name: "week" })}>
           +{all.length - SHOW} more coming up · see the week
         </a>
       )}
+      {sheet}
+      {toast}
     </>
   );
 }
