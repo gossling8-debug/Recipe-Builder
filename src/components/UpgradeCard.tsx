@@ -41,6 +41,9 @@ export default function UpgradeCard({ show }: { show: boolean }) {
           <Icon name="jar" size={16} /> Pantry, budget and “What can I make tonight?”
         </li>
         <li>
+          <Icon name="book" size={16} /> Shared cookbooks with family and friends
+        </li>
+        <li>
           <Icon name="camera" size={16} /> About 50 recipe adds a month (free has {FREE_LIMITS.scan})
         </li>
       </ul>
