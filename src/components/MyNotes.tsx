@@ -16,6 +16,7 @@ export default function MyNotes({
   onSaved,
   onMarkedMade,
   hideRating,
+  onDelete,
 }: {
   recipe: SavedRecipe;
   /** On a cookbook recipe, the cookbook's rating is shown instead. */
@@ -23,7 +24,10 @@ export default function MyNotes({
   onSaved: (r: SavedRecipe) => Promise<void>;
   /** After "Made it today" (e.g. to put a doubled batch's extra half in the freezer). */
   onMarkedMade?: () => void;
+  /** Deletes the recipe (already asked here, so no second question). */
+  onDelete?: () => void;
 }) {
+  const [askDelete, setAskDelete] = useState(false);
   const [text, setText] = useState(recipe.myNotes ?? "");
   const [editing, setEditing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -253,12 +257,30 @@ export default function MyNotes({
             key={label}
             className={recipe.makeAgain === v ? "tag on" : "tag"}
             aria-pressed={recipe.makeAgain === v}
-            onClick={() => onSaved({ ...recipe, makeAgain: recipe.makeAgain === v ? undefined : v })}
+            onClick={() => {
+              const next = recipe.makeAgain === v ? undefined : v;
+              void onSaved({ ...recipe, makeAgain: next });
+              if (next === false && onDelete) setAskDelete(true);
+            }}
           >
             {label}
           </button>
         ))}
       </div>
+      {askDelete && (
+        <div className="sheet-backdrop" onClick={() => setAskDelete(false)}>
+          <div className="sheet" role="dialog" aria-modal="true" aria-label="Delete this recipe?" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-title">Delete “{recipe.title}”?</div>
+            <p className="muted small sheet-note">You marked it as one you wouldn't make again. Deleting it can't be undone.</p>
+            <button className="sheet-item danger" onClick={() => (setAskDelete(false), onDelete?.())}>
+              <Icon name="trash" size={20} /> Delete recipe
+            </button>
+            <button className="sheet-item sheet-cancel" onClick={() => setAskDelete(false)}>
+              Keep it
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="dish-photo-row">
         <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => (addPhoto(e.target.files?.[0]), (e.target.value = ""))} />

@@ -1,4 +1,4 @@
-import { isDinner } from "./autoPlan";
+import { isDinnerDish } from "./autoPlan";
 import { madeDays } from "./made";
 import { convert, type Qty } from "./qty";
 import { recipeCost, unitPrice, type PriceEntry } from "./prices";
@@ -89,7 +89,7 @@ export function homeCooking(
   const outEach = fastFood.reduce((s, e) => s + e.amount, 0) / fastFood.length;
   let dinners = 0, counted = 0, homeTotal = 0, saving = 0;
   for (const r of recipes) {
-    if (!isDinner(r)) continue;
+    if (!isDinnerDish(r)) continue; // already cooked, so it counts even if marked "Wouldn't make again"
     const times = madeDays(r).filter((d) => d >= from && d < to).length;
     if (!times) continue;
     dinners += times;

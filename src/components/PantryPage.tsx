@@ -42,7 +42,7 @@ export default function PantryPage() {
   const loadIdeas = () =>
     listRecipes().then(
       (rs) => {
-        setIdeas(whatCanIMake(rs));
+        setIdeas(whatCanIMake(rs.filter((r) => r.makeAgain !== false)));
         setSoon(useSoon(rs));
       },
       () => setIdeas([]),

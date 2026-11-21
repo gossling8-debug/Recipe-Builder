@@ -908,6 +908,8 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .sheet-item:disabled { opacity: 0.5; }
 .sheet-item.danger { color: var(--error); }
 .sheet-cancel { justify-content: center; border-bottom: 0; font-weight: 600; }
+.sheet-note { padding: 10px 4px 4px; margin: 0; }
+.no-again { color: var(--error); }
 .undo-toast { display: flex; align-items: center; gap: 14px; }
 .undo-toast .link-btn { color: inherit; font-weight: 600; padding: 0; }
 .hold-tip { margin-top: 10px; }
