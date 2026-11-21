@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FEATURES } from "../lib/features";
 import { href } from "../lib/route";
-import { HOUSEHOLD_MAX, manageSubscription, myPlan, refreshMyPlan, upgrade, type MyPlan } from "../lib/subscription";
+import { HOUSEHOLD_MAX, manageSubscription, myPlan, refreshMyPlan, upgrade, type FamilyQuote, type MyPlan } from "../lib/subscription";
 import Header from "./Header";
 import Icon from "./Icon";
 import HouseholdSection from "./HouseholdSection";
@@ -12,16 +12,21 @@ const PRICE = {
   family: { yearly: "$69.99", monthly: "$8.99", perMonth: "$5.83" },
 };
 
-const dateText = (ms?: number | null) => (ms ? new Date(ms).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) : "");
+const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+const dateText =(ms?: number | null) => (ms ? new Date(ms).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) : "");
 
 /** Cardamix Plus: what it includes, upgrading, and managing the subscription. */
 export default function PlusPage({ done }: { done?: boolean }) {
   const [plan, setPlan] = useState<MyPlan>(myPlan);
-  const [interval, setInterval] = useState<"monthly" | "yearly">("yearly");
+  // Moving up from Plus keeps the billing you have (monthly stays monthly).
+  const [interval, setInterval] = useState<"monthly" | "yearly">(() => (myPlan().source === "stripe" && myPlan().interval === "month" ? "monthly" : "yearly"));
   const [tier, setTier] = useState<"plus" | "family">(() => (myPlan().plan === "plus" && myPlan().source === "stripe" ? "family" : "plus"));
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
+  // Plus → Family: the amount charged today, shown before anything changes.
+  const [quote, setQuote] = useState<FamilyQuote | null>(null);
+  useEffect(() => setQuote(null), [interval, tier]); // a different choice: work it out again
 
   // Ask the server — right after paying, Stripe may need a moment to confirm.
   useEffect(() => {
@@ -32,7 +37,8 @@ export default function PlusPage({ done }: { done?: boolean }) {
         const p = await refreshMyPlan();
         if (stop) return;
         setPlan(p);
-        if (p.plan !== "plus" && --tries > 0) return void setTimeout(check, 2500);
+        if (p.source === "stripe" && p.interval === "month") setInterval("monthly");
+        if (p.plan === "free" && --tries > 0) return void setTimeout(check, 2500);
       } catch {
         // Keep what we have, but say so — don't quietly look like the Free plan.
         if (!stop) setError("Couldn't check your plan right now, so this may be out of date. Try again in a minute.");
@@ -71,7 +77,7 @@ export default function PlusPage({ done }: { done?: boolean }) {
       <main className="page plus-page">
         {done && isPlus && (
           <div className="callout plan-card-plus">
-            <strong>Welcome to Plus!</strong> Every feature is unlocked. Thank you for supporting Cardamix.
+            <strong>Welcome to {isFamily ? "Cardamix Family" : "Plus"}!</strong> Every feature is unlocked. Thank you for supporting Cardamix.
           </div>
         )}
         {done && !isPlus && checking && <p className="muted">Confirming your payment…</p>}
@@ -89,11 +95,11 @@ export default function PlusPage({ done }: { done?: boolean }) {
             ) : plan.source === "comp" ? (
               <p>Your account is gifted: every Plus and Family feature, free.</p>
             ) : plan.cancelsAt ? (
-              <p>Your subscription is cancelled and ends on {dateText(plan.cancelsAt)}. You keep Plus until then.</p>
+              <p>Your subscription is cancelled and ends on {dateText(plan.cancelsAt)}. You keep {isFamily ? "Cardamix Family" : "Plus"} until then.</p>
             ) : (
               <p>{plan.renews ? `Renews on ${dateText(plan.renews)}.` : "Your subscription is active."}</p>
             )}
-            {plan.status === "past_due" && <div className="callout warn small">Your last payment didn't go through. Update your card to keep Plus.</div>}
+            {plan.status === "past_due" && <div className="callout warn small">Your last payment didn't go through. Update your card to keep {isFamily ? "Cardamix Family" : "Plus"}.</div>}
             {plan.source === "stripe" && (
               <div className="button-row">
                 <button className="btn" disabled={busy} onClick={run(manageSubscription)}>
@@ -149,20 +155,62 @@ export default function PlusPage({ done }: { done?: boolean }) {
             </p>
             {!gifted && (
             <>
-            <div className="button-row">
-              <button
-                className="btn primary"
-                disabled={busy || checking}
-                onClick={run(async () => {
-                  if ((await upgrade(interval, tier)) === "upgraded") {
-                    setPlan(myPlan());
-                    setBusy(false);
-                  }
-                })}
-              >
-                {busy ? "Opening checkout…" : tier === "family" ? "Get Cardamix Family" : "Upgrade to Plus"}
-              </button>
-            </div>
+            {quote ? (
+              <div className="callout family-quote" role="dialog" aria-label="Confirm the move to Cardamix Family">
+                <p>
+                  <strong>{quote.amountDue > 0 ? `You'll be charged ${money(quote.amountDue)} today.` : "Nothing to pay today."}</strong>{" "}
+                  {quote.newPeriod ? (
+                    <>
+                      Changing to {quote.interval === "year" ? "yearly" : "monthly"} billing starts a new Cardamix Family {quote.interval} today, at{" "}
+                      {money(quote.then)}, less a credit for the Plus time you've already paid for and won't use.
+                      {quote.amountDue === 0 && " Any credit left over goes toward your next payments."}
+                    </>
+                  ) : (
+                    <>
+                      {quote.amountDue > 0 && "That's only the difference between Plus and Family for the rest of the time you've already paid for. "}
+                      After that, Cardamix Family is {money(quote.then)} a {quote.interval}.
+                    </>
+                  )}
+                </p>
+                <div className="button-row">
+                  <button
+                    className="btn primary"
+                    disabled={busy}
+                    onClick={run(async () => {
+                      const r = await upgrade(interval, "family", quote);
+                      if (r.kind === "quote") setQuote(r.quote); // took too long: the new amount, to confirm again
+                      else {
+                        setQuote(null);
+                        setPlan(myPlan());
+                      }
+                      setBusy(false);
+                    })}
+                  >
+                    {busy ? "Moving you up…" : quote.amountDue > 0 ? `Pay ${money(quote.amountDue)} and switch` : "Switch to Family"}
+                  </button>
+                  <button className="btn" disabled={busy} onClick={() => setQuote(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="button-row">
+                <button
+                  className="btn primary"
+                  disabled={busy || checking}
+                  onClick={run(async () => {
+                    const r = await upgrade(interval, tier);
+                    if (r.kind === "quote") setQuote(r.quote);
+                    if (r.kind !== "moved") {
+                      setPlan(myPlan());
+                      setBusy(false);
+                    }
+                  })}
+                >
+                  {busy ? (canUpgradeToFamily ? "Working out the difference…" : "Opening checkout…") : tier === "family" ? "Get Cardamix Family" : "Upgrade to Plus"}
+                </button>
+              </div>
+            )}
             <p className="muted small">
               Secure checkout by Stripe. Renews automatically until you cancel — cancel any time from this page. By upgrading you agree to
               the <a href={href({ name: "terms" })}>Terms of service</a>, including the refund policy.

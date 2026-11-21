@@ -66,7 +66,10 @@ const DAY = 86_400_000;
 // failed and was then updated otherwise keeps Cloud Run's private default.
 const opts = { region: "us-central1", maxInstances: 10, invoker: "public" };
 
-const stripe = () => new Stripe(STRIPE_SECRET_KEY.value());
+// STRIPE_BASE_URL: tests only (a stand-in Stripe on this machine).
+const stripeHost = process.env.STRIPE_BASE_URL ? new URL(process.env.STRIPE_BASE_URL) : null;
+const stripe = () =>
+  new Stripe(STRIPE_SECRET_KEY.value(), stripeHost ? { host: stripeHost.hostname, port: Number(stripeHost.port), protocol: stripeHost.protocol.replace(":", "") } : undefined);
 const hasStripe = () => !!STRIPE_SECRET_KEY.value()?.startsWith("sk_");
 
 // ---------- plan ----------
@@ -378,9 +381,31 @@ export const checkout = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY, PLUS_EMAI
   if (current.source === "stripe" && current.plan !== "free") {
     if (current.plan === tier) throw new HttpsError("already-exists", `You already have ${name}.`);
     if (tier === "plus") throw new HttpsError("failed-precondition", "To move from Family to Plus, use Manage subscription.");
-    // Plus → Family: the same subscription moves to the Family price (Stripe charges the difference).
+    // Plus → Family: the same subscription moves to the Family price. Only the difference is charged —
+    // for the rest of the period already paid (Stripe credits the unused Plus time) — and charged now,
+    // so the first call returns that amount for the cook to confirm and the second makes the change.
     const sub = await s.subscriptions.retrieve(current.subscription);
-    await s.subscriptions.update(sub.id, { items: [{ id: sub.items.data[0].id, price: prices[PRICES.family[interval].lookup] }], proration_behavior: "create_prorations" });
+    const items = [{ id: sub.items.data[0].id, price: prices[PRICES.family[interval].lookup] }];
+    const at = Number(req.data?.prorationDate);
+    if (!req.data?.confirm || !Number.isInteger(at) || Math.abs(Date.now() / 1000 - at) > 3600) {
+      const prorationDate = Math.floor(Date.now() / 1000);
+      const preview = await s.invoices.createPreview({
+        customer: sub.customer,
+        subscription: sub.id,
+        subscription_details: { items, proration_behavior: "always_invoice", proration_date: prorationDate },
+      });
+      // Same billing (monthly → monthly, yearly → yearly): just the difference for the time left.
+      // Monthly ↔ yearly: Stripe starts a new period today, less a credit for the unused Plus time.
+      const newPeriod = (sub.items.data[0].price?.recurring?.interval ?? null) !== PRICES.family[interval].interval;
+      return { quote: { amountDue: Math.max(0, preview.amount_due ?? 0), currency: preview.currency ?? "usd", prorationDate, then: PRICES.family[interval].amount, interval: PRICES.family[interval].interval, newPeriod } };
+    }
+    const updated = await s.subscriptions.update(sub.id, {
+      items,
+      proration_behavior: "always_invoice", // bill the difference now
+      proration_date: at, // the same moment as the amount shown
+      payment_behavior: "pending_if_incomplete", // no Family unless that payment goes through
+    });
+    if (updated.pending_update) throw new HttpsError("failed-precondition", "Your card was declined, so you're still on Plus. Update your card under Manage subscription, then try again.");
     await savePlan(req.auth.uid, req.auth.token.email, req.auth.token.email_verified);
     return { upgraded: true };
   }

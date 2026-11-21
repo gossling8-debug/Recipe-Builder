@@ -81,16 +81,40 @@ export async function refreshMyPlan(): Promise<MyPlan> {
   return myPlan();
 }
 
-/** Starts Stripe Checkout for Plus or Family (the page moves to Stripe); Plus → Family switches the subscription in place. */
-export async function upgrade(interval: "monthly" | "yearly", tier: "plus" | "family" = "plus"): Promise<"moved" | "upgraded"> {
+/** Moving from Plus to Family: what's charged today (only the difference, for the rest of the period paid). */
+export interface FamilyQuote {
+  amountDue: number; // cents
+  currency: string;
+  prorationDate: number;
+  then: number; // cents per interval afterwards
+  interval: "month" | "year";
+  /** Monthly ↔ yearly: a new Family period starts today, less credit for the unused Plus time. */
+  newPeriod?: boolean;
+}
+
+/**
+ * Starts Stripe Checkout for Plus or Family (the page moves to Stripe). Plus → Family switches the
+ * subscription in place: the first call returns the amount for the cook to confirm ("quote"); calling
+ * again with that quote makes the change.
+ */
+export async function upgrade(
+  interval: "monthly" | "yearly",
+  tier: "plus" | "family" = "plus",
+  confirm?: FamilyQuote,
+): Promise<{ kind: "moved" } | { kind: "upgraded" } | { kind: "quote"; quote: FamilyQuote }> {
   try {
-    const r = await callable<{ url?: string; upgraded?: boolean }>("checkout", { interval, tier });
+    const r = await callable<{ url?: string; upgraded?: boolean; quote?: FamilyQuote }>("checkout", {
+      interval,
+      tier,
+      ...(confirm ? { confirm: true, prorationDate: confirm.prorationDate } : {}),
+    });
+    if (r.quote) return { kind: "quote", quote: r.quote };
     if (r.upgraded) {
       await refreshMyPlan();
-      return "upgraded";
+      return { kind: "upgraded" };
     }
     if (r.url) location.assign(r.url);
-    return "moved";
+    return { kind: "moved" };
   } catch (e) {
     throw new Error(friendly(e));
   }
