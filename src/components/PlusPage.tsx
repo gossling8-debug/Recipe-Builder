@@ -159,8 +159,18 @@ export default function PlusPage({ done }: { done?: boolean }) {
               <div className="callout family-quote" role="dialog" aria-label="Confirm the move to Cardamix Family">
                 <p>
                   <strong>{quote.amountDue > 0 ? `You'll be charged ${money(quote.amountDue)} today.` : "Nothing to pay today."}</strong>{" "}
-                  {quote.amountDue > 0 && "That's only the difference between Plus and Family for the rest of the time you've already paid for. "}
-                  After that, Cardamix Family is {money(quote.then)} a {quote.interval}.
+                  {quote.newPeriod ? (
+                    <>
+                      Changing to {quote.interval === "year" ? "yearly" : "monthly"} billing starts a new Cardamix Family {quote.interval} today, at{" "}
+                      {money(quote.then)}, less a credit for the Plus time you've already paid for and won't use.
+                      {quote.amountDue === 0 && " Any credit left over goes toward your next payments."}
+                    </>
+                  ) : (
+                    <>
+                      {quote.amountDue > 0 && "That's only the difference between Plus and Family for the rest of the time you've already paid for. "}
+                      After that, Cardamix Family is {money(quote.then)} a {quote.interval}.
+                    </>
+                  )}
                 </p>
                 <div className="button-row">
                   <button

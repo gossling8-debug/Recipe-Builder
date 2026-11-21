@@ -88,6 +88,8 @@ export interface FamilyQuote {
   prorationDate: number;
   then: number; // cents per interval afterwards
   interval: "month" | "year";
+  /** Monthly ↔ yearly: a new Family period starts today, less credit for the unused Plus time. */
+  newPeriod?: boolean;
 }
 
 /**

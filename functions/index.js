@@ -394,7 +394,10 @@ export const checkout = onCall({ ...opts, secrets: [STRIPE_SECRET_KEY, PLUS_EMAI
         subscription: sub.id,
         subscription_details: { items, proration_behavior: "always_invoice", proration_date: prorationDate },
       });
-      return { quote: { amountDue: Math.max(0, preview.amount_due ?? 0), currency: preview.currency ?? "usd", prorationDate, then: PRICES.family[interval].amount, interval: PRICES.family[interval].interval } };
+      // Same billing (monthly → monthly, yearly → yearly): just the difference for the time left.
+      // Monthly ↔ yearly: Stripe starts a new period today, less a credit for the unused Plus time.
+      const newPeriod = (sub.items.data[0].price?.recurring?.interval ?? null) !== PRICES.family[interval].interval;
+      return { quote: { amountDue: Math.max(0, preview.amount_due ?? 0), currency: preview.currency ?? "usd", prorationDate, then: PRICES.family[interval].amount, interval: PRICES.family[interval].interval, newPeriod } };
     }
     const updated = await s.subscriptions.update(sub.id, {
       items,
