@@ -23,6 +23,7 @@ import SearchBox from "./SearchBox";
 import { useToast } from "./Toast";
 import { deleteWithUndo } from "../lib/undoDelete";
 import { addSamples, isSample, removeSamples } from "../lib/samples";
+import { refusedBy, tastesOn } from "../lib/tastes";
 import { noteStep } from "../lib/funnel";
 import { removeFromShopping } from "../lib/shopping";
 import Welcome from "./Welcome";
@@ -32,6 +33,7 @@ import CookThisWeek from "./CookThisWeek";
 import Tour from "./Tour";
 import UpNext from "./UpNext";
 import UpgradeCard from "./UpgradeCard";
+import StackNote from "./StackNote";
 import { finishTour, queueAddTour, tourDone } from "../lib/tour";
 import { listRecipes, storageErrorMessage, storageMode, STORAGE_MODE_TEXT, type StorageMode } from "../lib/db";
 import { href, navigate } from "../lib/route";
@@ -141,10 +143,12 @@ export default function Library() {
     ...new Set(findAvoided(r.ingredients, avoid, new Set(activeSwaps(r).keys())).flatMap((m) => m.reasons)),
   ];
   // A remembered filter for a tag that no longer exists falls back to All.
+  const tastes = tastesOn();
   const activeFilter =
     filter === "favorites" ? "all" // Favorites is the folder row now, not a filter
     : filter === "safe" ? (avoiding ? filter : "all")
     : filter === "canmake" ? (hasPantry ? filter : "all")
+    : filter === "everyone" ? (tastes ? filter : "all")
     : filter !== "all" && !tags.includes(filter) ? "all" : filter;
 
   const q = query.trim().toLowerCase();
@@ -157,6 +161,7 @@ export default function Library() {
       : activeFilter === "favorites" ? r.favorite
       : activeFilter === "safe" ? avoidReasons(r).length === 0
       : activeFilter === "canmake" ? canMakeNow.has(r.id)
+      : activeFilter === "everyone" ? refusedBy(r).length === 0
       : (r.tags ?? []).includes(activeFilter),
     )
     .sort((a, b) =>
@@ -184,6 +189,7 @@ export default function Library() {
           <div className="muted small">
             {(r.tags ?? []).length ? (r.tags ?? []).join(" · ") : `${plural(r.ingredients.length, "ingredient")} · ${plural(r.steps.length, "step")}`}
             {r.makeAgain === false && <span className="no-again"> · Wouldn't make again</span>}
+            {tastes && refusedBy(r).length > 0 && <span className="no-again"> · {refusedBy(r).join(", ")} won't eat</span>}
           </div>
           {feature("notes") && (r.rating || lastMade(r) !== undefined) && (
             <div className="muted small">
@@ -314,6 +320,7 @@ export default function Library() {
         {error && <div className="callout error">{error}</div>}
         {mode === "memory" && <div className="callout error">{STORAGE_MODE_TEXT.memory}</div>}
         {mode === "local" && <div className="callout warn small">{STORAGE_MODE_TEXT.local}</div>}
+        <StackNote />
         <UpgradeCard show={!!cloud.uid && !!cloud.emailVerified && all.length > 0 && !(tourReady && !tourClosed)} />
         {recipes && recipes.length > 0 && (
           <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
@@ -348,12 +355,13 @@ export default function Library() {
             </button>
           </p>
         )}
-        {all.length > 0 && (hasFavorites || tags.length > 0 || avoiding || hasPantry) && (
+        {all.length > 0 && (hasFavorites || tags.length > 0 || avoiding || hasPantry || tastes) && (
           <div className="filters" role="group" aria-label="Show">
             {[
               ["all", "All"],
               ...(hasPantry ? [["canmake", "Can make now"]] : []),
               ...(avoiding ? [["safe", "Fits my avoid list"]] : []),
+              ...(tastes ? [["everyone", "Everyone eats"]] : []),
               ...tags.map((t) => [t, t]),
             ].map(([value, label]) => (
               <button

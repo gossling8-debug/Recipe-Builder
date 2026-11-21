@@ -1,3 +1,4 @@
+import { everyoneEats } from "./tastes";
 import { lastMade } from "./made";
 import { NO_REPEAT_DAYS } from "./autoPlan";
 import type { SavedRecipe } from "./schema";
@@ -24,7 +25,7 @@ export interface Suggestion {
 const DAY = 86_400_000;
 
 export function loved(r: SavedRecipe): boolean {
-  return r.makeAgain !== false && r.steps.length > 0 && ((r.rating ?? 0) >= 4 || r.makeAgain === true || !!r.favorite);
+  return r.makeAgain !== false && everyoneEats(r) && r.steps.length > 0 && ((r.rating ?? 0) >= 4 || r.makeAgain === true || !!r.favorite);
 }
 
 function score(r: SavedRecipe, now: number): number {

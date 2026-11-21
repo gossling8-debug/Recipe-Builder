@@ -513,6 +513,15 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
                   Lay the card flat in good light and fill the frame. If the
                   recipe continues on the back, add a second photo.
                 </p>
+                {!bookId && photos.length === 0 && (
+                  <a className="plan-strip stack-link" href={href({ name: "stack" })}>
+                    <Icon name="camera" size={18} />
+                    <span>
+                      <strong>Have a stack of cards?</strong>
+                      <span className="muted small"> Scan them one after another — each is read in the background.</span>
+                    </span>
+                  </a>
+                )}
                 {photos.length > 0 && (
                   <ul className="photo-grid">
                     {photos.map((p, i) => (
