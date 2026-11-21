@@ -178,10 +178,11 @@ export default function Library() {
       : b.createdAt - a.createdAt,
     );
 
-  // On the plain "All" view, favorites are one row pinned at the top; tapping it shows them.
+  // On the plain "All" view, favorites are one row pinned at the top; tapping it shows them (only there).
   const pinFavorites = activeFilter === "all" && !q && hasFavorites;
   const favoriteCount = all.filter((r) => r.favorite).length;
-  const rest = shown;
+  // Favorites live inside the Favorites row, not in the list below it as well.
+  const rest = pinFavorites ? shown.filter((r) => !r.favorite) : shown;
 
   const row = (r: SavedRecipe) => (
     <li key={r.id} className="recipe-row">
@@ -376,12 +377,12 @@ export default function Library() {
               <Icon name="star" size={14} filled /> Favorites
             </h2>
             <button className="link-btn small" onClick={() => choose("filter", "all")}>
-              Show all recipes
+              Back to all recipes
             </button>
           </div>
         )}
         {rest.length > 0 && activeFilter === "all" && !q && (pinFavorites || (feature("notes") && all.length > 3)) && (
-          <h2 className="list-heading list-heading-all">All recipes</h2>
+          <h2 className="list-heading list-heading-all">{pinFavorites ? "Other recipes" : "All recipes"}</h2>
         )}
         {rest.length > 0 && <ul className="recipe-list">{rest.map(row)}</ul>}
         {all.length > 0 && shown.length === 0 && <p className="muted">No matches.</p>}
