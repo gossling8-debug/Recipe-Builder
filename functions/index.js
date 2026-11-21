@@ -664,7 +664,7 @@ export const bookCheckout = onCall({ ...opts, memory: "1GiB", timeoutSeconds: 12
     mode: "payment",
     customer,
     line_items: [
-      { price_data: { currency: "usd", unit_amount: BOOK_PRICE_CENTS, product_data: { name: `Printed cookbook: ${order.title}`.slice(0, 120), description: `${pages}-page 8.5 × 11 in hardcover, full colour` } }, quantity: 1 },
+      { price_data: { currency: "usd", unit_amount: BOOK_PRICE_CENTS, product_data: { name: `Printed cookbook: ${order.title}`.slice(0, 120), description: `${pages}-page 8.5 × 11 in hardcover, full color` } }, quantity: 1 },
       { price_data: { currency: "usd", unit_amount: charge - BOOK_PRICE_CENTS, product_data: { name: "Delivery and tax" } }, quantity: 1 },
     ],
     client_reference_id: req.auth.uid,

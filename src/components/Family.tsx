@@ -171,7 +171,7 @@ export function FamilyPage() {
           <Icon name="book" size={20} />
           <span>
             <strong>Print a hardcover cookbook</strong>
-            <span className="muted small"> — your recipes and photos in a real book, posted to your door. A lovely family gift.</span>
+            <span className="muted small"> — your recipes and photos in a real book, shipped to your door. A lovely family gift.</span>
           </span>
         </a>
         {error && <div className="callout error">{error}</div>}

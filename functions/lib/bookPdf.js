@@ -1,5 +1,5 @@
 /**
- * The printed cookbook (Lulu, 8.5 × 11 in full-colour hardcover): the
+ * The printed cookbook (Lulu, 8.5 × 11 in full-color hardcover): the
  * interior and the wrap-around cover as print-ready PDFs, built here on the
  * server from the recipes saved in the account — the same file for the
  * on-screen preview and for the printer.

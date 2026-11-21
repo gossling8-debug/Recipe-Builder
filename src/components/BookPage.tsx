@@ -103,8 +103,8 @@ function BookList() {
         <section>
           <h1 className="page-title">A real cookbook</h1>
           <p>
-            Turn your recipes into a hardcover book — 8.5 × 11 inches, full colour, with your photos, a dedication and a table of contents.
-            Printed and posted to your door. A lovely gift for the family.
+            Turn your recipes into a hardcover book — 8.5 × 11 inches, full color, with your photos, a dedication and a table of contents.
+            Printed and shipped to your door. A lovely gift for the family.
           </p>
           <p className="muted small">
             {money(BOOK_PRICE)} for up to {MAX_PAGES} pages, plus delivery. You'll see the exact price before you pay.
@@ -393,8 +393,8 @@ function BookEditor({ id, order }: { id: string; order?: string }) {
                 </button>
               </div>
               <p className="muted small">
-                Printed and posted by our print partner, Lulu, usually within 1–2 weeks. Your address is used only for this order. Secure payment by
-                Stripe.
+                Printed and shipped by our print partner, Lulu. Delivery time depends on the speed you choose. Your address is used only for this
+                order. Secure payment by Stripe.
               </p>
             </div>
           )}
