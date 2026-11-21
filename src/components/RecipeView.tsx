@@ -47,6 +47,8 @@ export default function RecipeView({
   onTagsChange,
   photo,
   versions,
+  warningsHidden,
+  onWarningsChecked,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
@@ -70,11 +72,16 @@ export default function RecipeView({
   top?: ReactNode;
   /** Lets the labels under the title be edited in place. */
   onTagsChange?: (tags: string[]) => void;
+  /** The double-check notes were checked and hidden for good (then they don't show). */
+  warningsHidden?: boolean;
+  /** "I've checked — hide for good" (without it, only "Hide for now" is offered). */
+  onWarningsChecked?: () => void;
   /** The cook's photo of the dish: a thumbnail by the title that opens full screen. */
   photo?: string;
   /** The original and its versions, when there's more than one. */
   versions?: { id: string; title: string; original: boolean }[];
 }) {
+  const [warningsClosed, setWarningsClosed] = useState(false); // "Hide for now": until the recipe is opened again
   const [chosenUnits, setUnits] = useUnits();
   const units = feature("units") ? chosenUnits : "original";
   const [editingTags, setEditingTags] = useState(false);
@@ -251,7 +258,7 @@ export default function RecipeView({
         </div>
       )}
 
-      {recipe.warnings.length > 0 && (
+      {recipe.warnings.length > 0 && !warningsHidden && !warningsClosed && (
         <div className="callout warn">
           <strong>Double-check against the card:</strong>
           <ul>
@@ -259,6 +266,18 @@ export default function RecipeView({
               <li key={i}>{w}</li>
             ))}
           </ul>
+          {!preview && (
+            <div className="button-row warn-actions no-print">
+              {onWarningsChecked && (
+                <button className="btn" onClick={onWarningsChecked}>
+                  <Icon name="check" size={16} /> I've checked — hide for good
+                </button>
+              )}
+              <button className="link-btn small" onClick={() => setWarningsClosed(true)}>
+                Hide for now
+              </button>
+            </div>
+          )}
         </div>
       )}
 

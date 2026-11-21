@@ -83,6 +83,9 @@ export const fromPublishedBook = (r: { origin?: Origin; ownWriting?: boolean; so
 export const originLabel = (o: Origin | undefined | null) =>
   o?.book ? `“${o.book}”${o.author ? ` by ${o.author}` : ""}` : o?.kind === "magazine" ? "a magazine" : "a published cookbook";
 
+/** Which "double-check" notes were checked: their text, so new or changed ones show again. */
+export const warningsKey = (warnings: string[]) => warnings.join("\n");
+
 export type Ingredient = z.infer<typeof IngredientSchema>;
 export type Segment = z.infer<typeof SegmentSchema>;
 export type Step = z.infer<typeof StepSchema>;
@@ -98,6 +101,8 @@ export interface SavedRecipe extends ScannedRecipe {
   favorite?: boolean;
   /** Where it was read from (cookbook page, handwritten card…), when known. */
   origin?: Origin;
+  /** The "Double-check against the card" notes the cook has checked and hidden for good (the notes' text, so new ones show again). */
+  warningsChecked?: string;
   /** The cook said it's their own writing, though it was read as a published cookbook's page. */
   ownWriting?: boolean;
   /** Web page the recipe was imported from. */

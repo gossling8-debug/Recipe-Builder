@@ -1332,3 +1332,4 @@ main.page section > h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; 
 .fold-title { flex: 0 0 auto; }
 .fold-summary { flex: 1 1 auto; min-width: 0; }
 .shared-list-link .link-btn { display: inline-flex; align-items: center; gap: 6px; }
+.warn-actions { margin-top: 10px; }
