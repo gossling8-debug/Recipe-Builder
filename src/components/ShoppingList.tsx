@@ -377,6 +377,8 @@ export default function ShoppingList() {
                     pickStore(id);
                   }}
                 />
+                <details className="store-help">
+                  <summary className="muted small">How the store buttons work</summary>
                 <p className="muted small">
                   {store === "heb" ? (
                     <>
@@ -397,6 +399,7 @@ export default function ShoppingList() {
                   Tap the ✓ to clear it if you didn't add it. (If it opens the website instead of the app: in DuckDuckGo,
                   turn on Settings → General → Open Links in Associated Apps.)
                 </p>
+                </details>
               </>
             )}
             {remaining.length === 0 ? <p className="muted">All done.</p> : <ul className="ingredients">{remaining.map(row)}</ul>}

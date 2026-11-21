@@ -7,7 +7,6 @@ import { href, navigate } from "../lib/route";
 import { shareText } from "../lib/share";
 import { getSharedList, inviteLink, joinSharedList, leaveSharedList, sharedListId, startSharing, type SharedList } from "../lib/sharedShopping";
 import { Loading } from "./LogoLoader";
-import { PasteInvite } from "./PasteInvite";
 import { EmailInviteForm } from "./Invites";
 import { cleanEmail, clearInvitesFor, sendInvite } from "../lib/invites";
 
@@ -109,13 +108,12 @@ export function SharedListCard({ list, toast }: { list: SharedList | null; toast
   }
 
   return (
-    <div className="plan-card shared-list-card">
+    <div className={open ? "plan-card shared-list-card" : "shared-list-link"}>
       {!open ? (
         <>
           <button className="link-btn small" onClick={() => setOpen(true)}>
             <Icon name="share" size={16} /> Shop together — share this list live
           </button>
-          <PasteInvite what="a shopping list" />
         </>
       ) : (
         <>

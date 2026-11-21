@@ -159,31 +159,13 @@ export default function FastFoodSection({
           </button>
         )}
       </section>
-      <section className="fast-food-together">
-        <h3>Groceries and fast food together</h3>
-        <ul className="price-stores">
-          <li>
-            <span>
-              This week{" "}
-              <span className="muted small">
-                (groceries {dollars(groceries.week)} + fast food {dollars(week)}
-                )
-              </span>
-            </span>
-            <strong>{dollars(groceries.week + week)}</strong>
-          </li>
-          <li>
-            <span>
-              This month{" "}
-              <span className="muted small">
-                (groceries {dollars(groceries.month)} + fast food{" "}
-                {dollars(month)})
-              </span>
-            </span>
-            <strong>{dollars(groceries.month + month)}</strong>
-          </li>
-        </ul>
-      </section>
+      {/* Groceries and fast food together — one line, once there's fast food to add. */}
+      {(week > 0 || month > 0) && (
+        <p className="small fast-food-together">
+          All food (groceries + fast food): <strong>{dollars(groceries.week + week)}</strong> this week ·{" "}
+          <strong>{dollars(groceries.month + month)}</strong> this month
+        </p>
+      )}
     </>
   );
 }

@@ -1,4 +1,6 @@
 import ThawList, { useThawReminders } from "./ThawList";
+import Fold from "./Fold";
+import { dueNow } from "../lib/thaw";
 import BudgetPlan from "./BudgetPlan";
 import { feature } from "../lib/features";
 import { useEffect, useRef, useState } from "react";
@@ -243,18 +245,20 @@ export default function WeekPage() {
         }
       />
       <main className="page">
-        <p className="muted small">
-          Pick what you'll cook each day. When you're done, put the whole week
-          on your shopping list in one tap.
-        </p>
+
         {recipes?.length === 0 && (
           <p className="muted">Add some recipes first — then plan them here.</p>
         )}
         {thaw.length > 0 && (
-          <section className="thaw-section">
-            <h3>Thaw ahead</h3>
+          // Closed unless something needs moving today — Tonight shows them all.
+          <Fold
+            title="Thaw ahead"
+            open={dueNow(thaw).length > 0}
+            summary={dueNow(thaw).length ? `Today: ${[...new Set(dueNow(thaw).map((t) => t.item.name))].join(", ")}` : `${thaw.length} coming up`}
+            className="thaw-fold"
+          >
             <ThawList reminders={thaw} calendar />
-          </section>
+          </Fold>
         )}
         {recipes && recipes.some(isDinner) && (
           <div className="plan-card auto-plan">
@@ -306,49 +310,35 @@ export default function WeekPage() {
               leftoverDays={leftoverDays}
               onPlanned={() => (setWeek(loadWeek()), setResult(""))}
             />
-            <p className="muted small">
-              Fills the empty days with dinners you haven't had in the last{" "}
-              {NO_REPEAT_DAYS} days, leaves leftovers nights after big meals and
-              on the nights you picked above, and uses up leftovers in your
-              fridge first. Days you picked yourself stay as they are. When a
-              recipe doesn't say how many it serves, 4 is assumed (“servings
-              guessed”) — after you make it, you'll be asked.
-            </p>
           </div>
         )}
-        {feature("history") && (
-          <p className="small">
-            <a href={href({ name: "history" })}>What we've cooked</a>
-            <span className="muted"> — your meal history</span>
+        <Fold title="Leftovers nights" summary={leftoverDays.length ? `${leftoverDays.map((d) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]).join(", ")}` : undefined} className="fill-options">
+          <div
+      className="leftover-days"
+      role="group"
+      aria-label="Leftovers night every week"
+    >
+      <span className="small">Leftovers night every week:</span>
+      <span className="leftover-day-chips">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+          (label, wd) => (
+            <button
+              key={label}
+              className={leftoverDays.includes(wd) ? "chip active" : "chip"}
+              aria-pressed={leftoverDays.includes(wd)}
+              onClick={() => toggleLeftoverDay(wd)}
+            >
+              {label}
+            </button>
+          ),
+        )}
+      </span>
+    </div>
+          <p className="muted small">
+            Fill my week skips dinners you've had in the last {NO_REPEAT_DAYS} days, adds leftovers nights after big meals, and uses up
+            leftovers in your fridge first. Days you picked yourself stay as they are.
           </p>
-        )}
-        {recipes && recipes.length > 1 && (
-          <a className="btn plan-open" href={href({ name: "meal" })}>
-            <Icon name="timer" size={18} /> Plan a big meal (several dishes at
-            once)
-          </a>
-        )}
-        <div
-          className="leftover-days"
-          role="group"
-          aria-label="Leftovers night every week"
-        >
-          <span className="small">Leftovers night every week:</span>
-          <span className="leftover-day-chips">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-              (label, wd) => (
-                <button
-                  key={label}
-                  className={leftoverDays.includes(wd) ? "chip active" : "chip"}
-                  aria-pressed={leftoverDays.includes(wd)}
-                  onClick={() => toggleLeftoverDay(wd)}
-                >
-                  {label}
-                </button>
-              ),
-            )}
-          </span>
-        </div>
+        </Fold>
         <ol className="week">
           {days.map((d) => {
             const meals = week.days[d.key] ?? [];
@@ -613,12 +603,22 @@ export default function WeekPage() {
                 <Icon name="bag" size={18} /> Put this week on my shopping list
               </button>
             </div>
-            <p className="muted small">
-              A recipe planned twice is bought for twice. Sizes you set here
-              replace the size already on the list for that recipe.
-            </p>
           </>
         )}
+        <div className="week-more">
+        {recipes && recipes.length > 1 && (
+          <a className="btn plan-open" href={href({ name: "meal" })}>
+            <Icon name="timer" size={18} /> Plan a big meal (several dishes at
+            once)
+          </a>
+        )}
+        {feature("history") && (
+          <p className="small">
+            <a href={href({ name: "history" })}>What we've cooked</a>
+            <span className="muted"> — your meal history</span>
+          </p>
+        )}
+        </div>
       </main>
       {toast}
     </>
