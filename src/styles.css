@@ -7,7 +7,7 @@
   --bg: #faf8f5;
   --surface: #ffffff;
   --text: #1c1a17;
-  --muted: #7a736b;
+  --muted: #6f6860; /* 4.5:1 or better on the page, cards and tinted cards */
   --line: #e8e3dc;
   --ink: #1c1a17;
   --ink-text: #faf8f5;
@@ -80,7 +80,7 @@ h1, h2, h3, h4 { line-height: 1.2; }
   backdrop-filter: saturate(1.4) blur(14px);
   border-bottom: 1px solid var(--line);
 }
-.topbar h1 { flex: 1; margin: 0; font-size: 16px; font-weight: 600; text-align: center; letter-spacing: -0.01em; }
+.topbar h1, .topbar .topbar-title-spacer { flex: 1; margin: 0; font-size: 16px; font-weight: 600; text-align: center; letter-spacing: -0.01em; }
 .topbar-actions { display: flex; min-width: 44px; justify-content: flex-end; }
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;

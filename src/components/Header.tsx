@@ -50,7 +50,7 @@ export default function Header({
           <Icon name="home" />
         </a>
       )}
-      <h1>{title}</h1>
+      {title ? <h1>{title}</h1> : <span className="topbar-title-spacer" />}
       <div className="topbar-actions">{actions}</div>
     </header>
   );

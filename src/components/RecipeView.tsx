@@ -117,7 +117,7 @@ export default function RecipeView({
   return (
     <article className="recipe">
       <div className="title-row">
-        <h2 className="recipe-title">{recipe.title}</h2>
+        <h1 className="recipe-title">{recipe.title}</h1>
         {photo && (
           <button className="dish-thumb" onClick={() => setBigPhoto(true)} aria-label="Show your photo of the dish">
             <img src={photo} alt="" />
