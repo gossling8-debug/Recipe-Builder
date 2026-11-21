@@ -15,12 +15,13 @@ export default function AddToHomeScreen({ collapsed = false }: { collapsed?: boo
   useEffect(() => onInstallChange(() => refresh((n) => n + 1)), []);
   if (isStandalone()) return null;
 
-  if (!open)
-    return (
-      <button className="link-btn small" onClick={() => setOpen(true)}>
-        Add Cardamix to your home screen
-      </button>
-    );
+  // Tap to open, tap the same line to close.
+  const toggle = (
+    <button className="link-btn small disclosure" aria-expanded={open} onClick={() => setOpen(!open)}>
+      Add Cardamix to your home screen
+    </button>
+  );
+  if (!open) return toggle;
 
   // The browser in use only matters on the device it's running on.
   const browser = device === detected ? thisBrowser() : device === "android" ? "chrome" : "safari";
@@ -28,9 +29,8 @@ export default function AddToHomeScreen({ collapsed = false }: { collapsed?: boo
   const apple = device === "iphone" || device === "ipad";
   return (
     <div className="add-home">
-      <p className="small">
-        <strong>Add Cardamix to your home screen</strong> to open it like an app.
-      </p>
+      {toggle}
+      <p className="small">Open it like an app, from your home screen.</p>
       {device === "android" && device === detected && canInstall() ? (
         <button className="btn primary" onClick={() => void install()}>
           Add to home screen

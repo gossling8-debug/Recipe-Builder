@@ -19,6 +19,7 @@ export function PasteInvite({ what }: { what: string }) {
   };
   const paste = async () => {
     setError("");
+    if (open) return setOpen(false); // tap the same line to close
     try {
       const t = await navigator.clipboard.readText();
       if (inviteRoute(t)) return go(t);
@@ -27,14 +28,15 @@ export function PasteInvite({ what }: { what: string }) {
     }
     setOpen(true);
   };
-  if (!open)
-    return (
-      <button className="link-btn small" onClick={() => void paste()}>
-        Have an invite to {what}? Paste it here
-      </button>
-    );
+  const toggle = (
+    <button className="link-btn small disclosure" aria-expanded={open} onClick={() => void paste()}>
+      Have an invite to {what}? Paste it here
+    </button>
+  );
+  if (!open) return toggle;
   return (
     <div className="paste-invite">
+      {toggle}
       <label className="field">
         <span>Paste the invite link</span>
         <input className="text-input" value={text} autoFocus placeholder="https://…" onChange={(e) => setText(e.target.value)} />
@@ -42,9 +44,6 @@ export function PasteInvite({ what }: { what: string }) {
       <div className="button-row">
         <button className="btn primary" disabled={!text.trim()} onClick={() => go(text)}>
           Join
-        </button>
-        <button className="link-btn small" onClick={() => setOpen(false)}>
-          Cancel
         </button>
       </div>
       {error && <div className="callout error small">{error}</div>}

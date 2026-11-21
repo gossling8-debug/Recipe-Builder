@@ -123,16 +123,18 @@ export default function BudgetPlan(props: {
     setBusy("");
   }
 
-  if (!open)
-    return (
-      <button className="btn budget-plan-open" onClick={() => setOpen(true)}>
-        <Icon name="wallet" size={18} /> Plan my week on a budget
-      </button>
-    );
+  // Tap to open, tap the same button to close.
+  const toggle = (
+    <button className="btn budget-plan-open disclosure" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <Icon name="wallet" size={18} /> Plan my week on a budget
+    </button>
+  );
+  if (!open) return toggle;
 
   return (
+    <>
+    {toggle}
     <div className="budget-plan">
-      <h3 className="small-heading">Plan on a budget</h3>
       <div className="budget-plan-fields">
         <label className="field">
           <span>Spend at most</span>
@@ -153,9 +155,6 @@ export default function BudgetPlan(props: {
         <button className="btn primary" disabled={!!busy} onClick={() => void plan()}>
           {busy || (result ? "Try again" : "Plan my week")}
         </button>
-        <button className="link-btn small" disabled={!!busy} onClick={() => setOpen(false)}>
-          Close
-        </button>
       </div>
       {result && (
         <div className={result.over ? "callout warn small" : "callout small"} role="status">
@@ -171,5 +170,6 @@ export default function BudgetPlan(props: {
         picks alone.
       </p>
     </div>
+    </>
   );
 }
