@@ -461,7 +461,7 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
           <Icon name="check" size={16} /> Published in <a href={href({ name: "mix", id: pubId ?? "" })}>The Mix</a>
           {anonymous ? " anonymously" : ""}.{" "}
           {changed && (
-            <button className="link-btn small disclosure" aria-expanded={open} disabled={busy} onClick={() => setOpen(!open)}>
+            <button className="link-btn small" disabled={busy} onClick={() => setOpen(true)}>
               Update with my changes
             </button>
           )}{" "}
@@ -469,12 +469,11 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
             Take it out
           </button>
         </p>
-      ) : (
-        // Tap to open, tap the same button to close.
-        <button className="btn disclosure" aria-expanded={open} onClick={() => setOpen(!open)}>
+      ) : !open ? (
+        <button className="btn" onClick={() => setOpen(true)}>
           <Icon name="share" size={18} /> Publish to The Mix
         </button>
-      )}
+      ) : null}
       {open && (
         <div className="plan-card">
           {needsRewrite && (
@@ -565,6 +564,9 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
           <div className="button-row">
             <button className="btn primary" disabled={busy || (!anonymous && !name.trim()) || !title.trim() || (needsRewrite && !rewritten)} onClick={publish}>
               {busy ? "Publishing…" : at !== null ? "Update" : "Publish"}
+            </button>
+            <button className="btn" disabled={busy} onClick={() => setOpen(false)}>
+              Cancel
             </button>
           </div>
         </div>

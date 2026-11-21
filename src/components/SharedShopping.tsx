@@ -72,10 +72,22 @@ export function SharedListCard({ list, toast }: { list: SharedList | null; toast
             </>
           )}
         </p>
+        {inviting && (
+          <EmailInviteForm
+            kind="shop"
+            target={id}
+            title="a shopping list"
+            fromName={(uid && list?.names[uid]) || ""}
+            onLink={() => void sendLink(id, toast)}
+            onClose={() => setInviting(false)}
+          />
+        )}
         <div className="button-row">
-          <button className="btn disclosure" aria-expanded={inviting} disabled={busy} onClick={() => setInviting(!inviting)}>
-            Invite someone
-          </button>
+          {!inviting && (
+            <button className="btn" disabled={busy} onClick={() => setInviting(true)}>
+              Invite someone
+            </button>
+          )}
           <button
             className="link-btn small"
             disabled={busy}
@@ -90,15 +102,6 @@ export function SharedListCard({ list, toast }: { list: SharedList | null; toast
             Stop sharing
           </button>
         </div>
-        {inviting && (
-          <EmailInviteForm
-            kind="shop"
-            target={id}
-            title="a shopping list"
-            fromName={(uid && list?.names[uid]) || ""}
-            onLink={() => void sendLink(id, toast)}
-          />
-        )}
         {error && <div className="callout error small">{error}</div>}
       </div>
     );

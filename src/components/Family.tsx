@@ -281,7 +281,7 @@ export function BookPage({ id }: { id: string }) {
                   <Icon name="edit" />
                 </button>
               )}
-              <button className="icon-btn" onClick={() => setInviting(!inviting)} aria-expanded={inviting} aria-label="Invite someone">
+              <button className="icon-btn" onClick={() => setInviting(true)} aria-label="Invite someone">
                 <Icon name="share" />
               </button>
             </>
@@ -296,7 +296,7 @@ export function BookPage({ id }: { id: string }) {
             <CookbookCover book={book} isOwner={owner} />
             <p className="muted small book-members">
               {book.members.length} {book.members.length === 1 ? "member" : "members"}: {book.members.map((m) => book.names[m] ?? "someone").join(", ")} ·{" "}
-              <button className="link-btn small disclosure" aria-expanded={inviting} onClick={() => setInviting(!inviting)}>
+              <button className="link-btn small" onClick={() => setInviting(true)}>
                 Invite
               </button>
             </p>
@@ -308,6 +308,7 @@ export function BookPage({ id }: { id: string }) {
                   title={book.name}
                   fromName={(s.uid && book.names[s.uid]) || ""}
                   onLink={() => void invite(book, showToast)}
+                  onClose={() => setInviting(false)}
                 />
               </div>
             )}
