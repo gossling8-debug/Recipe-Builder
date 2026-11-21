@@ -13,6 +13,10 @@ on:
     paths: ["functions/**", "firestore.rules", "firebase.json", ".github/workflows/deploy-backend.yml"]
   workflow_dispatch:
 
+# Read-only on the repository; Google Cloud access comes from the service-account secret.
+permissions:
+  contents: read
+
 concurrency:
   group: backend
   cancel-in-progress: false
@@ -24,8 +28,10 @@ jobs:
       FIREBASE_TOOLS: firebase-tools@15.35.0
       PROJECT: recipe-relief
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -59,7 +65,10 @@ jobs:
         # deploy. Each function still checks the person's sign-in itself.
         run: |
           gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS" --quiet
-          for s in ai refreshplan checkout billingportal closemyaccount deletemydata mixvote ownerstats ownerclearerrors ownerconfirmemail stripewebhook; do
+          # Every function the app (or Stripe, or Lulu) calls, read from the code so the list can't fall behind.
+          FUNCS=$(grep -oE '^export const [A-Za-z0-9]+ = on(Call|Request)\b' functions/index.js | awk '{print tolower($3)}')
+          [ -n "$FUNCS" ] || { echo "::error::Found no functions to open up."; exit 1; }
+          for s in $FUNCS; do
             gcloud run services add-iam-policy-binding "$s" --region us-central1 --project "$PROJECT" \
               --member=allUsers --role=roles/run.invoker --quiet --format=none
             echo "$s: callable by the app"

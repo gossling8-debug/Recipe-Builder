@@ -46,3 +46,22 @@ describe("ordering", () => {
     expect(chargeCents(6.99 + 1.05)).toBe(4999 + 804); // not 805 from floating point
   });
 });
+
+import { luluBase } from "./lulu.js";
+import { inEmulator, testUrl } from "./testHooks.js";
+describe("test stand-ins (Claude, Stripe, Lulu) only inside the demo emulator", () => {
+  const emu = { FUNCTIONS_EMULATOR: "true", GCLOUD_PROJECT: "demo-recipe-builder" };
+  it("are used in the demo emulator, without a trailing slash", () => {
+    expect(testUrl("ANTHROPIC_BASE_URL", { ...emu, ANTHROPIC_BASE_URL: "http://127.0.0.1:4466/" })).toBe("http://127.0.0.1:4466");
+    expect(testUrl("STRIPE_BASE_URL", { ...emu, STRIPE_BASE_URL: "http://127.0.0.1:43200" })).toBe("http://127.0.0.1:43200");
+    expect(luluBase({ ...emu, LULU_BASE_URL: "http://127.0.0.1:43100/" })).toBe("http://127.0.0.1:43100");
+  });
+  it("are ignored in production, even if the settings were copied there", () => {
+    const prod = { GCLOUD_PROJECT: "recipe-relief", ANTHROPIC_BASE_URL: "http://evil.example", STRIPE_BASE_URL: "http://evil.example", LULU_BASE_URL: "http://evil.example" };
+    expect(inEmulator(prod)).toBe(false);
+    expect(inEmulator({ ...prod, FUNCTIONS_EMULATOR: "true" })).toBe(false); // the real project, even with the emulator flag
+    for (const name of ["ANTHROPIC_BASE_URL", "STRIPE_BASE_URL", "LULU_BASE_URL"]) expect(testUrl(name, { ...prod, FUNCTIONS_EMULATOR: "true" })).toBeUndefined();
+    expect(luluBase({ ...prod, LULU_ENV: "production" })).toBe("https://api.lulu.com");
+    expect(luluBase({})).toBe("https://api.sandbox.lulu.com");
+  });
+});

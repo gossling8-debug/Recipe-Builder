@@ -1,0 +1,21 @@
+# Weekly checks for updated libraries and build actions (security fixes are proposed
+# as soon as GitHub learns of them). Each update is a pull request that runs every test.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      app-minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: "/functions"
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      server-minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule: { interval: weekly }

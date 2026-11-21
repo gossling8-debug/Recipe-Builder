@@ -1,0 +1,6 @@
+{
+  // Type-checks the tests that live outside src/ (database rules, click-through tests).
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": ["node"], "noEmit": true },
+  "include": ["rules", "e2e"]
+}

@@ -30,6 +30,7 @@ import Stripe from "stripe";
 import * as functionsV1 from "firebase-functions/v1";
 import { summarize } from "./lib/stats.js";
 import { deleteMixRecipe, deleteUserData, deleteVotesOn } from "./lib/cleanup.js";
+import { inEmulator, testUrl } from "./lib/testHooks.js";
 import { nextVote, parseVote, voteDelta } from "./lib/mixVotes.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -44,7 +45,9 @@ const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const PLUS_EMAILS = defineSecret("PLUS_EMAILS");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET"); // "whsec_…" from Stripe's webhook settings; "none" until set up
 
-const ANTHROPIC_BASE = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com"; // tests point this at a fake
+// Test-only stand-ins (*_BASE_URL): only in the local emulator with a demo project (lib/testHooks.js).
+const IN_EMULATOR = inEmulator();
+const ANTHROPIC_BASE = testUrl("ANTHROPIC_BASE_URL") || "https://api.anthropic.com";
 // Stripe prices can't be changed, so a new price gets a new lookup key.
 // Family's keys start "cardamix_family" — that's how a subscription is known to be Family (guard.js tierOf).
 const PRICES = {
@@ -68,7 +71,7 @@ const DAY = 86_400_000;
 const opts = { region: "us-central1", maxInstances: 10, invoker: "public" };
 
 // STRIPE_BASE_URL: tests only (a stand-in Stripe on this machine).
-const stripeHost = process.env.STRIPE_BASE_URL ? new URL(process.env.STRIPE_BASE_URL) : null;
+const stripeHost = testUrl("STRIPE_BASE_URL") ? new URL(testUrl("STRIPE_BASE_URL")) : null;
 const stripe = () =>
   new Stripe(STRIPE_SECRET_KEY.value(), stripeHost ? { host: stripeHost.hostname, port: Number(stripeHost.port), protocol: stripeHost.protocol.replace(":", "") } : undefined);
 const hasStripe = () => !!STRIPE_SECRET_KEY.value()?.startsWith("sk_");
@@ -600,14 +603,14 @@ export const removeFromHousehold = onCall({ ...opts }, async (req) => {
 // Lulu's keys are set on the owner dashboard (config/lulu, readable only here).
 //   bookOrders/{id} { uid, bookId, title, pages, status, shipping, address, charge, stripeSession, lulu, fileKey, createdAt }
 import { buildCover, buildInterior, MAX_PAGES, previewCoverSize } from "./lib/bookPdf.js";
-import { BOOK_PRICE_CENTS, chargeCents, lulu, luluAddress, SHIPPING, toCentsUp } from "./lib/lulu.js";
+import { BOOK_PRICE_CENTS, chargeCents, lulu, luluAddress, SHIPPING, toCentsUp, luluBase } from "./lib/lulu.js";
 import { randomBytes } from "node:crypto";
 
-const EMULATOR = process.env.FUNCTIONS_EMULATOR === "true";
+const EMULATOR = IN_EMULATOR;
 async function luluClient() {
   const c = (await db.doc("config/lulu").get()).data();
   if (!c?.key || !c?.secret) throw new HttpsError("failed-precondition", "Printed books aren't set up yet.");
-  return lulu({ key: c.key, secret: c.secret, base: process.env.LULU_BASE_URL || (c.env === "production" ? "https://api.lulu.com" : "https://api.sandbox.lulu.com") });
+  return lulu({ key: c.key, secret: c.secret, base: luluBase({ ...process.env, LULU_ENV: c.env }) }); // one place decides the address (and the test stand-in)
 }
 
 /**

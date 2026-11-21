@@ -9,11 +9,13 @@
  * POD_PACKAGE: the product (trim, color, binding, paper, finish). To confirm
  * against Lulu's product list in sandbox before going live.
  */
+import { testUrl } from "./testHooks.js";
 export const POD_PACKAGE = "0850X1100FCPRECW080CW444GXX"; // 8.5×11 in, premium full color, casewrap hardcover, 80# coated white, gloss
 export const SHIPPING = ["MAIL", "PRIORITY_MAIL", "GROUND", "EXPEDITED", "EXPRESS"];
 
 export function luluBase(env = process.env) {
-  if (env.LULU_BASE_URL) return env.LULU_BASE_URL.replace(/\/$/, "");
+  const test = testUrl("LULU_BASE_URL", env);
+  if (test) return test;
   return env.LULU_ENV === "production" ? "https://api.lulu.com" : "https://api.sandbox.lulu.com";
 }
 
