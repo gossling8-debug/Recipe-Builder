@@ -271,7 +271,7 @@ export default function MyNotes({
         <div className="sheet-backdrop" onClick={() => setAskDelete(false)}>
           <div className="sheet" role="dialog" aria-modal="true" aria-label="Delete this recipe?" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-title">Delete “{recipe.title}”?</div>
-            <p className="muted small sheet-note">You marked it as one you wouldn't make again. Deleting it can't be undone.</p>
+            <p className="muted small sheet-note">You marked it as one you wouldn't make again.</p>
             <button className="sheet-item danger" onClick={() => (setAskDelete(false), onDelete?.())}>
               <Icon name="trash" size={20} /> Delete recipe
             </button>

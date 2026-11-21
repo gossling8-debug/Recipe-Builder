@@ -100,13 +100,18 @@ export default function UpNext({ recipes, thaw }: { recipes: SavedRecipe[]; thaw
   return (
     <>
       {all.slice(0, SHOW).map((l) => (
-        <HoldLink key={l.id} className={l.urgent ? "plan-strip use-soon-strip" : "plan-strip"} href={href({ name: "recipe", id: l.id })} onHold={() => setHolding(l.id)}>
-          {l.urgent ? <WarnIcon /> : <Icon name={l.parts.some((p) => p.startsWith("thaw") || p.startsWith("start")) ? "timer" : "calendar"} size={18} />}
-          <span>
-            <strong>{l.title}</strong>
-            <span className="muted small"> · {l.parts.join(" · ")}</span>
-          </span>
-        </HoldLink>
+        <div key={l.id} className={l.urgent ? "plan-strip-row use-soon-strip" : "plan-strip-row"}>
+          <HoldLink className="plan-strip" href={href({ name: "recipe", id: l.id })} onHold={() => setHolding(l.id)}>
+            {l.urgent ? <WarnIcon /> : <Icon name={l.parts.some((p) => p.startsWith("thaw") || p.startsWith("start")) ? "timer" : "calendar"} size={18} />}
+            <span>
+              <strong>{l.title}</strong>
+              <span className="muted small"> · {l.parts.join(" · ")}</span>
+            </span>
+          </HoldLink>
+          <button className="icon-btn more-btn" aria-label={`More options for ${l.title}`} aria-haspopup="dialog" onClick={() => setHolding(l.id)}>
+            <Icon name="more" size={20} />
+          </button>
+        </div>
       ))}
       {all.length > SHOW && (
         <a className="link-btn small up-next-more" href={href({ name: "week" })}>

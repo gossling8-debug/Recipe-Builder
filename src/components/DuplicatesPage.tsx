@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { deleteRecipe, listRecipes } from "../lib/db";
+import { listRecipes } from "../lib/db";
+import { deleteWithUndo } from "../lib/undoDelete";
 import { duplicatePairs, markNotDuplicates, notDuplicates } from "../lib/duplicates";
 import { href } from "../lib/route";
 import type { SavedRecipe } from "../lib/schema";
-import { removeFromShopping } from "../lib/shopping";
 import Header from "./Header";
 import { Loading } from "./LogoLoader";
 
@@ -19,9 +19,7 @@ export default function DuplicatesPage() {
   const pairs = all ? duplicatePairs(all, ignored) : [];
 
   async function remove(r: SavedRecipe) {
-    if (!confirm(`Delete “${r.title}” (added ${day(r.createdAt)})? This can't be undone.`)) return;
-    await deleteRecipe(r.id);
-    removeFromShopping(r.id);
+    await deleteWithUndo(r);
     setAll((xs) => xs && xs.filter((x) => x.id !== r.id));
   }
 
