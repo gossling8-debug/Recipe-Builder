@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { href } from "../lib/route";
 import { deleteAccount, signOutHere } from "../lib/account";
-import { cloudState, subscribeCloud, syncNow, type CloudState } from "../lib/cloud";
+import { cloudState, subscribeCloud, type CloudState } from "../lib/cloud";
 import ChangeEmail from "./ChangeEmail";
 
 const ago = (ms?: number) => {
@@ -56,9 +55,6 @@ export default function CloudSection() {
         {(s.status === "offline" || s.status === "error") && s.message}
       </p>
       <div className="button-row">
-        <button className="btn" disabled={busy || s.status === "syncing"} onClick={() => run(syncNow)}>
-          Sync now
-        </button>
         <button
           className="btn"
           disabled={busy}
@@ -67,11 +63,7 @@ export default function CloudSection() {
           Sign out
         </button>
       </div>
-      <p className="muted small">Backed up: recipes, photos, pantry, shopping list, week plan, prices and budget, and settings (except your Anthropic key). Signing out keeps everything in your account and on this phone.</p>
-      <p>
-        <a href={href({ name: "family" })}>Cookbooks</a>
-        <span className="muted small"> — share chosen recipes with family or friends</span>
-      </p>
+      <p className="muted small">Signing out keeps everything in your account and on this phone.</p>
       {message && <div className="callout small">{message}</div>}
       {!deleting ? (
         <button className="link-btn small" onClick={() => (setDeleting(true), setPassword(""), setMessage(""))}>
