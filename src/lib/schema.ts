@@ -107,6 +107,8 @@ export interface SavedRecipe extends ScannedRecipe {
   ownWriting?: boolean;
   /** Web page the recipe was imported from. */
   source?: string;
+  /** Who likes what (Family plan): a name from the people you cook for → loves it / won't eat it. */
+  tastes?: Record<string, "love" | "no">;
   /** Estimated cost (US dollars) of reading this recipe with Claude. */
   importCost?: number;
   /** Last change on any device (ms). Used by cloud sync to keep the newest version. */

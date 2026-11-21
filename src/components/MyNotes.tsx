@@ -6,6 +6,7 @@ import { compressPhoto } from "../lib/image";
 import { addLeftover, eatByLabel, useLeftovers } from "../lib/leftovers";
 import { href } from "../lib/route";
 import Icon from "./Icon";
+import TastesRow from "./TastesRow";
 import DishPhotoButtons, { photoAskSkipped, skipPhotoAsk } from "./DishPhotoButtons";
 import { agoText, clearMade, lastMade, madeDays, madeToday, markMade, removeMadeDay } from "../lib/made";
 import type { SavedRecipe } from "../lib/schema";
@@ -267,6 +268,7 @@ export default function MyNotes({
           </button>
         ))}
       </div>
+      {feature("tastes") && <TastesRow recipe={recipe} onSaved={onSaved} />}
       {askDelete && (
         <div className="sheet-backdrop" onClick={() => setAskDelete(false)}>
           <div className="sheet" role="dialog" aria-modal="true" aria-label="Delete this recipe?" onClick={(e) => e.stopPropagation()}>

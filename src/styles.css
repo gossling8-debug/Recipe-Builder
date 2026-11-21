@@ -1403,3 +1403,12 @@ main.page section > .h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600;
 .stack-card.failed strong { color: var(--error); }
 .stack-actions { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
 .stack-card .icon { display: inline-block; vertical-align: -2px; margin-right: 4px; }
+
+/* Who likes what */
+.tastes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 4px; }
+.tag.taste-no { color: var(--error); border-color: color-mix(in srgb, var(--error) 40%, transparent); }
+.tastes-setup { margin: 12px 0 4px; }
+.eaters { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.eaters li { display: inline-flex; align-items: center; gap: 2px; padding: 2px 4px 2px 12px; border: 1px solid var(--line); border-radius: 999px; }
+.eaters-add { display: flex; gap: 8px; }
+.eaters-add .text-input { flex: 1; min-width: 0; }

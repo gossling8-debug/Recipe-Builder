@@ -1,3 +1,4 @@
+import EatersSection from "./EatersSection";
 import { useEffect, useRef, useState } from "react";
 import FeaturesSection from "./FeaturesSection";
 import { feature, hasPlus } from "../lib/features";
@@ -192,6 +193,8 @@ export default function Settings() {
             <AddToHomeScreen />
           </section>
         )}
+
+        {feature("tastes") && <EatersSection />}
 
         {feature("avoid") && (
           <section>

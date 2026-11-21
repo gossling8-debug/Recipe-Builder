@@ -1,3 +1,4 @@
+import { everyoneEats } from "./tastes";
 import { madeDays } from "./made";
 import type { Leftover } from "./leftovers";
 import type { SavedRecipe } from "./schema";
@@ -26,7 +27,7 @@ export const isDinnerDish = (r: SavedRecipe) =>
   ((r.tags ?? []).some((t) => DINNER_TAG.test(t)) || (!(r.tags ?? []).some((t) => NOT_A_DINNER.test(t)) && !SWEET_TITLE.test(r.title)));
 
 /** A dinner to suggest: not one marked "Wouldn't make again". */
-export const isDinner = (r: SavedRecipe) => r.makeAgain !== false && isDinnerDish(r);
+export const isDinner = (r: SavedRecipe) => r.makeAgain !== false && isDinnerDish(r) && everyoneEats(r);
 
 /** "Serves 6", "6-8 servings", "Makes 4 bowls" → 6 / 6 / 4; null if it doesn't say. */
 export function servingsCount(servings: string | null): number | null {
