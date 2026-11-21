@@ -21,10 +21,12 @@ const SWEET_TITLE = /\b(cookies?|cakes?|cupcakes?|brownies?|muffins?|fudge|frost
 const DINNER_TAG = /\b(dinner|supper|main|main dish|entr[eé]e|lunch)\b/i;
 
 /** A dinner tag always counts (e.g. "Dinner" + "Baking"); otherwise desserts, sides and the like are skipped. */
-export const isDinner = (r: SavedRecipe) =>
-  r.makeAgain !== false &&
+export const isDinnerDish = (r: SavedRecipe) =>
   r.steps.length > 0 &&
   ((r.tags ?? []).some((t) => DINNER_TAG.test(t)) || (!(r.tags ?? []).some((t) => NOT_A_DINNER.test(t)) && !SWEET_TITLE.test(r.title)));
+
+/** A dinner to suggest: not one marked "Wouldn't make again". */
+export const isDinner = (r: SavedRecipe) => r.makeAgain !== false && isDinnerDish(r);
 
 /** "Serves 6", "6-8 servings", "Makes 4 bowls" → 6 / 6 / 4; null if it doesn't say. */
 export function servingsCount(servings: string | null): number | null {

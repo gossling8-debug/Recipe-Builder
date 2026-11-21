@@ -217,8 +217,8 @@ export default function RecipePage({ id }: { id: string }) {
     };
   }, []);
 
-  async function remove() {
-    if (!recipe || !confirm(`Delete “${recipe.title}”? This can't be undone.`)) return;
+  async function remove(asked = false) {
+    if (!recipe || (!asked && !confirm(`Delete “${recipe.title}”? This can't be undone.`))) return;
     await deleteRecipe(recipe.id);
     clearProgress(recipe.id);
     removeFromShopping(recipe.id);
@@ -289,7 +289,7 @@ export default function RecipePage({ id }: { id: string }) {
           <RecipeEditor
             recipe={recipe}
             onCancel={() => setEditing(false)}
-            onDelete={remove}
+            onDelete={() => void remove()}
             onSave={async (updated) => {
               await saveRecipe(updated);
               void syncLabels(updated, recipe.tags ?? []);
@@ -383,6 +383,7 @@ export default function RecipePage({ id }: { id: string }) {
                     key={recipe.id}
                     recipe={recipe}
                     onMarkedMade={() => freezeHalf() && showToast("Half is on your freezer list.")}
+                    onDelete={() => void remove(true)}
                     onSaved={async (updated) => {
                       setRecipe(updated);
                       await saveRecipe(updated);

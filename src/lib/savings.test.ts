@@ -50,4 +50,8 @@ describe("cooked at home", () => {
     expect(homeCooking([dinner("a", [T])], [out(20)], ...month, () => 10)).toBeNull();
     expect(homeCooking([dinner("a", [T])], [out(20), out(20), out(20)], ...month, () => null)).toMatchObject({ dinners: 1, counted: 0, saving: 0 });
   });
+  it("still counts a dinner you cooked but marked \"Wouldn't make again\"", () => {
+    const r = homeCooking([{ ...dinner("a", [T]), makeAgain: false }], [out(20), out(20), out(20)], ...month, () => 10);
+    expect(r).toMatchObject({ dinners: 1, counted: 1, saving: 10 });
+  });
 });

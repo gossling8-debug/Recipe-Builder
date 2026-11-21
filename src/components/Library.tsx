@@ -145,7 +145,7 @@ export default function Library() {
   const avoiding = feature("avoid") && isActive(avoid);
   const hasPantry = feature("pantry") && Object.keys(loadPantry()).length > 0;
   const canMakeNow = new Set(
-    hasPantry ? whatCanIMake(all, 0).filter((c) => c.missing.length + c.short.length + c.expired.length === 0).map((c) => c.recipe.id) : [],
+    hasPantry ? whatCanIMake(all.filter((r) => r.makeAgain !== false), 0).filter((c) => c.missing.length + c.short.length + c.expired.length === 0).map((c) => c.recipe.id) : [],
   );
   const avoidReasons = (r: SavedRecipe) => [
     ...new Set(findAvoided(r.ingredients, avoid, new Set(activeSwaps(r).keys())).flatMap((m) => m.reasons)),
@@ -193,6 +193,7 @@ export default function Library() {
           <div className="recipe-card-title">{r.title}</div>
           <div className="muted small">
             {(r.tags ?? []).length ? (r.tags ?? []).join(" · ") : `${plural(r.ingredients.length, "ingredient")} · ${plural(r.steps.length, "step")}`}
+            {r.makeAgain === false && <span className="no-again"> · Wouldn't make again</span>}
           </div>
           {feature("notes") && (r.rating || lastMade(r) !== undefined) && (
             <div className="muted small">
