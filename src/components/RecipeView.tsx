@@ -1,4 +1,5 @@
 import RecipeTips from "./RecipeTips";
+import Fold from "./Fold";
 import { feature } from "../lib/features";
 import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/schema";
 import { formatNumber, ingredientText, scaleAmount, stepAmount } from "../lib/quantity";
@@ -194,6 +195,9 @@ export default function RecipeView({
         ))}
         </div>
       </div>
+      {!preview && (feature("units") || feature("tips") || top) && (
+      <Fold title="Plan, units & tips" className="no-print plan-fold">
+      {top && <div className="no-print">{top}</div>}
       {feature("units") && (
       <div className="scale-row no-print" role="group" aria-label="Units">
         <span className="small muted">Units</span>
@@ -212,12 +216,11 @@ export default function RecipeView({
       </div>
       )}
       {feature("tips") && !preview && <div className="no-print"><RecipeTips recipe={original} /></div>}
-      {units !== "original" && (
-        <p className="small muted">
-          Converted from the card and rounded to kitchen-friendly amounts. Teaspoons and tablespoons stay as they are.
-        </p>
+      </Fold>
       )}
-      {top && <div className="no-print">{top}</div>}
+      {units !== "original" && (
+        <p className="small muted">Converted and rounded to kitchen-friendly amounts.</p>
+      )}
       {scale !== 1 && (
         <p className="small muted">
           Amounts are {scale < 1 ? "reduced" : "multiplied"} ×{scaleLabel(scale)}. Cooking times and pan sizes aren't changed —
@@ -261,7 +264,7 @@ export default function RecipeView({
 
       <section>
         <h3>Ingredients</h3>
-        {!preview && <p className="muted small">Cross off what you already have — it's left off the shopping list.</p>}
+        {!preview && <p className="muted small">Tick what you already have — it stays off the shopping list.</p>}
         {groups.map((g, gi) => (
           <div key={gi}>
             {g.section && <h4>{g.section}</h4>}
@@ -342,9 +345,7 @@ export default function RecipeView({
             Start cooking — one step at a time
           </button>
         )}
-        <p className="muted small">
-          Tap an ingredient to cross it off as you add it. Tap anywhere else in a step to mark the whole step done.
-        </p>
+        <p className="muted small">Tap a step when it's done.</p>
         <ol className="steps">
           {recipe.steps.map((step, si) => (
             <li
@@ -430,8 +431,7 @@ export default function RecipeView({
         if (!c.priced) return null;
         const serves = realServings(original);
         return (
-          <section className="cost-section no-print">
-            <h3>Cost</h3>
+          <Fold title="Cost" summary={`≈ ${dollars(c.total)}`} className="no-print">
             <p className="small cost-line">
             Ingredients ≈ <strong>{dollars(c.total)}</strong>
             {serves ? ` · ${dollars(c.total / (serves * scale))} per serving` : ""}
@@ -440,19 +440,15 @@ export default function RecipeView({
               (from prices you entered for {c.priced} of {c.of} ingredients{c.priced < c.of ? " — the rest aren't counted" : ""})
             </span>
             </p>
-          </section>
+          </Fold>
         );
       })()}
 
       {extra && <div className="no-print">{extra}</div>}
 
       {conversions.length > 0 && (
-        <section className="no-print">
-          <h3>Conversions</h3>
-          <p className="muted small">
-            Using a different form of an ingredient? Amounts are for the size shown above and are approximate — garlic
-            cloves and onions vary.
-          </p>
+        <Fold title="Conversions" summary={conversions.length === 1 ? conversions[0].title.split(",")[0] : `${conversions.length} ingredients`} className="no-print">
+          <p className="muted small">Swapping fresh for dried or powdered? Approximate amounts for the size shown.</p>
           <ul className="conversions">
             {conversions.map((c, i) => (
               <li key={i}>
@@ -484,7 +480,7 @@ export default function RecipeView({
               </li>
             ))}
           </ul>
-        </section>
+        </Fold>
       )}
     </article>
   );

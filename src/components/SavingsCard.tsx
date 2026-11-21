@@ -24,6 +24,15 @@ export default function SavingsCard({ recipes }: { recipes: SavedRecipe[] }) {
   const rescuedTotal = rescued.reduce((s, x) => s + x.value, 0);
   const home = homeCooking(recipes, fastFood, from, to, (r) => knownCost(applySwaps(r), prices));
   const total = storeTotal + rescuedTotal + (home?.saving ?? 0);
+  // Nothing saved this month or last: the card stays out of the way until there is.
+  const anyAtAll = (() => {
+    const [f, t] = which === "this" ? [lastMonth, thisMonth] : [thisMonth, Date.now() + 1];
+    const other =
+      storeSavings(prices, f, t).reduce((s2, x) => s2 + x.saving, 0) +
+      rescuedValue(loadRescued(), prices, f, t).reduce((s2, x) => s2 + x.value, 0) +
+      (homeCooking(recipes, fastFood, f, t, (r) => knownCost(applySwaps(r), prices))?.saving ?? 0);
+    return total > 0 || other > 0;
+  })();
   const label = which === "this" ? "this month" : "last month";
 
   const rows: { title: string; amount: number; detail: string }[] = [];
@@ -49,6 +58,7 @@ export default function SavingsCard({ recipes }: { recipes: SavedRecipe[] }) {
       detail: `${home.counted} ${home.counted === 1 ? "dinner" : "dinners"} at about ${dollars(home.homeEach)} each, vs. ${dollars(home.outEach)} for your usual eating-out trip`,
     });
 
+  if (!anyAtAll) return null;
   return (
     <section className="savings-card">
       <div className="savings-head">

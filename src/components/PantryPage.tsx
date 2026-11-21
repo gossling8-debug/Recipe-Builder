@@ -1,3 +1,4 @@
+import Fold from "./Fold";
 import { useEffect, useState } from "react";
 import { listRecipes } from "../lib/db";
 import LeftoversList from "./LeftoversList";
@@ -93,10 +94,30 @@ export default function PantryPage() {
         }
       />
       <main className="page">
-        <p className="muted small">
-          What you should have on hand. Ticking items on your shopping list adds them; making a recipe uses them up. Amounts
-          are estimates — tap one to correct it.
-        </p>
+        <p className="muted small">What's on hand: ticking the shopping list adds to it, making a recipe uses it up. Tap an amount to correct it.</p>
+
+        <section>
+          <h3 className="list-heading">Add something you have</h3>
+          <div className="pantry-add">
+            <input className="text-input" placeholder="Ingredient, e.g. sugar" value={name} onChange={(e) => setName(e.target.value)} />
+            <input className="text-input" placeholder="Amount, e.g. 4 lb" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            {name.trim() && (
+              <div className="storage-chips" role="radiogroup" aria-label="How it's kept">
+                {STORAGE_KINDS.map((k) => {
+                  const on = (newStorage ?? guessStorage(name)) === k.id;
+                  return (
+                    <button key={k.id} type="button" role="radio" aria-checked={on} className={on ? "chip active" : "chip"} onClick={() => setNewStorage(k.id)}>
+                      {k.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <button className="btn" onClick={addItem} disabled={!name.trim()}>
+              <Icon name="plus" size={18} /> Add
+            </button>
+          </div>
+        </section>
 
         <LeftoversList />
 
@@ -127,16 +148,14 @@ export default function PantryPage() {
                 </li>
               ))}
             </ul>
-            <p className="muted small">Dates marked “estimated” are typical fridge life — check the package, and trust your eyes and nose.</p>
+            <p className="muted small">Estimated dates are typical fridge life — trust your eyes and nose.</p>
           </section>
         )}
 
-        {items.length > 0 && ideas && (
+        {items.length > 0 && ideas && ideas.length > 0 && (
           <section className="ideas">
             <h3 className="list-heading">What can I make?</h3>
-            {ideas.length === 0 ? (
-              <p className="muted small">None of your recipes are close yet — they each need 3 or more things you don't have.</p>
-            ) : (
+            {(
               <ul className="idea-list">
                 {ideas.slice(0, 8).map((c) => {
                   const gaps = [...c.missing, ...c.short];
@@ -183,7 +202,6 @@ export default function PantryPage() {
           </section>
         )}
 
-        {items.length > 0 && <CookWithWhatIHave />}
 
         {items.length === 0 ? (
           <div className="empty">
@@ -305,30 +323,15 @@ export default function PantryPage() {
           </>
         )}
 
-        <StaplesSection />
+        {items.length > 0 && (
+          <Fold title="Cook with what I have" className="fold-single">
+            <CookWithWhatIHave />
+          </Fold>
+        )}
+        <Fold title="Always keep" className="fold-single">
+          <StaplesSection />
+        </Fold>
 
-        <section>
-          <h3 className="list-heading">Add something you have</h3>
-          <div className="pantry-add">
-            <input className="text-input" placeholder="Ingredient, e.g. sugar" value={name} onChange={(e) => setName(e.target.value)} />
-            <input className="text-input" placeholder="Amount, e.g. 4 lb" value={amount} onChange={(e) => setAmount(e.target.value)} />
-            {name.trim() && (
-              <div className="storage-chips" role="radiogroup" aria-label="How it's kept">
-                {STORAGE_KINDS.map((k) => {
-                  const on = (newStorage ?? guessStorage(name)) === k.id;
-                  return (
-                    <button key={k.id} type="button" role="radio" aria-checked={on} className={on ? "chip active" : "chip"} onClick={() => setNewStorage(k.id)}>
-                      {k.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            <button className="btn" onClick={addItem} disabled={!name.trim()}>
-              <Icon name="plus" size={18} /> Add
-            </button>
-          </div>
-        </section>
       </main>
     </>
   );

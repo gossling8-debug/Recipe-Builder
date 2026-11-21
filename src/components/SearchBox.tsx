@@ -1,6 +1,9 @@
 import type { SearchScope } from "../lib/search";
 
-/** The recipe search box with its Everything / Name / Ingredient switch (your recipes and cookbooks). */
+/**
+ * The recipe search box. It searches names and ingredients together; the
+ * Name / Ingredient switch is hidden unless a screen asks for it (showScope).
+ */
 export default function SearchBox(props: {
   query: string;
   scope: SearchScope;
@@ -8,6 +11,7 @@ export default function SearchBox(props: {
   onScope: (s: SearchScope) => void;
   /** What "Everything" and "Name" search, for the placeholder. */
   what?: string;
+  showScope?: boolean;
 }) {
   const { scope } = props;
   const what = props.what ?? "recipes";
@@ -21,6 +25,7 @@ export default function SearchBox(props: {
         onChange={(e) => props.onQuery(e.target.value)}
         aria-label="Search"
       />
+      {props.showScope && (
       <div className="search-scope" role="radiogroup" aria-label="Search in">
         {(
           [
@@ -34,6 +39,7 @@ export default function SearchBox(props: {
           </button>
         ))}
       </div>
+      )}
     </div>
   );
 }

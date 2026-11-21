@@ -173,13 +173,11 @@ export default function BudgetPage() {
           </section>
         )}
 
+        {/* Shown once there's something to show (no empty-state explanations). */}
+        {stores.length > 0 && (
         <section>
           <h3>Where it's cheapest</h3>
-          {stores.length === 0 ? (
-            <p className="muted small">
-              Once you've bought the same thing at two stores (from receipts or your shopping list), the cheaper store shows here.
-            </p>
-          ) : (
+          {(
             <ul className="cheap-list">
               {stores.map((x) => (
                 <li key={x.name}>
@@ -205,12 +203,12 @@ export default function BudgetPage() {
             See every price
           </a>
         </section>
+        )}
 
+        {cheapest.length > 0 && (
         <section>
           <h3>Cheapest dinners</h3>
-          {cheapest.length === 0 ? (
-            <p className="muted small">Once you've imported a receipt or two, your dinners appear here from cheapest per serving.</p>
-          ) : (
+          {(
             <ul className="cheap-list">
               {cheapest.map(({ r, per, c }) => (
                 <li key={r.id}>
@@ -225,6 +223,7 @@ export default function BudgetPage() {
           )}
           {cheapest.some((x) => x.c.priced < x.c.of) && <p className="muted small">“+” means some ingredients don't have a price yet.</p>}
         </section>
+        )}
       </main>
     </>
   );

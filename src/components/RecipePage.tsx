@@ -1,3 +1,4 @@
+import Fold from "./Fold";
 import { useEffect, useState } from "react";
 import Header from "./Header";
 import Icon from "./Icon";
@@ -392,30 +393,38 @@ export default function RecipePage({ id }: { id: string }) {
                       setRecipe(updated);
                     }}
                   />}
-                  {feature("family") && <ShareToFamily recipe={recipe} />}
-                  {feature("mix") && <PublishToMix recipe={recipe} />}
-                  {feature("nutrition") && <NutritionSection
-                    recipe={recipe}
-                    onSaved={async (updated) => {
-                      await saveRecipe(updated);
-                      setRecipe(updated);
-                    }}
-                  />}
+                  {feature("nutrition") && (
+                    <Fold title="Nutrition" summary={recipe.nutrition ? `${Math.round(recipe.nutrition.result.per_serving.calories)} cal / serving` : undefined} className="fold-single">
+                      <NutritionSection
+                        recipe={recipe}
+                        onSaved={async (updated) => {
+                          await saveRecipe(updated);
+                          setRecipe(updated);
+                        }}
+                      />
+                    </Fold>
+                  )}
                 </>
               }
             />
-            <div className="button-row print-link no-print">
-              {feature("print") && (
-                <a className="btn" href={href({ name: "print", id: recipe.id })}>
-                  <Icon name="download" size={18} /> Print or save as PDF
-                </a>
-              )}
-              {feature("versions") && (
-                <button className="btn" onClick={copyRecipe}>
-                  <Icon name="plus" size={18} /> Make my own version
-                </button>
-              )}
-            </div>
+            {(feature("family") || feature("mix") || feature("print") || feature("versions")) && (
+              <Fold title="Share, print & copy" className="no-print share-fold">
+                {feature("family") && <ShareToFamily recipe={recipe} />}
+                {feature("mix") && <PublishToMix recipe={recipe} />}
+                <div className="button-row print-link no-print">
+                  {feature("print") && (
+                    <a className="btn" href={href({ name: "print", id: recipe.id })}>
+                      <Icon name="download" size={18} /> Print or save as PDF
+                    </a>
+                  )}
+                  {feature("versions") && (
+                    <button className="btn" onClick={copyRecipe}>
+                      <Icon name="plus" size={18} /> Make my own version
+                    </button>
+                  )}
+                </div>
+              </Fold>
+            )}
             {(recipe.source || recipe.importCost !== undefined) && (
               <p className="muted small source-line">
                 {recipe.source && (

@@ -1295,3 +1295,40 @@ main.page section > h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; 
 .book-rights { margin: 12px 0; align-items: flex-start; }
 .mix-copyright p { margin: 0 0 8px; }
 .mix-copyright ol { padding-left: 20px; }
+
+/* ---------- Tap-to-open sections (Fold) ---------- */
+.fold { border-top: 1px solid var(--line); margin: 0; }
+.fold:last-of-type { border-bottom: 1px solid var(--line); }
+.fold > summary {
+  list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 10px;
+  padding: 14px 0; font-weight: 600; font-size: 16px;
+}
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::after { content: "›"; margin-left: auto; color: var(--muted); font-size: 20px; line-height: 1; transition: transform 0.15s; }
+.fold[open] > summary::after { transform: rotate(90deg); }
+.fold-summary { font-weight: 400; }
+.fold-body { padding: 0 0 14px; }
+/* A section inside a fold doesn't repeat its own heading when the fold already says it. */
+.fold.fold-single .fold-body > section > h3:first-child,
+.fold.fold-single .fold-body > div > section > h3:first-child { display: none; }
+.fold .fold-body > section, .fold .fold-body > div > section { margin-top: 0; }
+@media print { .fold { display: none; } }
+
+/* ---------- Today card (Recipes home): one card instead of a stack of banners ---------- */
+.today-card { background: var(--accent-soft); border-radius: 14px; padding: 4px 14px; margin: 0 0 14px; }
+.today-card:not(:has(.plan-strip)) { display: none; }
+.today-title { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 10px 0 2px; font-weight: 600; font-family: inherit; }
+.today-card .plan-strip { background: none; border-radius: 0; margin: 0; padding: 10px 0; }
+.today-card .plan-strip + .plan-strip { border-top: 1px solid color-mix(in srgb, var(--text) 10%, transparent); }
+.today-card .up-next-more { display: inline-block; margin: 4px 0 10px; }
+.fill-options { margin: 4px 0 12px; }
+.fill-options .leftover-days { margin: 0 0 8px; }
+.week-more { margin-top: 20px; display: grid; gap: 10px; }
+.store-help { margin: 4px 0 8px; }
+.store-help > summary { cursor: pointer; text-decoration: underline; text-underline-offset: 3px; list-style: none; }
+.store-help > summary::-webkit-details-marker { display: none; }
+.shared-list-link { margin: 4px 0 12px; }
+.fold > summary { flex-wrap: wrap; }
+.fold-title { flex: 0 0 auto; }
+.fold-summary { flex: 1 1 auto; min-width: 0; }
+.shared-list-link .link-btn { display: inline-flex; align-items: center; gap: 6px; }

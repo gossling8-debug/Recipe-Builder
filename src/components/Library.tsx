@@ -50,7 +50,6 @@ export default function Library() {
   const thawNow = groupThaw(dueNow(useThawReminders(recipes)));
   const [cloud, setCloud] = useState(cloudState());
   useEffect(() => subscribeCloud(setCloud), []);
-  const familyOn = cloud.status !== "off" && cloud.status !== "signed-out";
   const [showWelcome, setShowWelcome] = useState(() => !welcomeDone());
   const [tourClosed, setTourClosed] = useState(false);
   // A new phone downloads its recipes on the first sync — only then do we know the box is really empty.
@@ -255,6 +254,9 @@ export default function Library() {
       <main className="page">
         <h1 className="page-title">Recipes</h1>
         <InvitesWaiting kinds={["shop", "book", "household"]} />
+        {/* Today: what's up next, what to use soon, leftovers — one card instead of a stack of banners. */}
+        <div className="today-card">
+          <h2 className="today-title">Today</h2>
         {(() => {
           const soon = feature("pantry") ? useSoon(all) : [];
           if (!soon.length) return null;
@@ -306,6 +308,7 @@ export default function Library() {
         )}
         {/* One line per recipe: on today's plan, when to start, what to thaw. */}
         <UpNext recipes={all} thaw={thawNow} />
+        </div>
         {!aiReady() && !error && (
           <div className="callout">
             <strong>Welcome!</strong> To scan cards, add your Anthropic API key first.{" "}
@@ -390,24 +393,6 @@ export default function Library() {
               Got it
             </button>
           </p>
-        )}
-        {familyOn && feature("mix") && (
-          <a className="plan-strip mix-link" href={href({ name: "mix" })}>
-            <Icon name="share" size={18} />
-            <span>
-              <strong>The Mix</strong>
-              <span className="muted small"> · recipes cooks everywhere have shared</span>
-            </span>
-          </a>
-        )}
-        {familyOn && feature("family") && (
-          <a className="plan-strip family-link" href={href({ name: "family" })}>
-            <Icon name="book" size={18} />
-            <span>
-              <strong>Cookbooks</strong>
-              <span className="muted small"> · recipes shared with you</span>
-            </span>
-          </a>
         )}
       </main>
       {tourReady && !tourClosed && (
