@@ -30,7 +30,6 @@ import { duplicatesOf, markNotDuplicates, notDuplicates } from "../lib/duplicate
 import { href, navigate } from "../lib/route";
 import { recipeToText, shareText } from "../lib/share";
 import { recipeLink } from "../lib/link";
-import { money } from "../lib/usage";
 import { loadShopping, removeFromShopping } from "../lib/shopping";
 import { useToast } from "./Toast";
 import { cleanTags, warningsKey, type SavedRecipe } from "../lib/schema";
@@ -432,7 +431,7 @@ export default function RecipePage({ id }: { id: string }) {
                 </div>
               </Fold>
             )}
-            {(recipe.source || recipe.importCost !== undefined) && (
+            {recipe.source && (
               <p className="muted small source-line">
                 {recipe.source && (
                   <>
@@ -442,8 +441,6 @@ export default function RecipePage({ id }: { id: string }) {
                     </a>
                   </>
                 )}
-                {recipe.source && recipe.importCost !== undefined && " · "}
-                {recipe.importCost !== undefined && <>Reading it cost ≈ {money(recipe.importCost)}</>}
               </p>
             )}
             {recipe.photos.length > 0 && (
