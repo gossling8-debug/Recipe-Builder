@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { RecipeSchema, sanitizeRecipe, type ScannedRecipe } from "./schema";
+import { ReadRecipeSchema, sanitizeRecipe, type Origin, type ScannedRecipe } from "./schema";
 import { getModel, type ModelOption } from "./models";
 import { getApiKey } from "./settings";
 import { AI_URL } from "./firebaseConfig";
@@ -22,6 +22,8 @@ Steps: use the source's own steps. If the instructions are one paragraph, split 
 Notes: copy any tips or notes from the source. If it lists nutrition facts or a serving size (e.g. "Serving size 1 cup · 437 kcal · 31 g protein"), copy them into notes exactly as written.
 
 Tags: give 1–3 short categories that would help find this recipe later (meal or course, and a method like "Slow cooker" or an occasion like "Holiday" only if obvious).
+
+Origin: say what the source is — a handwritten card, a page from a published cookbook or magazine, a printout, and so on — and the book's or magazine's title and author if the page shows them (a running header or footer, a copyright line). Don't guess a title.
 
 If anything is unreadable or you had to guess, make your best reading and add a short warning that says what you guessed. If the source is not a recipe (or a web page couldn't be read), return an empty ingredient and step list and explain in warnings.`;
 
@@ -59,7 +61,7 @@ export type RecipeSource =
   | { kind: "text"; text: string };
 
 export interface ImportResult {
-  recipe: ScannedRecipe;
+  recipe: ScannedRecipe & { origin?: Origin };
   usage: UsageEntry;
 }
 
@@ -99,7 +101,7 @@ export async function importRecipe(apiKey: string, source: RecipeSource): Promis
     response = await client.beta.messages.parse({
       ...requestOptions(m),
       max_tokens: 16000,
-      output_config: { effort: m.effort, format: betaZodOutputFormat(RecipeSchema) },
+      output_config: { effort: m.effort, format: betaZodOutputFormat(ReadRecipeSchema) },
       system: SYSTEM_PROMPT,
       ...(tools ? { tools } : {}),
       messages: [{ role: "user", content }],
@@ -122,7 +124,9 @@ export async function importRecipe(apiKey: string, source: RecipeSource): Promis
   }
   const parsed = response.parsed_output;
   if (!parsed) throw new ScanError("Cardamix couldn't read the answer. Please try again.");
-  return { recipe: sanitizeRecipe(parsed), usage };
+  const { origin, ...rest } = parsed;
+  // A web page is a website, whatever the page looked like.
+  return { recipe: { ...sanitizeRecipe(rest), origin: source.kind === "url" ? { kind: "website", book: null, author: null } : origin }, usage };
 }
 
 export function describeApiError(err: unknown): string {

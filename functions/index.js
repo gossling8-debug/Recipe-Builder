@@ -29,7 +29,7 @@ import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import Stripe from "stripe";
 import * as functionsV1 from "firebase-functions/v1";
 import { summarize } from "./lib/stats.js";
-import { deleteUserData, deleteVotesOn } from "./lib/cleanup.js";
+import { deleteMixRecipe, deleteUserData, deleteVotesOn } from "./lib/cleanup.js";
 import { nextVote, parseVote, voteDelta } from "./lib/mixVotes.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -640,8 +640,11 @@ export const bookQuote = onCall({ ...opts, memory: "1GiB", timeoutSeconds: 120 }
 export const bookCheckout = onCall({ ...opts, memory: "1GiB", timeoutSeconds: 120, secrets: [STRIPE_SECRET_KEY] }, async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   if (!req.auth.token.email) throw new HttpsError("failed-precondition", "Your account needs an email address for delivery updates.");
+  // Printing needs the rights to what's printed (Lulu's terms too): the person confirms, and it's kept with the order.
+  if (req.data?.rightsConfirmed !== true) throw new HttpsError("failed-precondition", "Confirm you have the right to print these recipes.");
   const bookId = String(req.data?.bookId ?? "");
   const { book, recipes } = await bookContent(req.auth.uid, bookId);
+  const publishedCount = recipes.filter((r) => !r.ownWriting && (r.origin?.kind === "printed_book" || r.origin?.kind === "magazine")).length;
   const pages = buildInterior(book, recipes).pages;
   if (pages > MAX_PAGES) throw new HttpsError("failed-precondition", `This book comes to ${pages} pages; the most is ${MAX_PAGES}.`);
   const shipping = SHIPPING.includes(req.data?.shipping) ? req.data.shipping : "MAIL";
@@ -657,7 +660,7 @@ export const bookCheckout = onCall({ ...opts, memory: "1GiB", timeoutSeconds: 12
   if (cost.print + cost.fulfillment > BOOK_PRICE_CENTS / 100 - 5) throw new HttpsError("failed-precondition", "This book is too long to print at this price. Take a few recipes out.");
   const charge = chargeCents(cost.shipping + cost.tax);
   const ref = db.collection("bookOrders").doc();
-  const order = { uid: req.auth.uid, email: req.auth.token.email, bookId, title: book.title || "Our Family Recipes", pages, shipping, address, charge, coverSize, status: "awaiting_payment", fileKey: randomBytes(24).toString("hex"), createdAt: Date.now() };
+  const order = { uid: req.auth.uid, email: req.auth.token.email, bookId, title: book.title || "Our Family Recipes", pages, shipping, address, charge, coverSize, status: "awaiting_payment", rightsConfirmedAt: Date.now(), publishedCount, fileKey: randomBytes(24).toString("hex"), createdAt: Date.now() };
   const origin = allowedOrigin(req.rawRequest.get("origin"));
   const back = `${origin}/#/book/${encodeURIComponent(bookId)}?order=${ref.id}`;
   if (!hasStripe()) {
@@ -742,7 +745,38 @@ export const ownerSetAppConfig = onCall({ ...opts }, async (req) => {
   await requireAdmin(req);
   const patch = {};
   if (typeof req.data?.animatedLogo === "boolean") patch.animatedLogo = req.data.animatedLogo;
+  if (typeof req.data?.copyrightEmail === "string") {
+    const e = req.data.copyrightEmail.trim().toLowerCase();
+    if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new HttpsError("invalid-argument", "That doesn't look like an email address.");
+    patch.copyrightEmail = e;
+  }
   if (!Object.keys(patch).length) throw new HttpsError("invalid-argument", "Nothing to change.");
   await db.doc("config/app").set({ ...patch, updatedAt: Date.now() }, { merge: true });
   return { ok: true };
+});
+
+// ---------- copyright notices ----------
+// A Mix recipe taken down after a copyright notice counts a strike against whoever published it;
+// after COPYRIGHT_STRIKES they can't publish to The Mix any more (mixBlocked/{uid}, checked by the rules).
+// Who published stays private: only the server reads mixOwners here.
+const COPYRIGHT_STRIKES = 3;
+export const ownerCopyrightTakedown = onCall({ ...opts }, async (req) => {
+  await requireAdmin(req);
+  const id = String(req.data?.mixId ?? "");
+  const owner = (await db.doc(`mixOwners/${id}`).get()).data()?.uid ?? (await db.doc(`mix/${id}`).get()).data()?.by ?? null;
+  if (!(await db.doc(`mix/${id}`).get()).exists) throw new HttpsError("not-found", "That recipe isn't in The Mix.");
+  await deleteMixRecipe(db, id);
+  await db.doc(`mixOwners/${id}`).delete();
+  let strikes = 0;
+  if (owner) {
+    const ref = db.doc(`copyrightStrikes/${owner}`);
+    strikes = await db.runTransaction(async (tx) => {
+      const n = ((await tx.get(ref)).data()?.count ?? 0) + 1;
+      tx.set(ref, { count: n, last: Date.now(), mixIds: FieldValue.arrayUnion(id) }, { merge: true });
+      return n;
+    });
+    if (strikes >= COPYRIGHT_STRIKES) await db.doc(`mixBlocked/${owner}`).set({ reason: "copyright", at: Date.now() });
+  }
+  await db.collection("copyrightLog").add({ mixId: id, at: Date.now(), by: req.auth.uid, strikes, note: String(req.data?.note ?? "").slice(0, 300) });
+  return { strikes, blocked: strikes >= COPYRIGHT_STRIKES };
 });

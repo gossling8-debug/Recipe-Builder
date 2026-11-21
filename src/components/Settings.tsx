@@ -378,7 +378,8 @@ export default function Settings() {
             Take the tour again
           </button>{" "}
           · <a href={href({ name: "privacy" })}>Privacy policy</a> ·{" "}
-          <a href={href({ name: "terms" })}>Terms of service</a>
+          <a href={href({ name: "terms" })}>Terms of service</a> ·{" "}
+          <a href={href({ name: "copyright" })}>Copyright</a>
           {admin && (
             <>
               {" "}

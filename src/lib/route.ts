@@ -15,6 +15,7 @@ export type Route =
   | { name: "history" }
   | { name: "privacy" }
   | { name: "terms" }
+  | { name: "copyright" }
   | { name: "duplicates" }
   | { name: "owner" }
   | { name: "plus"; done?: boolean }
@@ -44,6 +45,7 @@ export function parseRoute(hash: string): Route {
   if (path === "history") return { name: "history" };
   if (path === "privacy") return { name: "privacy" };
   if (path === "terms") return { name: "terms" };
+  if (path === "copyright") return { name: "copyright" };
   if (path === "duplicates") return { name: "duplicates" };
   if (path === "owner") return { name: "owner" };
   if (path === "plus" || path === "plus/done") return { name: "plus", done: path === "plus/done" || undefined };

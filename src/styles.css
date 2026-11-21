@@ -1291,3 +1291,7 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .book-recipe-photo img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
 /* Settings: subheadings inside a section (Display) */
 main.page section > h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; }
+.book-flag { color: var(--warn, #b45309); font-size: 13px; }
+.book-rights { margin: 12px 0; align-items: flex-start; }
+.mix-copyright p { margin: 0 0 8px; }
+.mix-copyright ol { padding-left: 20px; }

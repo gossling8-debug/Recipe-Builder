@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatIngredient, sanitizeRecipe, unusedIngredients, type ScannedRecipe } from "./schema";
+import { fromPublishedBook, originLabel } from "./schema";
 
 const base: ScannedRecipe = {
   title: " Sugar Cookies ",
@@ -51,4 +52,20 @@ describe("unusedIngredients", () => {
 
 describe("tags", () => {
   it("are cleaned and de-duplicated", () => expect(sanitizeRecipe(base).tags).toEqual(["Dinner", "Slow Cooker"]));
+});
+
+describe("recipes from published cookbooks", () => {
+  const book = { kind: "printed_book" as const, book: "Salt Fat Acid Heat", author: "Samin Nosrat" };
+  it("knows someone else's writing, unless the cook says it's theirs or it's a web link", () => {
+    expect(fromPublishedBook({ origin: book })).toBe(true);
+    expect(fromPublishedBook({ origin: { kind: "magazine", book: null, author: null } })).toBe(true);
+    expect(fromPublishedBook({ origin: book, ownWriting: true })).toBe(false);
+    expect(fromPublishedBook({ origin: { kind: "handwritten", book: null, author: null } })).toBe(false);
+    expect(fromPublishedBook({})).toBe(false); // read before origins were recorded
+    expect(fromPublishedBook({ origin: book, source: "https://example.com" })).toBe(false); // web: the Mix only links
+  });
+  it("credits the book", () => {
+    expect(originLabel(book)).toBe("“Salt Fat Acid Heat” by Samin Nosrat");
+    expect(originLabel({ kind: "printed_book", book: null, author: null })).toBe("a published cookbook");
+  });
 });

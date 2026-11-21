@@ -39,6 +39,7 @@ const BudgetPage = lazyScreen(() => import("./components/BudgetPage"));
 const PricesPage = lazyScreen(() => import("./components/PricesPage"));
 const OwnerPage = lazyScreen(() => import("./components/OwnerPage"));
 const PrintBookPage = lazyScreen(() => import("./components/BookPage"));
+const CopyrightPage = lazyScreen(() => import("./components/CopyrightPage"));
 const BookPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.BookPage })));
 const FamilyPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.FamilyPage })));
 const JoinPage = lazyScreen(() => import("./components/Family").then((m) => ({ default: m.JoinPage })));
@@ -74,6 +75,8 @@ function Screen() {
       return <TermsPage />;
     case "duplicates":
       return <DuplicatesPage />;
+    case "copyright":
+      return <CopyrightPage />;
     case "book":
       return <PrintBookPage key={route.id ?? ""} id={route.id} order={route.order} />;
     case "owner":
@@ -134,7 +137,7 @@ export default function App() {
   const [cloud, setCloud] = useState(cloudState());
   useEffect(() => subscribeCloud(setCloud), []);
   // An account is required (when the cloud is set up). The privacy policy and terms are readable without one.
-  const needsAccount = cloud.status !== "off" && !cloud.uid && route.name !== "privacy" && route.name !== "terms";
+  const needsAccount = cloud.status !== "off" && !cloud.uid && route.name !== "privacy" && route.name !== "terms" && route.name !== "copyright";
   // Lock again after time away. With "Immediately", lock as the app is hidden so the app switcher shows the lock.
   useEffect(() => {
     let hiddenAt: number | null = null;

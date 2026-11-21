@@ -1,7 +1,7 @@
 import Header from "./Header";
 import { href } from "../lib/route";
 
-export const TERMS_UPDATED = "November 15, 2026";
+export const TERMS_UPDATED = "November 21, 2026";
 const CONTACT = "https://github.com/gossling8-debug/Recipe-Builder/issues";
 
 /** Plain-language terms of service. Keep it in step with what the app and the Plus plan actually do. */
@@ -80,7 +80,14 @@ export default function TermsPage() {
           </li>
           <li>
             Only add or share what you have the right to. A list of ingredients isn't protected, but someone else's written instructions,
-            stories or photos can be, so don't publish another person's cookbook pages or photos as your own.
+            stories or photos can be, so don't publish another person's cookbook pages or photos as your own. Recipes read from a
+            published cookbook go in The Mix only rewritten in fresh wording, with credit to the book; a printed cookbook may include
+            only recipes you have the right to print.
+          </li>
+          <li>
+            Copyright notices: see our <a href={href({ name: "copyright" })}>copyright page</a>. Recipes taken down after a valid notice
+            count against the account that published them; after three, that account can't publish to The Mix, and we may close accounts
+            that keep infringing.
           </li>
         </ul>
 

@@ -9,7 +9,9 @@ import { useToast } from "./Toast";
 import { cloudState, subscribeCloud, type CloudState } from "../lib/cloud";
 import { duplicatesOf } from "../lib/duplicates";
 import { href, navigate } from "../lib/route";
-import type { SavedRecipe } from "../lib/schema";
+import { fromPublishedBook, originLabel, type SavedRecipe, type ScannedRecipe } from "../lib/schema";
+import { saveRecipe } from "../lib/db";
+import { getApiKey } from "../lib/settings";
 import { searchRecipe, type SearchScope } from "../lib/search";
 import { applySwaps } from "../lib/swaps";
 import {
@@ -210,6 +212,16 @@ export function MixRecipePage({ id }: { id: string }) {
     navigate({ name: "mix" }, true);
   });
 
+  const copyrightDown = run(async () => {
+    if (!m) return;
+    const note = prompt(`Take down “${m.recipe.title}” after a copyright notice? It counts a strike against whoever published it (3 and they can't publish any more). Note (who complained):`);
+    if (note === null) return;
+    const { copyrightTakedown } = await import("../lib/mix");
+    const r = await copyrightTakedown(m.id, note);
+    alert(r.blocked ? `Taken down. That's strike ${r.strikes}: they can no longer publish to The Mix.` : `Taken down. Strike ${r.strikes} of 3 for whoever published it.`);
+    navigate({ name: "mix" }, true);
+  });
+
   const r = m ? mixRating(m) : null;
   const hidden = !!m && reportCount(m) >= HIDE_AFTER_REPORTS && !mine && !admin;
   const before = m && (
@@ -255,6 +267,11 @@ export function MixRecipePage({ id }: { id: string }) {
       {(mine || admin) && (
         <button className="btn danger" onClick={takeDown}>
           <Icon name="trash" size={18} /> {mine ? "Take it out of The Mix" : "Take down"}
+        </button>
+      )}
+      {admin && !mine && (
+        <button className="btn danger" onClick={copyrightDown}>
+          <Icon name="warning" size={18} /> Take down: copyright notice
         </button>
       )}
     </>
@@ -389,6 +406,10 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
   const [anonymous, setAnonymous] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // From a published cookbook: only a version in fresh wording can go in The Mix.
+  const [own, setOwn] = useState(!!recipe.ownWriting);
+  const needsRewrite = fromPublishedBook({ ...recipe, ownWriting: own });
+  const [rewritten, setRewritten] = useState<ScannedRecipe | null>(null);
   useEffect(() => {
     if (on)
       publishedInfo(recipe.id).then(
@@ -410,7 +431,8 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
     setBusy(true);
     setError("");
     try {
-      setPubId(await publishToMix(recipe, applySwaps(recipe), { name, anonymous, title }));
+      if (needsRewrite && !rewritten) throw new Error("Rewrite it in your own words first.");
+      setPubId(await publishToMix(recipe, needsRewrite && rewritten ? rewritten : applySwaps(recipe), { name, anonymous, title }));
       setAt(Date.now());
       setOpen(false);
     } catch (e) {
@@ -454,6 +476,56 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
       ) : null}
       {open && (
         <div className="plan-card">
+          {needsRewrite && (
+            <div className="callout small mix-copyright">
+              <p>
+                <strong>This came from {originLabel(recipe.origin)}.</strong> The author's writing is theirs, so The Mix only takes a version
+                in fresh wording: Cardamix rewrites the steps (same dish, amounts and method), keeps the ingredient list, and credits the book.
+              </p>
+              {!rewritten ? (
+                <button
+                  className="btn"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    setError("");
+                    try {
+                      const { rewriteForMix } = await import("../lib/rewrite");
+                      const r = await rewriteForMix(getApiKey(), applySwaps(recipe), recipe.origin);
+                      setRewritten(r);
+                      setTitle(r.title);
+                    } catch (e) {
+                      setError(errText(e));
+                    }
+                    setBusy(false);
+                  }}
+                >
+                  {busy ? "Rewriting…" : "Rewrite in my own words"}
+                </button>
+              ) : (
+                <details open>
+                  <summary>The version that will be published</summary>
+                  <ol className="small">
+                    {rewritten.steps.map((s, i) => (
+                      <li key={i}>{s.segments.map((g) => g.text).join("")}</li>
+                    ))}
+                  </ol>
+                  <p className="muted small">{rewritten.notes}</p>
+                </details>
+              )}
+              <button
+                className="link-btn small"
+                disabled={busy}
+                onClick={async () => {
+                  if (!confirm("Is this recipe your own writing (you wrote it, not the cookbook's author)? Publishing someone else's cookbook text isn't allowed.")) return;
+                  await saveRecipe({ ...recipe, ownWriting: true, updatedAt: Date.now() });
+                  setOwn(true);
+                }}
+              >
+                It's my own writing
+              </button>
+            </div>
+          )}
           <p className="small">
             {recipe.source ? (
               <>
@@ -490,7 +562,7 @@ export function PublishToMix({ recipe }: { recipe: SavedRecipe }) {
             and only what you have the right to share.
           </p>
           <div className="button-row">
-            <button className="btn primary" disabled={busy || (!anonymous && !name.trim()) || !title.trim()} onClick={publish}>
+            <button className="btn primary" disabled={busy || (!anonymous && !name.trim()) || !title.trim() || (needsRewrite && !rewritten)} onClick={publish}>
               {busy ? "Publishing…" : at !== null ? "Update" : "Publish"}
             </button>
             <button className="btn" disabled={busy} onClick={() => setOpen(false)}>

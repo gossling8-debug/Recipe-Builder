@@ -94,10 +94,10 @@ export async function quoteBook(b: BookSpec, address?: Address, shipping?: strin
 }
 
 /** Pay (Stripe's page); afterwards the app comes back to the book with the order. */
-export async function orderBook(b: BookSpec, address: Address, shipping: string): Promise<void> {
+export async function orderBook(b: BookSpec, address: Address, shipping: string, rightsConfirmed: boolean): Promise<void> {
   await saveBook(b);
   await syncNow();
-  const { url } = await callable<{ url: string }>("bookCheckout", { bookId: b.id, address, shipping });
+  const { url } = await callable<{ url: string }>("bookCheckout", { bookId: b.id, address, shipping, rightsConfirmed });
   location.assign(url);
 }
 export const confirmOrder = (orderId: string) => callable<{ status: BookOrder["status"] }>("bookConfirm", { orderId });
