@@ -1,15 +1,15 @@
 /**
- * Lulu's Print API (print-on-demand books). Lulu prints and posts each book.
+ * Lulu's Print API (print-on-demand books). Lulu prints and ships each book.
  *
  * Settings (environment / secrets):
  *   LULU_CLIENT_KEY, LULU_CLIENT_SECRET — from Lulu's developer portal (secrets)
  *   LULU_ENV       — "sandbox" (test orders, nothing printed) or "production"
  *   LULU_BASE_URL  — tests only: a stand-in server
  *
- * POD_PACKAGE: the product (trim, colour, binding, paper, finish). To confirm
+ * POD_PACKAGE: the product (trim, color, binding, paper, finish). To confirm
  * against Lulu's product list in sandbox before going live.
  */
-export const POD_PACKAGE = "0850X1100FCPRECW080CW444GXX"; // 8.5×11 in, premium full colour, casewrap hardcover, 80# coated white, gloss
+export const POD_PACKAGE = "0850X1100FCPRECW080CW444GXX"; // 8.5×11 in, premium full color, casewrap hardcover, 80# coated white, gloss
 export const SHIPPING = ["MAIL", "PRIORITY_MAIL", "GROUND", "EXPEDITED", "EXPRESS"];
 
 export function luluBase(env = process.env) {

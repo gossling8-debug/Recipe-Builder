@@ -4,7 +4,7 @@ import { newId } from "./db";
 import { callable } from "./subscription";
 
 /**
- * A printed cookbook (hardcover, printed and posted by Lulu). Its settings
+ * A printed cookbook (hardcover, printed and shipped by Lulu). Its settings
  * are saved in the account (users/{uid}/books/{id}); the server builds the
  * pages from the recipes backed up there — so recipes are synced first.
  */
