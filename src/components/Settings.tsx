@@ -273,44 +273,6 @@ export default function Settings() {
 
         <AppLockSection />
 
-        <CloudSection />
-
-        <section>
-          <h3>Backup</h3>
-          <p className="muted small">
-            {signedIn
-              ? "Everything is backed up to your account automatically. A backup file is an extra copy of your recipes that you keep yourself."
-              : "Recipes are saved on this phone. Clearing this site's data in your browser settings (or deleting the app) erases them, so sign in to cloud backup above or export a backup now and then."}
-            {persisted === true &&
-              " This browser has agreed not to clear them on its own to free up space."}
-          </p>
-          {mode && (
-            <p className="small" data-testid="storage-mode">
-              <strong>Storage on this browser:</strong>{" "}
-              {STORAGE_MODE_TEXT[mode]}
-            </p>
-          )}
-          <div className="button-row">
-            <button className="btn" onClick={doExport}>
-              <Icon name="download" size={20} /> Export backup
-            </button>
-            <button className="btn" onClick={() => fileInput.current?.click()}>
-              <Icon name="upload" size={20} /> Restore backup
-            </button>
-          </div>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(e) => {
-              doImport(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-          {message && <div className="callout">{message}</div>}
-        </section>
-
         <AiAllowance />
 
         <section>
@@ -370,6 +332,44 @@ export default function Settings() {
 
         {/* Your own Anthropic key lives on the owner dashboard now; a key already saved on this phone can still be removed here. */}
         {ownKey() && <OwnKeySection />}
+
+        <section>
+          <h3>Backup</h3>
+          <p className="muted small">
+            {signedIn
+              ? "Everything is backed up to your account automatically. A backup file is an extra copy of your recipes that you keep yourself."
+              : "Recipes are saved on this phone. Clearing this site's data in your browser settings (or deleting the app) erases them, so sign in to cloud backup below or export a backup now and then."}
+            {persisted === true &&
+              " This browser has agreed not to clear them on its own to free up space."}
+          </p>
+          {mode && (
+            <p className="small" data-testid="storage-mode">
+              <strong>Storage on this browser:</strong>{" "}
+              {STORAGE_MODE_TEXT[mode]}
+            </p>
+          )}
+          <div className="button-row">
+            <button className="btn" onClick={doExport}>
+              <Icon name="download" size={20} /> Export backup
+            </button>
+            <button className="btn" onClick={() => fileInput.current?.click()}>
+              <Icon name="upload" size={20} /> Restore backup
+            </button>
+          </div>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => {
+              doImport(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          {message && <div className="callout">{message}</div>}
+        </section>
+
+        <CloudSection />
 
         <p className="small settings-footer">
           <button

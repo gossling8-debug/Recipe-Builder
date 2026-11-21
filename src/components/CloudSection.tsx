@@ -36,7 +36,7 @@ export default function CloudSection() {
     return (
       <section>
         <h3>Cloud backup &amp; sync</h3>
-        <p className="muted small">Not set up yet. Until it is, recipes are saved only on this phone — use Export backup below.</p>
+        <p className="muted small">Not set up yet. Until it is, recipes are saved only on this phone — use Export backup above.</p>
       </section>
     );
   }
@@ -91,7 +91,7 @@ export default function CloudSection() {
           <p className="small">
             This deletes your account and everything it stored: recipes, photos, lists and settings; what you added to
             cookbooks (and cookbooks only you are in); recipes you published to The Mix, and your ratings and reports there —
-            and clears this phone. A Plus subscription is cancelled too. <strong>Export a backup first</strong> (below)
+            and clears this phone. A Plus subscription is cancelled too. <strong>Export a backup first</strong> (above)
             if you want a copy.
           </p>
           <input
