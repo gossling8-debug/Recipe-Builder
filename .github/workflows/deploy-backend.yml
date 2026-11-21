@@ -6,6 +6,7 @@ name: Deploy server (Cloud Functions + Firestore rules)
 #   ANTHROPIC_API_KEY         – the app's own Anthropic key (pays for everyone's AI)
 #   STRIPE_SECRET_KEY         – Stripe secret key (sk_test_… or sk_live_…); may be left unset until payments are ready
 #   PLUS_EMAILS               – optional, comma-separated emails that always get Plus (e.g. the owner)
+#   STRIPE_WEBHOOK_SECRET     – the signing secret (whsec_…) of the Stripe webhook that points at the stripeWebhook function; may be left unset until payments are ready
 on:
   push:
     branches: [main]
@@ -43,8 +44,9 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           PLUS_EMAILS: ${{ secrets.PLUS_EMAILS }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
         run: |
-          for NAME in ANTHROPIC_API_KEY STRIPE_SECRET_KEY PLUS_EMAILS; do
+          for NAME in ANTHROPIC_API_KEY STRIPE_SECRET_KEY PLUS_EMAILS STRIPE_WEBHOOK_SECRET; do
             VALUE="${!NAME}"
             [ -z "$VALUE" ] && VALUE="none"
             printf '%s' "$VALUE" | npx --yes $FIREBASE_TOOLS functions:secrets:set "$NAME" --data-file=- --project "$PROJECT" --non-interactive --force
@@ -57,7 +59,7 @@ jobs:
         # deploy. Each function still checks the person's sign-in itself.
         run: |
           gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS" --quiet
-          for s in ai refreshplan checkout billingportal closemyaccount deletemydata mixvote ownerstats ownerclearerrors ownerconfirmemail; do
+          for s in ai refreshplan checkout billingportal closemyaccount deletemydata mixvote ownerstats ownerclearerrors ownerconfirmemail stripewebhook; do
             gcloud run services add-iam-policy-binding "$s" --region us-central1 --project "$PROJECT" \
               --member=allUsers --role=roles/run.invoker --quiet --format=none
             echo "$s: callable by the app"

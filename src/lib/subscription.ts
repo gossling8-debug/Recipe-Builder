@@ -76,9 +76,38 @@ const friendly = (e: unknown) => {
 /** Asks the server for your current plan (after signing in, and after paying). */
 export async function refreshMyPlan(): Promise<MyPlan> {
   if (!(await user())) return myPlan();
-  const p = await callable<MyPlan>("refreshPlan");
-  remember({ plan: p.plan, source: p.source, owner: p.owner, status: p.status, interval: p.interval ?? null, renews: p.renews, cancelsAt: p.cancelsAt });
+  remember(fromServer(await callable<MyPlan>("refreshPlan")));
   return myPlan();
+}
+
+const fromServer = (p: MyPlan): MyPlan => ({
+  plan: p.plan,
+  source: p.source,
+  owner: p.owner,
+  status: p.status,
+  interval: p.interval ?? null,
+  renews: p.renews,
+  cancelsAt: p.cancelsAt,
+});
+
+/**
+ * Follows this account's plan as the server saves it, so a change made elsewhere —
+ * Stripe reporting a cancellation or a failed card, or the payer of a Family plan
+ * changing it — shows at once without reopening the app. Returns a stop function.
+ */
+export async function watchMyPlan(uid: string): Promise<() => void> {
+  const { db, f } = await fb();
+  return f.onSnapshot(
+    f.doc(db, "plans", uid),
+    (snap) => {
+      if (snap.metadata.fromCache) return; // an older copy; the server's answer follows
+      const p = snap.data() as MyPlan | undefined;
+      if (p?.plan) remember(fromServer(p));
+    },
+    () => {
+      /* offline or not allowed: the copy on this phone stays */
+    },
+  );
 }
 
 /** Moving from Plus to Family: what's charged today (only the difference, for the rest of the period paid). */
