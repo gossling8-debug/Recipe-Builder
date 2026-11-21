@@ -1373,3 +1373,5 @@ main.page section > h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; 
 .today-card .plan-strip-row .more-btn { margin-right: -10px; }
 .undo-toast .undo-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .today-card .plan-strip + .plan-strip-row, .today-card .plan-strip-row + .plan-strip { border-top: 1px solid color-mix(in srgb, var(--text) 10%, transparent); }
+.empty-actions { margin-top: 16px; }
+.samples-note { margin: 4px 0 12px; }

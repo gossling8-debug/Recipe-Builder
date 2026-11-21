@@ -22,6 +22,8 @@ import { searchRecipe, type SearchScope } from "../lib/search";
 import SearchBox from "./SearchBox";
 import { useToast } from "./Toast";
 import { deleteWithUndo } from "../lib/undoDelete";
+import { addSamples, isSample, removeSamples } from "../lib/samples";
+import { removeFromShopping } from "../lib/shopping";
 import Welcome from "./Welcome";
 import { welcomeDone } from "../lib/welcome";
 import Icon from "./Icon";
@@ -90,6 +92,19 @@ export default function Library() {
   async function removeRecipe(r: SavedRecipe) {
     setRecipes((rs) => rs && rs.filter((x) => x.id !== r.id));
     await deleteWithUndo(r);
+  }
+
+  const [addingSamples, setAddingSamples] = useState(false);
+  async function trySamples() {
+    setAddingSamples(true);
+    await addSamples().catch(() => {});
+    setRecipes(await listRecipes().catch(() => []));
+    setAddingSamples(false);
+  }
+  async function clearSamples() {
+    await removeSamples(all).catch(() => {});
+    all.filter(isSample).forEach((r) => removeFromShopping(r.id));
+    setRecipes(await listRecipes().catch(() => []));
   }
 
   async function toggleFavorite(r: SavedRecipe) {
@@ -303,8 +318,31 @@ export default function Library() {
         {recipes?.length === 0 && (
           <div className="empty">
             <p className="empty-title">Your recipe box is empty.</p>
-            <p className="muted">Add your first recipe: scan a card, paste a website link, or paste the text.</p>
+            <p className="muted">Snap a photo of a recipe card, cookbook page or screenshot, and it becomes a recipe you can cook from, scale and shop for.</p>
+            <div className="button-row empty-actions">
+              <a className="btn primary" href={href({ name: "scan" })}>
+                <Icon name="camera" size={20} /> Add your first recipe
+              </a>
+              <button className="btn" disabled={addingSamples} onClick={() => void trySamples()}>
+                {addingSamples ? "Adding…" : "Try 3 sample recipes"}
+              </button>
+            </div>
           </div>
+        )}
+        {all.some(isSample) && (
+          <p className="muted small samples-note">
+            {all.every(isSample) ? (
+              <>
+                These are sample recipes to try things out: open one to cook, scale or add it to your shopping list. Add your own with{" "}
+                <strong>Add Recipe</strong>.
+              </>
+            ) : (
+              "Done with the sample recipes?"
+            )}{" "}
+            <button className="link-btn small" onClick={() => void clearSamples()}>
+              Remove samples
+            </button>
+          </p>
         )}
         {all.length > 0 && (hasFavorites || tags.length > 0 || avoiding || hasPantry) && (
           <div className="filters" role="group" aria-label="Show">

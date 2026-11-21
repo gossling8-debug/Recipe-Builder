@@ -66,7 +66,10 @@ const DAY = 86_400_000;
 // failed and was then updated otherwise keeps Cloud Run's private default.
 const opts = { region: "us-central1", maxInstances: 10, invoker: "public" };
 
-const stripe = () => new Stripe(STRIPE_SECRET_KEY.value());
+// STRIPE_BASE_URL: tests only (a stand-in Stripe on this machine).
+const stripeHost = process.env.STRIPE_BASE_URL ? new URL(process.env.STRIPE_BASE_URL) : null;
+const stripe = () =>
+  new Stripe(STRIPE_SECRET_KEY.value(), stripeHost ? { host: stripeHost.hostname, port: Number(stripeHost.port), protocol: stripeHost.protocol.replace(":", "") } : undefined);
 const hasStripe = () => !!STRIPE_SECRET_KEY.value()?.startsWith("sk_");
 
 // ---------- plan ----------

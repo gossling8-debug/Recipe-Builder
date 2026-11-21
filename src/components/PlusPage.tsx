@@ -17,7 +17,8 @@ const dateText = (ms?: number | null) => (ms ? new Date(ms).toLocaleDateString([
 /** Cardamix Plus: what it includes, upgrading, and managing the subscription. */
 export default function PlusPage({ done }: { done?: boolean }) {
   const [plan, setPlan] = useState<MyPlan>(myPlan);
-  const [interval, setInterval] = useState<"monthly" | "yearly">("yearly");
+  // Moving up from Plus keeps the billing you have (monthly stays monthly).
+  const [interval, setInterval] = useState<"monthly" | "yearly">(() => (myPlan().source === "stripe" && myPlan().interval === "month" ? "monthly" : "yearly"));
   const [tier, setTier] = useState<"plus" | "family">(() => (myPlan().plan === "plus" && myPlan().source === "stripe" ? "family" : "plus"));
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -32,7 +33,8 @@ export default function PlusPage({ done }: { done?: boolean }) {
         const p = await refreshMyPlan();
         if (stop) return;
         setPlan(p);
-        if (p.plan !== "plus" && --tries > 0) return void setTimeout(check, 2500);
+        if (p.source === "stripe" && p.interval === "month") setInterval("monthly");
+        if (p.plan === "free" && --tries > 0) return void setTimeout(check, 2500);
       } catch {
         // Keep what we have, but say so — don't quietly look like the Free plan.
         if (!stop) setError("Couldn't check your plan right now, so this may be out of date. Try again in a minute.");
@@ -71,7 +73,7 @@ export default function PlusPage({ done }: { done?: boolean }) {
       <main className="page plus-page">
         {done && isPlus && (
           <div className="callout plan-card-plus">
-            <strong>Welcome to Plus!</strong> Every feature is unlocked. Thank you for supporting Cardamix.
+            <strong>Welcome to {isFamily ? "Cardamix Family" : "Plus"}!</strong> Every feature is unlocked. Thank you for supporting Cardamix.
           </div>
         )}
         {done && !isPlus && checking && <p className="muted">Confirming your payment…</p>}
@@ -89,11 +91,11 @@ export default function PlusPage({ done }: { done?: boolean }) {
             ) : plan.source === "comp" ? (
               <p>Your account is gifted: every Plus and Family feature, free.</p>
             ) : plan.cancelsAt ? (
-              <p>Your subscription is cancelled and ends on {dateText(plan.cancelsAt)}. You keep Plus until then.</p>
+              <p>Your subscription is cancelled and ends on {dateText(plan.cancelsAt)}. You keep {isFamily ? "Cardamix Family" : "Plus"} until then.</p>
             ) : (
               <p>{plan.renews ? `Renews on ${dateText(plan.renews)}.` : "Your subscription is active."}</p>
             )}
-            {plan.status === "past_due" && <div className="callout warn small">Your last payment didn't go through. Update your card to keep Plus.</div>}
+            {plan.status === "past_due" && <div className="callout warn small">Your last payment didn't go through. Update your card to keep {isFamily ? "Cardamix Family" : "Plus"}.</div>}
             {plan.source === "stripe" && (
               <div className="button-row">
                 <button className="btn" disabled={busy} onClick={run(manageSubscription)}>
