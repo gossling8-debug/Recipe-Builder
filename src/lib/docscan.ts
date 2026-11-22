@@ -211,3 +211,84 @@ export function warp(src: { data: ArrayLike<number>; width: number; height: numb
   }
   return out;
 }
+
+// ---------- is this outline really a card? ----------
+
+/** Corners in order top-left, top-right, bottom-right, bottom-left, going round the shape (never crossed). */
+export function orderCorners(pts: Point[]): Quad {
+  const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+  const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+  // Clockwise on screen (y points down), starting from the corner nearest the top left.
+  const round = [...pts].sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+  let start = 0;
+  round.forEach((p, i) => p.x + p.y < round[start].x + round[start].y && (start = i));
+  return [0, 1, 2, 3].map((k) => round[(start + k) % 4]) as Quad;
+}
+
+/** The inside angle at each corner, in degrees. */
+export function cornerAngles(q: Quad): number[] {
+  return q.map((p, i) => {
+    const a = q[(i + 3) % 4], b = q[(i + 1) % 4];
+    const v1 = { x: a.x - p.x, y: a.y - p.y }, v2 = { x: b.x - p.x, y: b.y - p.y };
+    const cos = (v1.x * v2.x + v1.y * v2.y) / (Math.hypot(v1.x, v1.y) * Math.hypot(v2.x, v2.y) || 1);
+    return (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI;
+  });
+}
+
+const side = (q: Quad, i: number) => Math.hypot(q[(i + 1) % 4].x - q[i].x, q[(i + 1) % 4].y - q[i].y);
+
+/**
+ * Could this be a card or page seen at an angle? Not folded over itself, every corner between
+ * 60° and 120° (a tilted rectangle; a "triangle" has a corner far sharper), and each side at
+ * least half the length of the side opposite.
+ */
+export function plausibleQuad(q: Quad): boolean {
+  // Convex: turning the same way at every corner.
+  const turns = q.map((p, i) => {
+    const b = q[(i + 1) % 4], c = q[(i + 2) % 4];
+    return (b.x - p.x) * (c.y - b.y) - (b.y - p.y) * (c.x - b.x);
+  });
+  if (!(turns.every((t) => t > 0) || turns.every((t) => t < 0))) return false;
+  if (cornerAngles(q).some((a) => a < 60 || a > 120)) return false;
+  for (const i of [0, 1]) {
+    const a = side(q, i), b = side(q, i + 2);
+    if (Math.min(a, b) < 0.5 * Math.max(a, b)) return false;
+  }
+  return true;
+}
+
+/**
+ * How much of each side runs along an edge in the picture (0–1 per side). `edges` is an
+ * edge map (non-zero = edge) of w×h. A real card's outline follows its edges all the way
+ * round; a wrong shape cuts across the card where there is no edge.
+ */
+export function edgeSupport(edges: ArrayLike<number>, w: number, h: number, q: Quad, samples = 40): number[] {
+  return q.map((p, i) => {
+    const b = q[(i + 1) % 4];
+    let on = 0, n = 0;
+    for (let k = 1; k < samples; k++) {
+      const x = Math.round(p.x + ((b.x - p.x) * k) / samples);
+      const y = Math.round(p.y + ((b.y - p.y) * k) / samples);
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      n++;
+      if (edges[y * w + x]) on++;
+    }
+    return n ? on / n : 0;
+  });
+}
+
+/**
+ * Does a side run along the border of the picture? That's the table or chair running out of
+ * view, not a card's edge: a card the camera sees whole sits inside the picture.
+ */
+export function touchesBorder(q: Quad, w: number, h: number, margin = 0.02): boolean {
+  const mx = w * margin, my = h * margin;
+  const near = (p: Point) => ({ l: p.x <= mx, r: p.x >= w - mx, t: p.y <= my, b: p.y >= h - my });
+  return q.some((p, i) => {
+    const a = near(p), b = near(q[(i + 1) % 4]);
+    return (a.l && b.l) || (a.r && b.r) || (a.t && b.t) || (a.b && b.b);
+  });
+}
+
+/** A side counts as following an edge when at least this share of it does. */
+export const MIN_EDGE_SUPPORT = 0.7;
