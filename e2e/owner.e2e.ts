@@ -21,6 +21,10 @@ test("owner dashboard: counts toward upgrading, with no names", async ({ page })
   const samples = funnel.locator("tr", { hasText: "Tried the sample recipes" });
   await expect(samples.locator("td").first()).not.toHaveText("0");
   await expect(page.getByRole("heading", { name: "Paying" })).toBeVisible();
+  // App Check (watch-only): the emulator app sends no token, so the requests so far count as "No check".
+  const appCheck = page.locator(".owner-appcheck tr", { hasText: "Other server requests" });
+  await expect(appCheck.locator("td").nth(1)).not.toHaveText("0");
+  await expect(appCheck.locator("td").first()).toHaveText("0");
   await expect(page.locator("main")).not.toContainText(email);
   await page.screenshot({ path: "test-results/owner-dashboard.png", fullPage: true });
 });

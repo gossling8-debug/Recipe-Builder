@@ -4,6 +4,16 @@ Short records of decisions that aren't obvious from the code — the "load-beari
 Before changing one of these, read why it's there. Newest first; add one for any
 Tier-3 decision.
 
+### App Check: watch first, turn away later (Nov 2026)
+The app's Firebase settings are public, so a script could call the server as if it were the app.
+App Check (reCAPTCHA Enterprise) lets the server tell the real app apart. It starts watch-only:
+the server counts each request as from the app, no check, or failed check (owner dashboard), and
+turns nothing away, so people on an older copy of the app or with reCAPTCHA blocked aren't locked
+out. Turning requests away is a separate change, once a week of counts shows real use is all
+"from the app". The site key is public like the other settings (`src/lib/firebaseConfig.ts`); the
+emulator never uses it. Book PDFs open as plain links and can't carry the token: they stay
+protected by the sign-in token in the link, which the server checks. (`functions/lib/appCheck.js`)
+
 ### Shrinkflation: same item, same store, a 3–30% smaller package, 3%+ more per unit (Nov 2026)
 Comparing across stores would flag normal size choices (Costco's big box vs the regular one),
 a shrink over 30% is a different size bought on purpose, and a price that fell as much as the

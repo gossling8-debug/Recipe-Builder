@@ -95,6 +95,11 @@ describe("owner dashboard data", () => {
     await assertFails(setDoc(doc(bob(), "funnel/alice"), { cardSeen: 1 }));
     await assertFails(getDoc(doc(alice(), "funnel/alice")));
   });
+  it("App Check counts: only the server writes them, and nobody in the app reads them", async () => {
+    await assertFails(setDoc(doc(alice(), "appCheckStats/2026-11-22"), { ai: { verified: 999 } }));
+    await assertFails(getDoc(doc(alice(), "appCheckStats/2026-11-22")));
+    await assertFails(getDoc(doc(nobody(), "appCheckStats/2026-11-22")));
+  });
   it("error reports: anyone signed in adds a short one; only admins read them", async () => {
     const report = { message: "x", stack: "", screen: "library", where: null, app: "1", device: "phone", at: 1, expireAt: Timestamp.fromMillis(Date.now() + 86_400_000) };
     await assertSucceeds(setDoc(doc(alice(), "errors/e1"), report));

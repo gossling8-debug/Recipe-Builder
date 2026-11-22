@@ -42,16 +42,17 @@ export class ScanError extends Error {}
 export async function makeClient(apiKey: string, kind = "other"): Promise<Anthropic> {
   // The SDK refuses browser use unless told this is intentional.
   if (apiKey) return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-  const { user } = await import("./cloud");
+  const { appCheckToken, user } = await import("./cloud");
   const u = await user();
   if (!u) throw new ScanError("Sign in to use AI features.");
+  const appCheck = await appCheckToken();
   return new Anthropic({
     apiKey: null,
     authToken: await u.getIdToken(),
     baseURL: AI_URL,
     dangerouslyAllowBrowser: true,
     maxRetries: 1,
-    defaultHeaders: { "x-cardamix-kind": kind },
+    defaultHeaders: { "x-cardamix-kind": kind, ...(appCheck ? { "X-Firebase-AppCheck": appCheck } : {}) },
   });
 }
 
