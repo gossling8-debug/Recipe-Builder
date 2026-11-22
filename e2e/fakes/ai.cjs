@@ -4,6 +4,7 @@ const http = require("http");
 const PORT = Number(process.env.PORT || 4466);
 let n = 0;
 let unclear = false; // /test/unclear?on=1: the next reading says part of the card was hard to read
+let nextTags = null; // /test/tags?t=Dinner,Beef: the next reading's labels
 
 const recipe = () => ({
   title: `Test Pie ${++n}`,
@@ -15,13 +16,17 @@ const recipe = () => ({
     { segments: [{ text: "Bake 20 minutes.", ingredient_index: null, amount: null }] },
   ],
   notes: null,
-  tags: ["Dessert"],
+  tags: nextTags ? ((t) => ((nextTags = null), t))(nextTags) : ["Dessert"],
   warnings: unclear ? ((unclear = false), ["The second line was hard to read; I guessed \"1 cup flour\"."]) : [],
   origin: { kind: "handwritten", book: null, author: null },
 });
 
 http
   .createServer((req, res) => {
+    if (req.url.startsWith("/test/tags")) {
+      nextTags = (new URL(req.url, "http://x").searchParams.get("t") || "").split(",").filter(Boolean);
+      return res.end("ok");
+    }
     if (req.url.startsWith("/test/unclear")) {
       unclear = new URL(req.url, "http://x").searchParams.get("on") === "1";
       return res.end("ok");

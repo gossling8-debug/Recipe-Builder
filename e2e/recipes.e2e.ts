@@ -1,5 +1,5 @@
 import { devices, expect, test } from "@playwright/test";
-import { pasteRecipe, signUp } from "./helpers";
+import { nextReadingTags, pasteRecipe, signUp } from "./helpers";
 
 test("sample recipes: try them, then remove them", async ({ page }) => {
   await signUp(page, "samples");
@@ -105,4 +105,34 @@ test("a new account whose recipes can't download on this device is never offered
   await expect(p2.getByRole("link", { name: "Add a recipe" })).toBeVisible();
   await expect(p2.getByRole("button", { name: "Try 3 sample recipes" })).toHaveCount(0);
   await other.close();
+});
+
+test("a remembered label filter says so, and search looks through every recipe", async ({ page }) => {
+  await signUp(page, "filter");
+  await pasteRecipe(page); // labelled Dessert
+  await nextReadingTags("Dinner");
+  await pasteRecipe(page); // labelled Dinner
+  await page.goto("./#/");
+  await expect(page.locator(".recipe-row")).toHaveCount(2);
+
+  // Pick Dinner: one recipe shows, and the line says the list is filtered.
+  await page.locator(".filters").getByRole("button", { name: "Dinner" }).click();
+  await expect(page.locator(".recipe-row")).toHaveCount(1);
+  const note = page.locator(".filter-note");
+  await expect(note).toContainText("Showing only Dinner: 1 of 2");
+
+  // Still filtered after leaving and coming back (the filter is remembered) — and still said.
+  await page.reload();
+  await expect(note).toContainText("Showing only Dinner: 1 of 2");
+
+  // Search finds the Dessert recipe too, though the Dinner filter is on.
+  await page.getByPlaceholder("Search recipes or ingredients").fill("pie");
+  await expect(page.locator(".recipe-row")).toHaveCount(2);
+  await expect(page.locator(".list-toolbar")).toContainText("2 matches in all recipes");
+
+  // Show all turns the filter off.
+  await page.getByPlaceholder("Search recipes or ingredients").fill("");
+  await note.getByRole("button", { name: "Show all" }).click();
+  await expect(page.locator(".recipe-row")).toHaveCount(2);
+  await expect(note).toHaveCount(0);
 });
