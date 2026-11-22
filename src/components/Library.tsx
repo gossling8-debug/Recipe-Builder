@@ -12,7 +12,7 @@ import { loadPantry, useSoon } from "../lib/pantry";
 import { freshness, useByText } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
 import { agoText, lastMade } from "../lib/made";
-import { cloudState, subscribeCloud } from "../lib/cloud";
+import { accountCreatedAt, cloudState, subscribeCloud } from "../lib/cloud";
 import { eatByLabel, leftoverPast, useLeftovers } from "../lib/leftovers";
 import { aYearAgo } from "../lib/history";
 import Header from "./Header";
@@ -22,7 +22,7 @@ import { searchRecipe, type SearchScope } from "../lib/search";
 import SearchBox from "./SearchBox";
 import { useToast } from "./Toast";
 import { deleteWithUndo } from "../lib/undoDelete";
-import { addSamples, isSample, removeSamples } from "../lib/samples";
+import { addSamples, isNewAccount, isSample, removeSamples } from "../lib/samples";
 import { refusedBy, tastesOn } from "../lib/tastes";
 import { noteStep } from "../lib/funnel";
 import { removeFromShopping } from "../lib/shopping";
@@ -57,13 +57,35 @@ export default function Library() {
   useEffect(() => subscribeCloud(setCloud), []);
   const [showWelcome, setShowWelcome] = useState(() => !welcomeDone());
   const [tourClosed, setTourClosed] = useState(false);
-  // A new phone downloads its recipes on the first sync — only then do we know the box is really empty.
+  // A new phone downloads its recipes on the first full sync — only then do we know the box is
+  // really empty. (Not on any upload, and not when the download failed: offline isn't "empty".)
   const [syncedOnce, setSyncedOnce] = useState(false);
   useEffect(() => {
-    if (!cloud.lastSync || syncedOnce) return;
-    listRecipes().then((rs) => (setRecipes(rs), setSyncedOnce(true)), () => setSyncedOnce(true));
+    if (!cloud.fullSyncAt || syncedOnce) return;
+    listRecipes().then(
+      (rs) => (setRecipes(rs), setSyncedOnce(true)),
+      (e) => setError(storageErrorMessage(e)),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cloud.lastSync]);
+  }, [cloud.fullSyncAt]);
+  // Whether an empty list really means an empty box (DECISIONS: sample recipes).
+  const boxKnown = cloud.status === "off" || syncedOnce;
+  // Still not known after a while (a stalled or failed download): say so, and keep "Add a recipe" in reach.
+  const [waitedLong, setWaitedLong] = useState(false);
+  useEffect(() => {
+    if (boxKnown) return;
+    const t = window.setTimeout(() => setWaitedLong(true), 10_000);
+    return () => window.clearTimeout(t);
+  }, [boxKnown]);
+  // Sample recipes: only for new accounts (or with no accounts at all), never added to an existing one.
+  const [newAccount, setNewAccount] = useState(false);
+  useEffect(() => {
+    if (cloud.status === "off") return void setNewAccount(true);
+    if (!cloud.uid) return void setNewAccount(false);
+    let stop = false;
+    void accountCreatedAt().then((t) => !stop && setNewAccount(isNewAccount(t)));
+    return () => void (stop = true);
+  }, [cloud.uid, cloud.status]);
   // Re-render every 30 s so "start by … in 20 min" stays current.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -100,11 +122,24 @@ export default function Library() {
 
   const [addingSamples, setAddingSamples] = useState(false);
   async function trySamples() {
+    if (addingSamples) return; // a second tap while the first is checking
     setAddingSamples(true);
-    void noteStep("samplesTried");
-    await addSamples().catch(() => {});
-    setRecipes(await listRecipes().catch(() => []));
-    setAddingSamples(false);
+    try {
+      // Only into a box that's really empty, on a new account: re-check before adding anything.
+      const now = await listRecipes().catch(() => null);
+      const stillNew = cloud.status === "off" || isNewAccount(await accountCreatedAt());
+      if (!boxKnown || !now || now.length > 0 || !stillNew) {
+        if (now) setRecipes(now);
+        if (!stillNew) setNewAccount(false);
+        showToast("Sample recipes are only for new, empty recipe boxes.");
+        return;
+      }
+      void noteStep("samplesTried");
+      await addSamples().catch(() => {});
+      setRecipes(await listRecipes().catch(() => []));
+    } finally {
+      setAddingSamples(false);
+    }
   }
   async function clearSamples() {
     await removeSamples(all).catch(() => {});
@@ -325,8 +360,23 @@ export default function Library() {
         {recipes && recipes.length > 0 && (
           <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
         )}
-        {recipes === null && !error && <Loading />}
-        {recipes?.length === 0 && (
+        {(recipes === null || (recipes.length === 0 && !boxKnown)) && !error && !waitedLong && <Loading />}
+        {recipes?.length === 0 && !boxKnown && !error && waitedLong && (
+          <div className="empty">
+            <p className="empty-title">{cloud.status === "offline" || cloud.status === "error" ? "Couldn't load your recipes yet." : "Still loading your recipes…"}</p>
+            <p className="muted">
+              {cloud.status === "offline" || cloud.status === "error"
+                ? "Check your connection — they'll appear here as soon as they've downloaded."
+                : "They'll appear here as soon as they've downloaded."}
+            </p>
+            <div className="button-row empty-actions">
+              <a className="btn" href={href({ name: "scan" })}>
+                <Icon name="plus" size={20} /> Add a recipe
+              </a>
+            </div>
+          </div>
+        )}
+        {recipes?.length === 0 && boxKnown && !error && (
           <div className="empty">
             <p className="empty-title">Your recipe box is empty.</p>
             <p className="muted">Snap a photo of a recipe card, cookbook page or screenshot, and it becomes a recipe you can cook from, scale and shop for.</p>
@@ -334,9 +384,11 @@ export default function Library() {
               <a className="btn primary" href={href({ name: "scan" })}>
                 <Icon name="camera" size={20} /> Add your first recipe
               </a>
-              <button className="btn" disabled={addingSamples} onClick={() => void trySamples()}>
-                {addingSamples ? "Adding…" : "Try 3 sample recipes"}
-              </button>
+              {newAccount && (
+                <button className="btn" disabled={addingSamples} onClick={() => void trySamples()}>
+                  {addingSamples ? "Adding…" : "Try 3 sample recipes"}
+                </button>
+              )}
             </div>
           </div>
         )}

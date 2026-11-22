@@ -43,3 +43,4 @@ the list for the next audit.
 | S1 | Deleting a recipe can be undone for 8 seconds. | `src/lib/undoDelete.ts` | `e2e/recipes.e2e.ts` |
 | S2 | Cards waiting to be read survive closing the app. | `src/lib/stackScan.ts` | `e2e/stack.e2e.ts` |
 | S3 | Main screens meet accessibility standards (WCAG 2.2 AA checks). | everywhere | `e2e/accessibility.e2e.ts` |
+| S4 | Nothing is added to someone's recipes without their say-so. The sample recipes are offered only to **new accounts** (created in the last 14 days), only once the account's recipes have loaded and the box is really empty — never to an existing account — and adding them re-checks all of this first. | `src/components/Library.tsx` (`boxKnown`, `newAccount`, `trySamples`), `src/lib/samples.ts` (`isNewAccount`) | `e2e/recipes.e2e.ts` "a fresh browser … never offers the sample recipes" (fails on the old code over a slow connection); `src/lib/samples.test.ts` "who is offered the sample recipes" |

@@ -4,6 +4,14 @@ Short records of decisions that aren't obvious from the code — the "load-beari
 Before changing one of these, read why it's there. Newest first; add one for any
 Tier-3 decision.
 
+### Sample recipes: new accounts only, and only once the box is known to be empty (Nov 2026)
+An existing account was offered the samples while its recipes were still downloading in a new
+browser, and one tap added them (reported by the owner). Now an empty list counts as an empty box
+only after this account's recipes have been fully downloaded here (`fullSyncAt`, set by the full
+sync only — not by small uploads, and not when the download failed). Samples are offered only to
+accounts created in the last 14 days, and adding them re-checks all of it. If the download stalls
+or fails, the screen says so and offers "Add a recipe" instead. (INVARIANTS S4)
+
 ### Test stand-ins only inside the emulator (Nov 2026)
 `*_BASE_URL` settings point the server at fake Claude, Stripe and Lulu for tests. They are
 honoured only when the emulator is running *and* the project is a `demo-` project

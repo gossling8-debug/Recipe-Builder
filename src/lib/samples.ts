@@ -7,6 +7,11 @@ import type { Ingredient, SavedRecipe, Step } from "./schema";
  * for Cardamix. Fixed ids, so adding them on two phones doesn't make copies.
  */
 export const SAMPLE_PREFIX = "sample-";
+
+/** Sample recipes are offered only to new accounts — never added to an existing one. */
+export const SAMPLE_OFFER_DAYS = 14;
+export const isNewAccount = (createdAt: number | null | undefined, now = Date.now()) =>
+  typeof createdAt === "number" && Number.isFinite(createdAt) && now - createdAt < SAMPLE_OFFER_DAYS * 86_400_000;
 export const isSample = (r: { id: string }) => r.id.startsWith(SAMPLE_PREFIX);
 
 const ing = (quantity: string, unit: string, name: string, preparation: string | null = null): Ingredient => ({

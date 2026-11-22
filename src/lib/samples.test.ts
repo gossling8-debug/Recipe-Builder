@@ -20,3 +20,17 @@ describe("sample recipes", () => {
     expect([...saved].sort((a, b) => b.createdAt - a.createdAt)[0].id).toBe("sample-sheet-pan-chicken");
   });
 });
+
+describe("who is offered the sample recipes", () => {
+  it("only new accounts (created in the last 14 days), never older ones or unknown ones", async () => {
+    const { isNewAccount } = await import("./samples");
+    const now = Date.parse("2026-11-21T12:00:00Z");
+    const day = 86_400_000;
+    expect(isNewAccount(now - 1 * day, now)).toBe(true);
+    expect(isNewAccount(now - 13 * day, now)).toBe(true);
+    expect(isNewAccount(now - 15 * day, now)).toBe(false);
+    expect(isNewAccount(now - 400 * day, now)).toBe(false);
+    expect(isNewAccount(null, now)).toBe(false);
+    expect(isNewAccount(Number.NaN, now)).toBe(false);
+  });
+});
