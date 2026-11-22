@@ -4,6 +4,15 @@ Short records of decisions that aren't obvious from the code — the "load-beari
 Before changing one of these, read why it's there. Newest first; add one for any
 Tier-3 decision.
 
+### Live scanner: keep the sharpest of 3 frames; no "this photo is blurry" warning (Nov 2026)
+Deciding whether one photo is blurry wasn't reliable: two methods tried on test cards (dark ink,
+faded pencil, big lettering, a mostly blank card, focus blur and hand shake) either flagged a
+sharp real photo as soft or missed clearly blurry ones. Comparing photos of the same card is
+reliable, so the scanner takes 3 frames ~90 ms apart and keeps the sharpest
+(`src/lib/sharpness.ts`). The outline eases toward each new detection and only jumps to a far-off
+shape when two frames agree, so a one-frame mistake never flashes up. Photos taken with the
+phone's own camera or chosen from the library get no sharpness check.
+
 ### App Check: watch first, turn away later (Nov 2026)
 The app's Firebase settings are public, so a script could call the server as if it were the app.
 App Check (reCAPTCHA Enterprise) lets the server tell the real app apart. It starts watch-only:
