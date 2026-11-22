@@ -12,6 +12,12 @@ run along the border of the picture, and has a real edge along at least 70% of e
 (`src/lib/docscan.ts`). The corners are joined going round the shape, so they can't cross. If
 nothing passes, the scanner shows the corners to aim at. The fallback method behind "Choose from
 photos" gets the same checks.
+On busy backgrounds (carpet, wood grain) a card's edges blur into the pattern, so it's also
+spotted as paper: a bright, colourless area (`findPage` in `src/lib/opencv.ts`). Measured on
+frames made from the owner's own carpet, cabinet and chair photos (varied in position, zoom,
+angle, blur and light): with nothing in view the old finder outlined something in 42 of 300
+frames and the new one in none; of cards fully in view on those backgrounds the old one found
+17 of 83 correctly (and drew 23 wrong shapes), the new one 45 of 83 with no wrong shapes.
 
 ### Live scanner: keep the sharpest of 3 frames; no "this photo is blurry" warning (Nov 2026)
 Deciding whether one photo is blurry wasn't reliable: two methods tried on test cards (dark ink,
