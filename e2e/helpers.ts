@@ -1,6 +1,9 @@
 import { expect, type Page } from "@playwright/test";
 
 export const STRIPE = process.env.STRIPE_URL || "http://127.0.0.1:43200";
+export const AI = process.env.AI_URL || "http://127.0.0.1:4466";
+/** The test AI's next reading says part of the card was hard to read. */
+export const nextReadingUnclear = () => fetch(`${AI}/test/unclear?on=1`);
 const OOB = "http://127.0.0.1:9099/emulator/v1/projects/demo-recipe-builder/oobCodes";
 
 let count = 0;

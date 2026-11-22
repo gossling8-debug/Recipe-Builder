@@ -49,6 +49,7 @@ export default function RecipeView({
   versions,
   warningsHidden,
   onWarningsChecked,
+  onRetake,
 }: {
   recipe: ScannedRecipe;
   recipeId: string;
@@ -74,6 +75,8 @@ export default function RecipeView({
   onTagsChange?: (tags: string[]) => void;
   /** The double-check notes were checked and hidden for good (then they don't show). */
   warningsHidden?: boolean;
+  /** The recipe was read from photos: offer to take them again when the reading had trouble. */
+  onRetake?: () => void;
   /** "I've checked — hide for good" (without it, only "Hide for now" is offered). */
   onWarningsChecked?: () => void;
   /** The cook's photo of the dish: a thumbnail by the title that opens full screen. */
@@ -268,6 +271,11 @@ export default function RecipeView({
           </ul>
           {!preview && (
             <div className="button-row warn-actions no-print">
+              {onRetake && (
+                <button className="btn" onClick={onRetake}>
+                  <Icon name="camera" size={16} /> Retake the photo
+                </button>
+              )}
               {onWarningsChecked && (
                 <button className="btn" onClick={onWarningsChecked}>
                   <Icon name="check" size={16} /> I've checked — hide for good

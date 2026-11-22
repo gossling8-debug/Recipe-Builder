@@ -12,6 +12,10 @@ reliable, so the scanner takes 3 frames ~90 ms apart and keeps the sharpest
 (`src/lib/sharpness.ts`). The outline eases toward each new detection and only jumps to a far-off
 shape when two frames agree, so a one-frame mistake never flashes up. Photos taken with the
 phone's own camera or chosen from the library get no sharpness check.
+Instead, when the AI says part of a photo was hard to read, its "Double-check" note offers
+"Retake the photo": new photos are read into the same recipe (`src/lib/retake.ts`), keeping the
+cook's star, labels, notes, dish photo and who-likes-what. The retake counts as a reading like any
+other (for the free plan, a recipe add).
 
 ### App Check: watch first, turn away later (Nov 2026)
 The app's Firebase settings are public, so a script could call the server as if it were the app.

@@ -54,7 +54,7 @@ function Screen() {
   const route = useRoute();
   switch (route.name) {
     case "scan":
-      return <Scanner key={route.book ?? ""} book={route.book} />;
+      return <Scanner key={route.retake ? `retake-${route.retake}` : (route.book ?? "")} book={route.book} retake={route.retake} />;
     case "settings":
       return <Settings />;
     case "import":

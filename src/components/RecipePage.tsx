@@ -357,6 +357,7 @@ export default function RecipePage({ id }: { id: string }) {
               photo={feature("notes") ? recipe.dishPhoto : undefined}
               versions={feature("versions") && versions.length > 1 ? versions.map((v) => ({ id: v.id, title: v.title, original: !v.variantOf })) : undefined}
               warningsHidden={!!recipe.warningsChecked && recipe.warningsChecked === warningsKey(recipe.warnings)}
+              onRetake={recipe.photos.length > 0 && !recipe.source ? () => navigate({ name: "scan", retake: recipe.id }) : undefined}
               onWarningsChecked={async () => {
                 const updated = { ...recipe, warningsChecked: warningsKey(recipe.warnings), updatedAt: Date.now() };
                 setRecipe(updated);

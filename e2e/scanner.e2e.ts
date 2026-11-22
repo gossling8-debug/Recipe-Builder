@@ -2,7 +2,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-import { signUp } from "./helpers";
+import { nextReadingUnclear, signUp } from "./helpers";
+import type { Page } from "@playwright/test";
 
 /**
  * The live scanner with a stand-in camera: a short looping video (made here, not stored)
@@ -63,4 +64,53 @@ test("live scanner: corners to aim at, finds the card, takes the picture by itse
   await scanner.getByRole("button", { name: "Keep scan" }).click();
   await scanner.getByRole("button", { name: /Done · 1 page/ }).click();
   await expect(page.locator(".photo-grid img")).toHaveCount(1);
+});
+
+/** Scan a card with the stand-in camera (Auto on) and add it. Ends with the photo on the scan screen. */
+async function scanCard(page: Page) {
+  await page.getByRole("button", { name: "Scan a card" }).click();
+  const scanner = page.getByRole("dialog", { name: "Scanner" });
+  await scanner.getByRole("button", { name: "Keep scan" }).click({ timeout: 45_000 });
+  await scanner.getByRole("button", { name: /Done · 1 page/ }).click();
+  await expect(page.locator(".photo-grid img")).toHaveCount(1);
+}
+
+test("a reading that had trouble offers to retake the photo, and the retake replaces the same recipe", async ({ page }) => {
+  await signUp(page, "retake");
+  await page.goto("./#/scan");
+  await scanCard(page);
+  await nextReadingUnclear();
+  await page.getByRole("button", { name: "Read recipe" }).click();
+
+  // The reading had trouble: the note says so and offers a retake.
+  const note = page.locator(".callout.warn");
+  await expect(note).toContainText("hard to read", { timeout: 45_000 });
+  const firstTitle = await page.locator("h1").first().textContent();
+  const recipeUrl = page.url();
+  await note.getByRole("button", { name: "Retake the photo" }).click();
+
+  // Retake mode: about this recipe, photos only.
+  await expect(page.getByRole("heading", { name: "Retake the photo" })).toBeVisible();
+  await expect(page.locator(".retake-note")).toContainText(firstTitle!.trim());
+  await expect(page.getByRole("tablist", { name: "Add from" })).toHaveCount(0);
+  await scanCard(page);
+  await page.getByRole("button", { name: "Read recipe" }).click();
+
+  // Back on the same recipe, with the new reading and no trouble note.
+  await expect(page.locator(".my-notes")).toBeVisible({ timeout: 45_000 });
+  expect(page.url()).toBe(recipeUrl);
+  await expect(page.locator("h1").first()).not.toHaveText(firstTitle!);
+  await expect(page.locator(".callout.warn")).toHaveCount(0);
+  // Replaced, not added: still one recipe.
+  await page.goto("./#/");
+  await expect(page.locator(".recipe-row")).toHaveCount(1);
+});
+
+test("a clear reading doesn't offer a retake", async ({ page }) => {
+  await signUp(page, "clear");
+  await page.goto("./#/scan");
+  await scanCard(page);
+  await page.getByRole("button", { name: "Read recipe" }).click();
+  await expect(page.locator(".my-notes")).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByRole("button", { name: "Retake the photo" })).toHaveCount(0);
 });
