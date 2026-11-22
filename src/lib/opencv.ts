@@ -5,7 +5,7 @@
  * and is then cached.
  */
 import cvUrl from "@techstark/opencv-js/dist/opencv.js?url";
-import type { Quad } from "./docscan";
+import { edgeSupport, MIN_EDGE_SUPPORT, orderCorners, plausibleQuad, touchesBorder, type Quad } from "./docscan";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CV = any;
@@ -34,16 +34,11 @@ export function loadOpenCv(): Promise<CV> {
   return loading;
 }
 
-/** Corners in order top-left, top-right, bottom-right, bottom-left. */
-function order(pts: { x: number; y: number }[]): Quad {
-  const bySum = [...pts].sort((a, b) => a.x + a.y - (b.x + b.y));
-  const byDiff = [...pts].sort((a, b) => a.x - a.y - (b.x - b.y));
-  return [bySum[0], byDiff[3], bySum[3], byDiff[0]] as Quad;
-}
-
 /**
  * The page's outline in an image (RGBA), or null. Edges (Canny) → outlines
- * (contours) → the largest one that simplifies to four corners.
+ * (contours, nested ones too) → the largest that simplifies to four corners,
+ * is card-shaped (plausibleQuad), doesn't run along the picture's border
+ * (touchesBorder) and has an edge along all four sides (edgeSupport). Showing nothing beats showing a wrong shape.
  */
 export function findPage(cv: CV, img: ImageData): Quad | null {
   const W = img.width;
@@ -62,7 +57,8 @@ export function findPage(cv: CV, img: ImageData): Quad | null {
     const median = sorted[sorted.length >> 1];
     cv.Canny(gray, edges, Math.max(10, 0.66 * median), Math.min(255, 1.33 * median));
     cv.dilate(edges, edges, kernel, new cv.Point(-1, -1), 2);
-    cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+    cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+    const edgeMap = edges.data as Uint8Array;
     let best: Quad | null = null;
     let bestArea = 0;
     for (let i = 0; i < contours.size(); i++) {
@@ -77,10 +73,12 @@ export function findPage(cv: CV, img: ImageData): Quad | null {
           const approx = new cv.Mat();
           cv.approxPolyDP(hull, approx, eps * peri, true);
           if (approx.rows === 4) {
-            const pts = [0, 1, 2, 3].map((k) => ({ x: approx.data32S[k * 2], y: approx.data32S[k * 2 + 1] }));
-            best = order(pts);
-            bestArea = area;
+            const q = orderCorners([0, 1, 2, 3].map((k) => ({ x: approx.data32S[k * 2], y: approx.data32S[k * 2 + 1] })));
             approx.delete();
+            if (plausibleQuad(q) && !touchesBorder(q, W, H) && edgeSupport(edgeMap, W, H, q).every((s) => s >= MIN_EDGE_SUPPORT)) {
+              best = q;
+              bestArea = area;
+            }
             break;
           }
           approx.delete();

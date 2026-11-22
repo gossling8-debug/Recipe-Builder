@@ -1,4 +1,4 @@
-import { defaultQuad, detectCard, outputSize, scaleQuad, warp, type Quad } from "./docscan";
+import { defaultQuad, detectCard, orderCorners, outputSize, plausibleQuad, scaleQuad, touchesBorder, warp, type Quad } from "./docscan";
 /**
  * Shrinks a phone photo before sending it to Claude or saving it.
  * Claude doesn't benefit from images beyond ~1568px on the long edge, and a
@@ -110,8 +110,10 @@ export async function prepareCrop(file: Blob): Promise<CropSource> {
   } catch {
     /* fall through to the simple method */
   }
+  // The simple method gets the same checks: no shape that isn't card-like or that runs along the photo's edge.
   const q = detectCard(gray, sw, sh);
-  return { url, w, h, found: q ? scaleQuad(q, 1 / s) : null };
+  const ok = q && plausibleQuad(orderCorners(q)) && !touchesBorder(q, sw, sh);
+  return { url, w, h, found: ok ? scaleQuad(orderCorners(q), 1 / s) : null };
 }
 
 export const startingQuad = (src: CropSource): Quad => src.found ?? defaultQuad(src.w, src.h);
