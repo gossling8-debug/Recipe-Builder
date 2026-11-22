@@ -23,8 +23,16 @@ export async function requestStatus(req, verify) {
   }
 }
 
-/** The day's counter document id, e.g. "2026-11-22" (UTC). */
+/** The day, e.g. "2026-11-22" (UTC). Each day's counts are spread over APP_CHECK_SHARDS documents "2026-11-22_0"… */
 export const dayKey = (now = Date.now()) => new Date(now).toISOString().slice(0, 10);
+export const APP_CHECK_SHARDS = 10;
+
+/** Every counter document of the last `days` days. */
+export function appCheckDocIds(now = Date.now(), days = 7) {
+  const ids = [];
+  for (let d = 0; d < days; d++) for (let s = 0; s < APP_CHECK_SHARDS; s++) ids.push(`${dayKey(now - d * 86_400_000)}_${s}`);
+  return ids;
+}
 
 /** Totals over the given daily counter documents: { ai: {verified, missing, invalid}, call: {...} }. */
 export function totals(days) {

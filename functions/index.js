@@ -32,7 +32,7 @@ import * as functionsV1 from "firebase-functions/v1";
 import { summarize } from "./lib/stats.js";
 import { deleteMixRecipe, deleteUserData, deleteVotesOn } from "./lib/cleanup.js";
 import { inEmulator, testUrl } from "./lib/testHooks.js";
-import { callStatus, dayKey, requestStatus, totals } from "./lib/appCheck.js";
+import { APP_CHECK_SHARDS, appCheckDocIds, callStatus, dayKey, requestStatus, totals } from "./lib/appCheck.js";
 import { nextVote, parseVote, voteDelta } from "./lib/mixVotes.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -47,16 +47,22 @@ const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const PLUS_EMAILS = defineSecret("PLUS_EMAILS");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET"); // "whsec_…" from Stripe's webhook settings; "none" until set up
 
-// App Check, watch-only (lib/appCheck.js): counts per day whether requests came from the real
-// app. Nothing is turned away. A failed count never affects the request.
+// App Check, watch-only (lib/appCheck.js): counts per day whether signed-in requests came from
+// the real app. Nothing is turned away. Counts are spread over several documents (one busy
+// document would slow down), and a slow or failed count never holds up a request for long.
 const noteAppCheck = (kind, status) =>
-  db.doc(`appCheckStats/${dayKey()}`).set({ [kind]: { [status]: FieldValue.increment(1) } }, { merge: true }).catch(() => {});
-/** onCall plus the App Check count. Same name, so the deploy's list of functions (deploy-backend.yml) still finds every one. */
+  Promise.race([
+    db.doc(`appCheckStats/${dayKey()}_${Math.floor(Math.random() * APP_CHECK_SHARDS)}`)
+      .set({ [kind]: { [status]: FieldValue.increment(1) } }, { merge: true })
+      .catch(() => {}),
+    new Promise((r) => setTimeout(r, 1000).unref?.()),
+  ]);
+/** onCall plus the App Check count (signed-in calls only). Same name, so the deploy's list of functions (deploy-backend.yml) still finds every one. */
 const onCall = (o, fn) =>
-  onCallUnwatched(o, async (req) => {
-    const note = noteAppCheck("call", callStatus(req)); // runs alongside, finished before the answer goes back
+  onCallUnwatched(o, async (req, res) => {
+    const note = req.auth ? noteAppCheck("call", callStatus(req)) : null; // alongside the work, finished before the answer goes back
     try {
-      return await fn(req);
+      return await fn(req, res);
     } finally {
       await note;
     }
@@ -173,17 +179,16 @@ export const ai = onRequest({ ...opts, secrets: [ANTHROPIC_API_KEY, STRIPE_SECRE
   if (req.method !== "POST" || !/\/v1\/messages$/.test(req.path)) return fail(res, 404, "not_found_error", "Not found.");
   if ((req.rawBody?.length ?? 0) > MAX_BODY_BYTES) return fail(res, 413, "request_too_large", "That's too much to send at once. Try fewer or smaller photos.");
 
-  // Who's asking? (App Check is only counted, alongside the sign-in check.)
-  const appCheckNoted = requestStatus(req, (t) => getAppCheck().verifyToken(t)).then((s) => noteAppCheck("ai", s));
+  // Who's asking?
   const token = (req.get("authorization") || "").replace(/^Bearer\s+/i, "");
   let user;
   try {
     user = await getAuth().verifyIdToken(token);
   } catch {
     return fail(res, 401, "authentication_error", "Please sign in again.");
-  } finally {
-    await appCheckNoted;
   }
+  // App Check is only counted (signed in only, so outside scripts can't make writes for free).
+  await noteAppCheck("ai", await requestStatus(req, (t) => getAppCheck().verifyToken(t)));
 
   const problem = checkRequest(req.body);
   if (problem) return fail(res, 400, "invalid_request_error", problem);
@@ -289,7 +294,7 @@ export const ownerStats = onCall({ ...opts, timeoutSeconds: 60 }, async (req) =>
     db.collection("cookbooks").count().get(),
     db.collection("errors").orderBy("at", "desc").limit(500).get(),
     db.collection("funnel").get(),
-    db.getAll(...[0, 1, 2, 3, 4, 5, 6].map((d) => db.doc(`appCheckStats/${dayKey(Date.now() - d * DAY)}`))),
+    db.getAll(...appCheckDocIds().map((id) => db.doc(`appCheckStats/${id}`))),
   ]);
   const data = (q) => q.docs.map((d) => d.data());
   const withId = (q) => q.docs.map((d) => ({ ...d.data(), uid: d.id })); // to match steps with plans; never returned

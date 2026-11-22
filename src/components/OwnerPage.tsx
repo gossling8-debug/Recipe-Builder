@@ -352,6 +352,7 @@ function AppCheckSection({ counts }: { counts: NonNullable<OwnerStats["appCheck"
   return (
     <section>
       <h2 className="h3">App Check (last 7 days)</h2>
+      <p className="muted small">Signed-in requests to the server: did they come from the Cardamix app?</p>
       <table className="owner-appcheck">
         <thead>
           <tr>

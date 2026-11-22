@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { callStatus, dayKey, requestStatus, totals } from "./appCheck.js";
+import { APP_CHECK_SHARDS, appCheckDocIds, callStatus, dayKey, requestStatus, totals } from "./appCheck.js";
 
 const httpReq = (headers) => ({ get: (h) => headers[h.toLowerCase()] });
 
@@ -25,5 +25,9 @@ describe("App Check (watch-only counts)", () => {
       call: { verified: 0, missing: 4, invalid: 0 },
     });
     expect(dayKey(Date.parse("2026-11-22T23:59:00Z"))).toBe("2026-11-22");
+    const ids = appCheckDocIds(Date.parse("2026-11-22T12:00:00Z"));
+    expect(ids).toHaveLength(7 * APP_CHECK_SHARDS);
+    expect(ids[0]).toBe("2026-11-22_0");
+    expect(ids.at(-1)).toBe(`2026-11-16_${APP_CHECK_SHARDS - 1}`);
   });
 });

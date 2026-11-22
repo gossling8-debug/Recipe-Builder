@@ -62,7 +62,7 @@ export function fb(): Promise<Fb> {
   fbPromise ??= (async () => {
     const [{ initializeApp }, a, f] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore")]);
     const app = initializeApp(firebaseConfig!);
-    startAppCheck(app);
+    await startAppCheck(app); // before anything talks to the server, so those requests carry its token too
     // Remember the sign-in in localStorage first: Safari's IndexedDB can come back
     // empty after a refresh, which signed people out. Sign-ins saved the old way
     // (IndexedDB) are found and moved over automatically.
@@ -81,22 +81,31 @@ export function fb(): Promise<Fb> {
   return fbPromise;
 }
 
-let appCheck: Promise<import("firebase/app-check").AppCheck | null> | null = null;
+let appCheck: import("firebase/app-check").AppCheck | null = null;
 /** App Check (when a site key is set): Firestore and server calls then send its token by themselves. */
-function startAppCheck(app: import("firebase/app").FirebaseApp) {
+async function startAppCheck(app: import("firebase/app").FirebaseApp) {
   if (!APP_CHECK_SITE_KEY || import.meta.env.VITE_FIREBASE_EMULATOR) return;
-  appCheck = import("firebase/app-check")
-    .then((ac) => ac.initializeAppCheck(app, { provider: new ac.ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY), isTokenAutoRefreshEnabled: true }))
-    .catch(() => null); // watch-only for now: without it, requests still go through
+  try {
+    const ac = await import("firebase/app-check");
+    appCheck = ac.initializeAppCheck(app, { provider: new ac.ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY), isTokenAutoRefreshEnabled: true });
+  } catch {
+    /* watch-only for now: without it, requests still go through */
+  }
 }
 
-/** The App Check token for requests the app makes itself (AI), or null. Waits at most 3 seconds. */
+/** The App Check token for requests the app makes itself (AI), or null. Waits at most 1 second (reCAPTCHA can be blocked). */
 export async function appCheckToken(): Promise<string | null> {
-  const ac = await (appCheck ?? Promise.resolve(null));
-  if (!ac) return null;
+  if (!appCheck) return null;
   const { getToken } = await import("firebase/app-check");
-  const timeout = new Promise<null>((r) => setTimeout(() => r(null), 3000));
-  return Promise.race([getToken(ac).then((t) => t.token), timeout]).catch(() => null);
+  let timer = 0;
+  const timeout = new Promise<null>((r) => (timer = window.setTimeout(() => r(null), 1000)));
+  try {
+    return await Promise.race([getToken(appCheck).then((t) => t.token), timeout]);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export const user = async (): Promise<User | null> => (await fb()).auth.currentUser;

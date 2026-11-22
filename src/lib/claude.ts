@@ -45,10 +45,10 @@ export async function makeClient(apiKey: string, kind = "other"): Promise<Anthro
   const { appCheckToken, user } = await import("./cloud");
   const u = await user();
   if (!u) throw new ScanError("Sign in to use AI features.");
-  const appCheck = await appCheckToken();
+  const [idToken, appCheck] = await Promise.all([u.getIdToken(), appCheckToken()]);
   return new Anthropic({
     apiKey: null,
-    authToken: await u.getIdToken(),
+    authToken: idToken,
     baseURL: AI_URL,
     dangerouslyAllowBrowser: true,
     maxRetries: 1,
