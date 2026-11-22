@@ -18,6 +18,11 @@ frames made from the owner's own carpet, cabinet and chair photos (varied in pos
 angle, blur and light): with nothing in view the old finder outlined something in 42 of 300
 frames and the new one in none; of cards fully in view on those backgrounds the old one found
 17 of 83 correctly (and drew 23 wrong shapes), the new one 45 of 83 with no wrong shapes.
+A real page in a plastic sleeve was then missed: its outline ran between the paper's and the
+sleeve's edges. An edge up to 6 px across from a side now counts, and to keep patterns like
+carpet out, the shape must be lighter or darker than what's around it on every side (by 25+
+shades). On the same frames: the owner's page found, nothing outlined on carpet or cabinets,
+cards found as before. Once found, the white aiming corners move onto the card's corners.
 
 ### Live scanner: keep the sharpest of 3 frames; no "this photo is blurry" warning (Nov 2026)
 Deciding whether one photo is blurry wasn't reliable: two methods tried on test cards (dark ink,
