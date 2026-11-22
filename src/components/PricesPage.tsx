@@ -5,6 +5,8 @@ import Icon from "./Icon";
 import { useLongPress } from "./RecipeActions";
 import { useToast } from "./Toast";
 import {
+  shrinkflation,
+  type Shrunk,
   allItemPrices,
   deletePrice,
   deletePrices,
@@ -40,6 +42,8 @@ export default function PricesPage() {
   const [version, setVersion] = useState(0);
   const prices = useMemo(() => loadPrices(), [version]); // eslint-disable-line react-hooks/exhaustive-deps
   const stores = usedStores(prices);
+  const shrunk = useMemo(() => shrinkflation(prices), [prices]);
+  const shrunkKeys = new Set(shrunk.map((x) => `${x.key}|${x.storage ?? ""}`));
   const [query, setQuery] = useState("");
   const [store, setStore] = useState("");
   const [sort, setSort] = useState<"recent" | "az" | "up">("recent");
@@ -81,6 +85,7 @@ export default function PricesPage() {
           <p className="muted">No prices yet. Import a receipt, or add prices as you tick items off your shopping list.</p>
         ) : (
           <>
+            <ShrinkList items={shrunk} />
             <input className="search" type="search" placeholder="Search items" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search items" />
             <div className="price-filters">
               <label>
@@ -115,6 +120,7 @@ export default function PricesPage() {
                   onHold={() => setMenuFor(all)}
                   onEditPurchase={setEditing}
                   prices={prices}
+                  shrank={shrunkKeys.has(`${it.key}|${it.storage ?? ""}`)}
                 />
               ))}
             </ul>
@@ -188,6 +194,7 @@ export default function PricesPage() {
 }
 
 function ItemRow(props: {
+  shrank?: boolean;
   it: ItemPrices;
   all: ItemPrices;
   open: boolean;
@@ -213,6 +220,7 @@ function ItemRow(props: {
             {perPack(it.latest)}
             {it.change !== null && Math.abs(it.change) >= 0.03 && <span className={it.change > 0 ? "price-up" : "price-down"}> {pct(it.change)} since last time</span>}
           </span>
+          {props.shrank && <span className="small price-up">Package shrank — see “Packages that shrank” above</span>}
           {all.byStore.length > 1 && all.byStore[0].store !== it.latest.store && (
             <span className="small price-best">
               Cheapest at {all.byStore[0].store}: {unitText(all.byStore[0].unit)}
@@ -422,4 +430,29 @@ function PurchaseEditSheet(props: {
 function perPack(p: PriceEntry): string {
   const pack = packOf(p.size);
   return pack ? ` · ${dollars(p.price / pack.count)}/${pack.noun}` : "";
+}
+
+/** Shrinkflation: the same item at the same store, in a smaller package, costing more per oz. */
+function ShrinkList({ items }: { items: Shrunk[] }) {
+  if (!items.length) return null;
+  return (
+    <section className="shrink-list" aria-label="Packages that shrank">
+      <h2 className="h3">Packages that shrank</h2>
+      <p className="muted small">Less in the package than last time at the same store, for the same money or more.</p>
+      <ul>
+        {items.map((x) => (
+          <li key={`${x.key}|${x.storage ?? ""}|${x.store ?? ""}`}>
+            <strong>{x.name}</strong>
+            {x.store && <span className="muted"> at {x.store}</span>}
+            <div className="small">
+              {sizeOf(x.before) || "?"} for {dollars(x.before.price)} → {sizeOf(x.after) || "?"} for {dollars(x.after.price)}
+            </div>
+            <div className="small price-up">
+              {Math.round(x.shrink * 100)}% less in the package · {Math.round(x.unitRise * 100)}% more per {unitPrice(x.after)?.unit ?? "unit"}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }

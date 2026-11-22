@@ -40,3 +40,17 @@ export async function pasteRecipe(page: Page): Promise<void> {
 /** Amounts the test Stripe has charged, in cents. */
 export const charges = async (): Promise<number[]> => (await fetch(`${STRIPE}/test/charges`)).json();
 export const declineNextCharge = (on: boolean) => fetch(`${STRIPE}/test/decline?on=${on ? 1 : 0}`);
+
+/** Free → Plus (monthly) through the test checkout. Ends on "Your plan". */
+export async function buyPlusMonthly(page: Page) {
+  await page.goto("./#/plus");
+  await expect(page.locator(".plus-page h1").first()).toHaveText("Choose a plan");
+  await page.locator(".plus-interval").getByText("Monthly ·").click();
+  await page.getByRole("button", { name: "Upgrade to Plus" }).click();
+  await page.waitForURL(/\/pay\//);
+  await expect(page.locator("#price")).toHaveText("cardamix_plus_monthly_449: $4.49/month");
+  await page.getByRole("button", { name: "Pay" }).click();
+  await page.waitForURL(/#\/plus\/done/);
+  await expect(page.locator(".plan-card-plus")).toContainText("Welcome to Plus!");
+  await expect(page.locator(".plus-page h1").first()).toHaveText("You have Plus");
+}

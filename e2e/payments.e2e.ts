@@ -1,21 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { charges, declineNextCharge, pasteRecipe, signUp, STRIPE } from "./helpers";
+import { buyPlusMonthly, charges, declineNextCharge, pasteRecipe, signUp, STRIPE } from "./helpers";
 
 const heading = (page: Page) => page.locator(".plus-page h1").first();
 
-/** Free → Plus (monthly) through the test checkout. Ends on "Your plan". */
-async function buyPlusMonthly(page: Page) {
-  await page.goto("./#/plus");
-  await expect(heading(page)).toHaveText("Choose a plan");
-  await page.locator(".plus-interval").getByText("Monthly ·").click();
-  await page.getByRole("button", { name: "Upgrade to Plus" }).click();
-  await page.waitForURL(/\/pay\//);
-  await expect(page.locator("#price")).toHaveText("cardamix_plus_monthly_449: $4.49/month");
-  await page.getByRole("button", { name: "Pay" }).click();
-  await page.waitForURL(/#\/plus\/done/);
-  await expect(page.locator(".plan-card-plus")).toContainText("Welcome to Plus!");
-  await expect(heading(page)).toHaveText("You have Plus");
-}
 
 test("free → upgrade card → Plus → Family for only the difference", async ({ page }) => {
   await signUp(page, "pay");
