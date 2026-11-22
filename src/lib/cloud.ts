@@ -79,6 +79,11 @@ export function fb(): Promise<Fb> {
 }
 
 export const user = async (): Promise<User | null> => (await fb()).auth.currentUser;
+/** When the signed-in account was created (ms), or null if unknown. */
+export async function accountCreatedAt(): Promise<number | null> {
+  const t = Date.parse((await user().catch(() => null))?.metadata.creationTime ?? "");
+  return Number.isFinite(t) ? t : null;
+}
 
 // ---------- start ----------
 let started = false;

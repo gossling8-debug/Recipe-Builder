@@ -12,7 +12,7 @@ import { loadPantry, useSoon } from "../lib/pantry";
 import { freshness, useByText } from "../lib/shelfLife";
 import WarnIcon from "./WarnIcon";
 import { agoText, lastMade } from "../lib/made";
-import { cloudState, subscribeCloud } from "../lib/cloud";
+import { accountCreatedAt, cloudState, subscribeCloud } from "../lib/cloud";
 import { eatByLabel, leftoverPast, useLeftovers } from "../lib/leftovers";
 import { aYearAgo } from "../lib/history";
 import Header from "./Header";
@@ -22,7 +22,7 @@ import { searchRecipe, type SearchScope } from "../lib/search";
 import SearchBox from "./SearchBox";
 import { useToast } from "./Toast";
 import { deleteWithUndo } from "../lib/undoDelete";
-import { addSamples, isSample, removeSamples } from "../lib/samples";
+import { addSamples, isNewAccount, isSample, removeSamples } from "../lib/samples";
 import { refusedBy, tastesOn } from "../lib/tastes";
 import { noteStep } from "../lib/funnel";
 import { removeFromShopping } from "../lib/shopping";
@@ -64,6 +64,18 @@ export default function Library() {
     listRecipes().then((rs) => (setRecipes(rs), setSyncedOnce(true)), () => setSyncedOnce(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloud.lastSync]);
+  // Whether an empty list really means an empty box: only after this account's recipes have been
+  // downloaded (a new phone or browser starts empty), or when there's no cloud to download from.
+  const boxKnown = cloud.status === "off" || syncedOnce || cloud.status === "offline" || cloud.status === "error";
+  // Sample recipes: only for new accounts (or with no accounts at all), never added to an existing one.
+  const [newAccount, setNewAccount] = useState(false);
+  useEffect(() => {
+    if (cloud.status === "off") return void setNewAccount(true);
+    if (!cloud.uid) return void setNewAccount(false);
+    let stop = false;
+    void accountCreatedAt().then((t) => !stop && setNewAccount(isNewAccount(t)));
+    return () => void (stop = true);
+  }, [cloud.uid, cloud.status]);
   // Re-render every 30 s so "start by … in 20 min" stays current.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -100,6 +112,13 @@ export default function Library() {
 
   const [addingSamples, setAddingSamples] = useState(false);
   async function trySamples() {
+    // Only into a box that's really empty: if recipes turn up after all (still syncing), add nothing.
+    const now = await listRecipes().catch(() => null);
+    const stillNew = cloud.status === "off" || isNewAccount(await accountCreatedAt());
+    if (!now || now.length > 0 || !stillNew) {
+      if (now) setRecipes(now);
+      return;
+    }
     setAddingSamples(true);
     void noteStep("samplesTried");
     await addSamples().catch(() => {});
@@ -325,8 +344,8 @@ export default function Library() {
         {recipes && recipes.length > 0 && (
           <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
         )}
-        {recipes === null && !error && <Loading />}
-        {recipes?.length === 0 && (
+        {(recipes === null || (recipes.length === 0 && !boxKnown)) && !error && <Loading />}
+        {recipes?.length === 0 && boxKnown && (
           <div className="empty">
             <p className="empty-title">Your recipe box is empty.</p>
             <p className="muted">Snap a photo of a recipe card, cookbook page or screenshot, and it becomes a recipe you can cook from, scale and shop for.</p>
@@ -334,9 +353,11 @@ export default function Library() {
               <a className="btn primary" href={href({ name: "scan" })}>
                 <Icon name="camera" size={20} /> Add your first recipe
               </a>
-              <button className="btn" disabled={addingSamples} onClick={() => void trySamples()}>
-                {addingSamples ? "Adding…" : "Try 3 sample recipes"}
-              </button>
+              {newAccount && (
+                <button className="btn" disabled={addingSamples} onClick={() => void trySamples()}>
+                  {addingSamples ? "Adding…" : "Try 3 sample recipes"}
+                </button>
+              )}
             </div>
           </div>
         )}
