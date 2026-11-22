@@ -114,3 +114,28 @@ test("a clear reading doesn't offer a retake", async ({ page }) => {
   await expect(page.locator(".my-notes")).toBeVisible({ timeout: 45_000 });
   await expect(page.getByRole("button", { name: "Retake the photo" })).toHaveCount(0);
 });
+
+test("scanning leaves no big drawing surfaces behind (iPhone Safari goes black when they pile up)", async ({ page }) => {
+  // Track every canvas the app makes.
+  await page.addInitScript(() => {
+    const made: HTMLCanvasElement[] = ((window as unknown as { __canvases: HTMLCanvasElement[] }).__canvases = []);
+    const create = Document.prototype.createElement;
+    Document.prototype.createElement = function (this: Document, tag: string, opts?: ElementCreationOptions) {
+      const el = create.call(this, tag, opts);
+      if (String(tag).toLowerCase() === "canvas") made.push(el as HTMLCanvasElement);
+      return el;
+    } as typeof Document.prototype.createElement;
+  });
+  await signUp(page, "mem");
+  await page.goto("./#/scan");
+  await scanCard(page);
+  await page.getByRole("button", { name: "Read recipe" }).click();
+  await expect(page.locator(".my-notes")).toBeVisible({ timeout: 45_000 });
+  // Pixels still held by canvases that are no longer on screen.
+  const left = await page.evaluate(() =>
+    (window as unknown as { __canvases: HTMLCanvasElement[] }).__canvases
+      .filter((c) => !c.isConnected)
+      .reduce((n, c) => n + c.width * c.height, 0),
+  );
+  expect(left).toBeLessThan(500_000); // well under one camera frame
+});

@@ -1,3 +1,5 @@
+import { release } from "./canvas";
+
 /**
  * Which of several photos of the same card is the sharpest? Runs on the phone.
  *
@@ -58,6 +60,7 @@ export function grayOf(
   const ctx = c.getContext("2d", { willReadFrequently: true })!;
   ctx.drawImage(source, box.x, box.y, box.w, box.h, 0, 0, w, h);
   const px = ctx.getImageData(0, 0, w, h).data;
+  release(c);
   const gray = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) gray[i] = (px[i * 4] * 0.299 + px[i * 4 + 1] * 0.587 + px[i * 4 + 2] * 0.114) | 0;
   return { gray, w, h };

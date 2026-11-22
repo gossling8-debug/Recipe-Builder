@@ -4,6 +4,16 @@ Short records of decisions that aren't obvious from the code — the "load-beari
 Before changing one of these, read why it's there. Newest first; add one for any
 Tier-3 decision.
 
+### Free every scanner canvas as soon as it's used (Nov 2026)
+After scanning, a user's screen went black while the app kept working underneath (they saved a
+recipe blind). iPhone Safari has a small total budget for canvas memory; past it, canvases and
+the screen go blank. The live scanner made a new canvas ~8 times a second while aiming and kept
+three full-size frames per picture; a short test scan left 7.5 million pixels (~30 MB) behind,
+and a real phone with 4K frames and longer aiming far more. Now one canvas is reused for aiming,
+frames are at most 2560 px, and every temporary canvas is released (`src/lib/canvas.ts`). The
+click-through test "scanning leaves no big drawing surfaces behind" checks it (under 0.5 MP).
+Not reproduced on an iPhone here; this is the most likely cause, and the fix is safe either way.
+
 ### Card outlines: show nothing rather than a wrong shape (Nov 2026)
 On a real phone, a card on a chair was outlined as a sliver or a lopsided slice running onto the
 chair (reported by the owner). An outline is now accepted only if it's card-shaped (no corner
