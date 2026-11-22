@@ -6,7 +6,7 @@ import FastFoodSection from "./FastFoodSection";
 import SavingsCard from "./SavingsCard";
 import { listRecipes } from "../lib/db";
 import { isDinner, realServings } from "../lib/autoPlan";
-import { cheapestStores, dollars, getBudget, parsePrice, periodStarts, recipeCost, setBudget, spendingByStore, spentSince, unitText } from "../lib/prices";
+import { cheapestStores, dollars, getBudget, parsePrice, periodStarts, recipeCost, setBudget, shrinkflation, spendingByStore, spentSince, unitText } from "../lib/prices";
 import { href } from "../lib/route";
 import { loadShopping, saveShopping, type ShoppingState } from "../lib/shopping";
 import { applySwaps } from "../lib/swaps";
@@ -44,6 +44,7 @@ export default function BudgetPage() {
   const left = budget - week;
   const pct = budget ? Math.min(100, (week / budget) * 100) : 0;
 
+  const shrunk = shrinkflation();
   // What the dinners planned for the next 7 days cost (ingredients with prices only).
   const byId = new Map(recipes.map((r) => [r.id, r]));
   const plan = loadWeek();
@@ -198,6 +199,13 @@ export default function BudgetPage() {
                 </li>
               ))}
             </ul>
+          )}
+          {shrunk.length > 0 && (
+            <p className="small price-up shrink-note">
+              {shrunk.length === 1 ? `${shrunk[0].name} came in a smaller package` : `${shrunk.length} items came in smaller packages`} for the same money or
+              more.{" "}
+              <a href={href({ name: "prices" })}>See which</a>
+            </p>
           )}
           <a className="link-btn small" href={href({ name: "prices" })}>
             See every price

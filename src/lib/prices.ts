@@ -323,7 +323,14 @@ export function priceInsight(
   store: string | null,
   prices = loadPrices(),
   storage?: StorageKind | null,
-): { change: number | null; since: number | null; cheaperAt: { store: string; unit: UnitPrice } | null; unit: UnitPrice | null } {
+): {
+  change: number | null;
+  since: number | null;
+  cheaperAt: { store: string; unit: UnitPrice } | null;
+  unit: UnitPrice | null;
+  /** Shrinkflation: smaller than the last one bought at this store, and more per unit. */
+  shrank: { from: PriceEntry; shrink: number; unitRise: number } | null;
+} {
   const unit = unitPrice({ qty: parseQty(amountText, name), price });
   // Canned isn't compared with fresh: only the same kind (or purchases where it wasn't recorded).
   const h = priceHistory(nameKey(name), prices).filter((p) => !storage || !p.storage || p.storage === storage);
@@ -336,7 +343,80 @@ export function priceInsight(
     if (!p.store || p.store === store || !unit || !u || u.unit !== unit.unit) continue;
     if (u.value < unit.value * 0.97 && (!cheaperAt || u.value < cheaperAt.unit.value)) cheaperAt = { store: p.store, unit: u };
   }
-  return { change, since: prev?.at ?? null, cheaperAt, unit };
+  const lastHere = h.find((p) => (p.store ?? null) === (store ?? null));
+  const d = lastHere ? shrinkBetween(lastHere, { qty: parseQty(amountText, name), price }) : null;
+  const shrank = lastHere && d ? { from: lastHere, ...d } : null;
+  return { change, since: prev?.at ?? null, cheaperAt, unit, shrank };
+}
+
+// ---------- shrinkflation ----------
+
+/**
+ * Shrinkflation: the same item at the same store came in a smaller package, and you pay
+ * more per oz (or fl oz, or item) for it. Only a modest shrink counts (3–30%): a much
+ * smaller package is a different size you chose (the small bag vs the family size), and a
+ * price that fell as much as the size isn't shrinkflation either.
+ */
+export const SHRINK_MIN = 0.03;
+export const SHRINK_MAX = 0.3;
+export const SHRINK_UNIT_RISE = 0.03;
+
+const amountOf = (q: Qty | null): { kind: string; v: number } | null =>
+  !q ? null
+  : q.kind === "weight" ? { kind: "weight", v: q.g }
+  : q.kind === "volume" ? { kind: "volume", v: q.tsp }
+  : { kind: `count:${singular(q.noun || "")}`, v: q.n };
+
+/** How much smaller the later package is, and how much more it costs per unit — or null if it isn't shrinkflation. */
+export function shrinkBetween(
+  before: Pick<PriceEntry, "qty" | "price">,
+  after: Pick<PriceEntry, "qty" | "price">,
+): { shrink: number; unitRise: number } | null {
+  const a = amountOf(before.qty);
+  const b = amountOf(after.qty);
+  if (!a || !b || a.kind !== b.kind || !(a.v > 0) || !(b.v > 0)) return null;
+  const shrink = 1 - b.v / a.v;
+  if (shrink < SHRINK_MIN || shrink > SHRINK_MAX) return null;
+  const ua = unitPrice(before);
+  const ub = unitPrice(after);
+  if (!ua || !ub || ua.unit !== ub.unit || !(ua.value > 0)) return null;
+  const unitRise = ub.value / ua.value - 1;
+  return unitRise >= SHRINK_UNIT_RISE ? { shrink, unitRise } : null;
+}
+
+export interface Shrunk {
+  key: string;
+  name: string;
+  storage: StorageKind | null;
+  store: string | null;
+  before: PriceEntry;
+  after: PriceEntry;
+  shrink: number; // 0.1 = 10% less in the package
+  unitRise: number; // 0.11 = 11% more per oz
+}
+
+/**
+ * Items whose most recent purchase at a store was a shrunken package compared with the
+ * purchase before it at that same store. Newest first.
+ */
+export function shrinkflation(prices = loadPrices()): Shrunk[] {
+  const out: Shrunk[] = [];
+  const keys = [...new Set(prices.map((p) => p.key))].filter((k) => k !== TAX_KEY());
+  for (const key of keys)
+    for (const g of itemGroups(key, prices)) {
+      const byStore = new Map<string, PriceEntry[]>(); // newest first (itemGroups' order)
+      for (const p of g.entries) {
+        const s = p.store ?? "";
+        byStore.set(s, [...(byStore.get(s) ?? []), p]);
+      }
+      for (const [store, list] of byStore) {
+        if (list.length < 2) continue;
+        const [after, before] = list;
+        const d = shrinkBetween(before, after);
+        if (d) out.push({ key, name: after.name, storage: g.storage, store: store || null, before, after, ...d });
+      }
+    }
+  return out.sort((a, b) => b.after.at - a.after.at);
 }
 
 /** What was spent at each store since `from` (most first). */

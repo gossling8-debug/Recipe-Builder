@@ -14,6 +14,7 @@
   --accent: #9a4a26;
   --accent-soft: rgba(154, 74, 38, 0.08);
   --warn: #b98a2e;
+  --warn-text: #86600f; /* warning-coloured text: 4.5:1 or better */
   --error: #b0443a;
   --serif: "New York", ui-serif, "Iowan Old Style", "Palatino", Georgia, serif;
   --sans: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -33,6 +34,7 @@
   --accent: #e8a27e;
   --accent-soft: rgba(232, 162, 126, 0.14);
   --warn: #e0b763;
+  --warn-text: #e0b763; /* warning-coloured text: 4.5:1 or better */
   --error: #ef8a7e;
   --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E");
   color-scheme: dark;
@@ -49,6 +51,7 @@
     --accent: #e8a27e;
     --accent-soft: rgba(232, 162, 126, 0.14);
     --warn: #e0b763;
+    --warn-text: #e0b763; /* warning-coloured text: 4.5:1 or better */
     --error: #ef8a7e;
     --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E");
     color-scheme: dark;
@@ -403,7 +406,7 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .closeness { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
 .closeness.nearly { color: var(--text); }
 .closeness.close { color: var(--accent); }
-.closeness.noticeably { color: var(--warn); }
+.closeness.noticeably { color: var(--warn-text); }
 .conv-line { font-size: 16px; margin-top: 4px; }
 .conv-note { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
 .recipe-card .avoid-meta { color: var(--error); }
@@ -595,10 +598,10 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .use-soon ul { list-style: none; padding: 0; margin: 0 0 6px; border-top: 1px solid var(--line); }
 .use-soon li { padding: 10px 0 10px 12px; border-bottom: 1px solid var(--line); border-left: 3px solid var(--warn); }
 .use-soon li.fresh-past, .use-soon li.fresh-today { border-left-color: var(--error); }
-.use-by-text { color: var(--warn); font-weight: 600; font-size: 14px; }
+.use-by-text { color: var(--warn-text); font-weight: 600; font-size: 14px; }
 .use-soon li.fresh-past .use-by-text, .use-soon li.fresh-today .use-by-text { color: var(--error); }
 .use-by { display: block; padding: 2px 0; text-decoration: none; color: var(--muted); }
-.use-by.fresh-soon { color: var(--warn); font-weight: 600; }
+.use-by.fresh-soon { color: var(--warn-text); font-weight: 600; }
 .use-by.fresh-today, .use-by.fresh-past { color: var(--error); font-weight: 600; }
 .use-by.fresh-none { text-decoration: underline; }
 .date-edit { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
@@ -680,7 +683,7 @@ html[data-text-size="largest"] body { zoom: 1.3; }
 .meal-timeline li::before { content: ""; position: absolute; left: -6px; top: 15px; width: 10px; height: 10px; border-radius: 50%; background: var(--bg, #fff); border: 2px solid var(--accent); }
 .meal-timeline li.eat::before { background: var(--accent); }
 .tl-time { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
-.late-note { color: var(--warn); display: block; }
+.late-note { color: var(--warn-text); display: block; }
 .meal-pick label.picked span { font-weight: 600; }
 
 /* Printable recipe card */
@@ -922,7 +925,7 @@ body:has(.fab-bar) .tabbar, body:has(.cook) .tabbar, body:has(.lightbox) .tabbar
 .dup-list { list-style: none; padding: 0; margin: 0; }
 .dup-pair { padding: 12px 0 16px; border-bottom: 1px solid var(--line); }
 .dup-card { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; margin: 6px 0; border: 1px solid var(--line); border-radius: 10px; color: var(--text); text-decoration: none; background: var(--surface); }
-.dup-flag { color: var(--warn-text, #9a5b13); }
+.dup-flag { color: var(--warn-text); }
 .topbar.with-home .topbar-actions { min-width: 92px; }
 
 /* Search */
@@ -1069,7 +1072,7 @@ body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 
 .receipt-store { margin: 4px 0 10px; }
 .receipt-store select.text-input { font-size: 16px; }
 .receipt-rows .price-note { grid-column: 2 / -1; margin: -4px 0 0; color: var(--muted); }
-.receipt-rows .price-note.up { color: var(--warn, #b45309); }
+.receipt-rows .price-note.up { color: var(--warn-text); }
 /* Price tracker */
 .price-filters { display: flex; gap: 10px; margin: 8px 0 10px; }
 .price-filters label { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
@@ -1079,7 +1082,7 @@ body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 
 .price-row { display: flex; width: 100%; gap: 10px; align-items: flex-start; padding: 12px 0; background: none; border: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
 .price-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .price-amount { font-weight: 600; }
-.price-up { color: var(--warn, #b45309); }
+.price-up { color: var(--warn-text); }
 .price-down { color: var(--accent); }
 .price-best { color: var(--accent); }
 .price-history { padding: 0 0 12px; }
@@ -1097,7 +1100,7 @@ body:has(.fab-stack) .page { padding-bottom: calc(env(safe-area-inset-bottom) + 
 .price-row { user-select: none; -webkit-user-select: none; }
 .receipt-size { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 4px 0 2px; }
 .receipt-size .text-input { padding: 6px 8px; font-size: 15px; flex: 1 1 140px; min-width: 0; }
-.size-from { font-size: 12px; color: var(--warn); }
+.size-from { font-size: 12px; color: var(--warn-text); }
 .size-from.ok { color: var(--muted); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 /* Date boxes on iPhone keep their own width and spill past the edge. */
@@ -1296,7 +1299,7 @@ input.text-input[type="date"] { display: block; width: 100%; min-width: 0; box-s
 .book-recipe-photo img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
 /* Settings: subheadings inside a section (Display) */
 main.page section > .h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; }
-.book-flag { color: var(--warn, #b45309); font-size: 13px; }
+.book-flag { color: var(--warn-text); font-size: 13px; }
 .book-rights { margin: 12px 0; align-items: flex-start; }
 .mix-copyright p { margin: 0 0 8px; }
 .mix-copyright ol { padding-left: 20px; }
@@ -1412,3 +1415,10 @@ main.page section > .h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600;
 .eaters li { display: inline-flex; align-items: center; gap: 2px; padding: 2px 4px 2px 12px; border: 1px solid var(--line); border-radius: 999px; }
 .eaters-add { display: flex; gap: 8px; }
 .eaters-add .text-input { flex: 1; min-width: 0; }
+
+/* Shrinkflation */
+.shrink-list { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 0 0 16px; }
+.page section.shrink-list > .h3 { margin-top: 0; }
+.shrink-list ul { list-style: none; padding: 0; margin: 8px 0 0; }
+.shrink-list li + li { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 8px; }
+.shrink-note { margin: 4px 0 8px; }

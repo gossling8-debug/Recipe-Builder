@@ -17,6 +17,7 @@ import {
   addPrice,
   deletePrice,
   dollars,
+  sizeOf,
   parsePrice,
   priceInsight,
   unitText,
@@ -711,6 +712,10 @@ function PriceNote({
     parts.push(
       `${i.change > 0 ? "↑" : "↓"} ${Math.round(Math.abs(i.change) * 100)}% since ${new Date(i.since).toLocaleDateString([], { month: "short", day: "numeric" })}`,
     );
+  if (i.shrank)
+    parts.push(
+      `smaller than last time (${sizeOf(i.shrank.from) || "?"} for ${dollars(i.shrank.from.price)}): ${Math.round(i.shrank.unitRise * 100)}% more per ${i.unit?.unit ?? "unit"}`,
+    );
   if (i.cheaperAt)
     parts.push(
       `cheaper at ${i.cheaperAt.store}: ${unitText(i.cheaperAt.unit)}`,
@@ -718,7 +723,7 @@ function PriceNote({
   if (!parts.length) return null;
   return (
     <div
-      className={`small price-note${i.change !== null && i.change > 0.03 ? " up" : ""}`}
+      className={`small price-note${(i.change !== null && i.change > 0.03) || i.shrank ? " up" : ""}`}
     >
       {i.unit ? `${unitText(i.unit)} · ` : ""}
       {parts.join(" · ")}

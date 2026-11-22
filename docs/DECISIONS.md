@@ -4,6 +4,12 @@ Short records of decisions that aren't obvious from the code — the "load-beari
 Before changing one of these, read why it's there. Newest first; add one for any
 Tier-3 decision.
 
+### Shrinkflation: same item, same store, a 3–30% smaller package, 3%+ more per unit (Nov 2026)
+Comparing across stores would flag normal size choices (Costco's big box vs the regular one),
+a shrink over 30% is a different size bought on purpose, and a price that fell as much as the
+size isn't shrinkflation. Only each store's latest purchase vs the one before counts, so the
+flag goes away once the package is back to its size. (`src/lib/prices.ts` shrinkBetween)
+
 ### Node 22 everywhere, and its type definitions stay on 22 (Nov 2026)
 The server (`functions/package.json` engines) and the build and test workflows use Node 22, so
 `.github/dependabot.yml` ignores major updates of `@types/node`. When moving to a newer Node,
