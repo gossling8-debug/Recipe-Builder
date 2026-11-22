@@ -57,16 +57,26 @@ export default function Library() {
   useEffect(() => subscribeCloud(setCloud), []);
   const [showWelcome, setShowWelcome] = useState(() => !welcomeDone());
   const [tourClosed, setTourClosed] = useState(false);
-  // A new phone downloads its recipes on the first sync — only then do we know the box is really empty.
+  // A new phone downloads its recipes on the first full sync — only then do we know the box is
+  // really empty. (Not on any upload, and not when the download failed: offline isn't "empty".)
   const [syncedOnce, setSyncedOnce] = useState(false);
   useEffect(() => {
-    if (!cloud.lastSync || syncedOnce) return;
-    listRecipes().then((rs) => (setRecipes(rs), setSyncedOnce(true)), () => setSyncedOnce(true));
+    if (!cloud.fullSyncAt || syncedOnce) return;
+    listRecipes().then(
+      (rs) => (setRecipes(rs), setSyncedOnce(true)),
+      (e) => setError(storageErrorMessage(e)),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cloud.lastSync]);
-  // Whether an empty list really means an empty box: only after this account's recipes have been
-  // downloaded (a new phone or browser starts empty), or when there's no cloud to download from.
-  const boxKnown = cloud.status === "off" || syncedOnce || cloud.status === "offline" || cloud.status === "error";
+  }, [cloud.fullSyncAt]);
+  // Whether an empty list really means an empty box (DECISIONS: sample recipes).
+  const boxKnown = cloud.status === "off" || syncedOnce;
+  // Still not known after a while (a stalled or failed download): say so, and keep "Add a recipe" in reach.
+  const [waitedLong, setWaitedLong] = useState(false);
+  useEffect(() => {
+    if (boxKnown) return;
+    const t = window.setTimeout(() => setWaitedLong(true), 10_000);
+    return () => window.clearTimeout(t);
+  }, [boxKnown]);
   // Sample recipes: only for new accounts (or with no accounts at all), never added to an existing one.
   const [newAccount, setNewAccount] = useState(false);
   useEffect(() => {
@@ -112,18 +122,24 @@ export default function Library() {
 
   const [addingSamples, setAddingSamples] = useState(false);
   async function trySamples() {
-    // Only into a box that's really empty: if recipes turn up after all (still syncing), add nothing.
-    const now = await listRecipes().catch(() => null);
-    const stillNew = cloud.status === "off" || isNewAccount(await accountCreatedAt());
-    if (!now || now.length > 0 || !stillNew) {
-      if (now) setRecipes(now);
-      return;
-    }
+    if (addingSamples) return; // a second tap while the first is checking
     setAddingSamples(true);
-    void noteStep("samplesTried");
-    await addSamples().catch(() => {});
-    setRecipes(await listRecipes().catch(() => []));
-    setAddingSamples(false);
+    try {
+      // Only into a box that's really empty, on a new account: re-check before adding anything.
+      const now = await listRecipes().catch(() => null);
+      const stillNew = cloud.status === "off" || isNewAccount(await accountCreatedAt());
+      if (!boxKnown || !now || now.length > 0 || !stillNew) {
+        if (now) setRecipes(now);
+        if (!stillNew) setNewAccount(false);
+        showToast("Sample recipes are only for new, empty recipe boxes.");
+        return;
+      }
+      void noteStep("samplesTried");
+      await addSamples().catch(() => {});
+      setRecipes(await listRecipes().catch(() => []));
+    } finally {
+      setAddingSamples(false);
+    }
   }
   async function clearSamples() {
     await removeSamples(all).catch(() => {});
@@ -344,8 +360,23 @@ export default function Library() {
         {recipes && recipes.length > 0 && (
           <SearchBox query={query} scope={scope} onQuery={setQuery} onScope={setScope} />
         )}
-        {(recipes === null || (recipes.length === 0 && !boxKnown)) && !error && <Loading />}
-        {recipes?.length === 0 && boxKnown && (
+        {(recipes === null || (recipes.length === 0 && !boxKnown)) && !error && !waitedLong && <Loading />}
+        {recipes?.length === 0 && !boxKnown && !error && waitedLong && (
+          <div className="empty">
+            <p className="empty-title">{cloud.status === "offline" || cloud.status === "error" ? "Couldn't load your recipes yet." : "Still loading your recipes…"}</p>
+            <p className="muted">
+              {cloud.status === "offline" || cloud.status === "error"
+                ? "Check your connection — they'll appear here as soon as they've downloaded."
+                : "They'll appear here as soon as they've downloaded."}
+            </p>
+            <div className="button-row empty-actions">
+              <a className="btn" href={href({ name: "scan" })}>
+                <Icon name="plus" size={20} /> Add a recipe
+              </a>
+            </div>
+          </div>
+        )}
+        {recipes?.length === 0 && boxKnown && !error && (
           <div className="empty">
             <p className="empty-title">Your recipe box is empty.</p>
             <p className="muted">Snap a photo of a recipe card, cookbook page or screenshot, and it becomes a recipe you can cook from, scale and shop for.</p>

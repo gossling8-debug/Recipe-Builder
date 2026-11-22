@@ -26,6 +26,8 @@ export interface CloudState {
   email?: string;
   uid?: string;
   lastSync?: number;
+  /** When this account's recipes were last fully downloaded on this device (not just a small upload). */
+  fullSyncAt?: number;
   message?: string;
   /** False until Firebase has said whether someone is signed in on this device. */
   authKnown?: boolean;
@@ -115,7 +117,16 @@ export async function startCloud(): Promise<void> {
   const { auth, a } = loaded;
   a.onAuthStateChanged(auth, async (u) => {
     if (u) {
-      set({ status: "syncing", email: u.email ?? undefined, uid: u.uid, message: undefined, authKnown: true, emailVerified: u.emailVerified });
+      set({
+        status: "syncing",
+        email: u.email ?? undefined,
+        uid: u.uid,
+        message: undefined,
+        authKnown: true,
+        emailVerified: u.emailVerified,
+        // A different account than before: its recipes haven't been downloaded here yet.
+        ...(state.uid !== u.uid ? { fullSyncAt: undefined } : {}),
+      });
       const previous = lastAccount();
       if (previous && previous !== u.uid) {
         // This phone holds another account's data: show this account's instead.
@@ -136,7 +147,7 @@ export async function startCloud(): Promise<void> {
     } else {
       stopPlanWatch?.();
       stopPlanWatch = null;
-      set({ status: "signed-out", email: undefined, uid: undefined, lastSync: undefined, authKnown: true });
+      set({ status: "signed-out", email: undefined, uid: undefined, lastSync: undefined, fullSyncAt: undefined, authKnown: true });
     }
   });
 
@@ -463,7 +474,7 @@ export function syncNow(): Promise<void> {
       }
       stateDirty.clear(); // covered by the full sync below
       if (await syncState(u.uid)) announceChanges();
-      set({ status: "synced", lastSync: Date.now(), message: undefined });
+      set({ status: "synced", lastSync: Date.now(), fullSyncAt: Date.now(), message: undefined });
       window.dispatchEvent(new Event("recipes-synced"));
     } catch (e) {
       const offline = !navigator.onLine || (e as { code?: string })?.code === "unavailable";

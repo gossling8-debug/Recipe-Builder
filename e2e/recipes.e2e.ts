@@ -76,3 +76,33 @@ test("a fresh browser on an account with recipes never offers the sample recipes
   await expect(p2.locator(".recipe-row")).toHaveCount(1);
   await other.close();
 });
+
+test("a new account whose recipes can't download on this device is never offered the samples", async ({ page, browser }) => {
+  const email = await signUp(page, "offline");
+  await pasteRecipe(page);
+  const uid = await page.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find((k) => k.startsWith("firebase:authUser"))!)!).uid);
+  await expect
+    .poll(async () => ((await (await fetch(`http://127.0.0.1:8080/v1/projects/demo-recipe-builder/databases/(default)/documents/users/${uid}/recipes`, { headers: { Authorization: "Bearer owner" } })).json()).documents ?? []).length, { timeout: 30_000 })
+    .toBe(1);
+
+  // Another device where the database can't be reached at all (signing in still works).
+  const other = await browser.newContext({ ...devices["iPhone 13"], baseURL: test.info().project.use.baseURL });
+  const p2 = await other.newPage();
+  await p2.route("http://127.0.0.1:8080/**", (route) => route.abort());
+  await p2.goto("./");
+  await p2.getByRole("tab", { name: "Sign in" }).click();
+  await p2.fill("input[type=email]", email);
+  await p2.fill(".password-row input", "secret1");
+  await p2.click("button[type=submit]");
+  let sawSampleOffer = false;
+  for (let i = 0; i < 140; i++) {
+    if (await p2.getByRole("button", { name: "Try 3 sample recipes" }).count()) sawSampleOffer = true;
+    if (await p2.getByText(/Couldn't load your recipes yet|Still loading your recipes/).count()) break;
+    await p2.waitForTimeout(100);
+  }
+  expect(sawSampleOffer).toBe(false);
+  await expect(p2.getByText(/Couldn't load your recipes yet|Still loading your recipes/)).toBeVisible();
+  await expect(p2.getByRole("link", { name: "Add a recipe" })).toBeVisible();
+  await expect(p2.getByRole("button", { name: "Try 3 sample recipes" })).toHaveCount(0);
+  await other.close();
+});
