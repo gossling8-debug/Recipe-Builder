@@ -208,6 +208,21 @@ export default function DocumentScanner(props: {
     ctx.lineJoin = "round";
     ctx.fill();
     ctx.stroke();
+    // The aiming corners move onto the card's own corners, so they fit whatever is being scanned.
+    const pts = q.map((p) => ({ x: ox + p.x * s, y: oy + p.y * s }));
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    pts.forEach((p, i) => {
+      for (const o of [pts[(i + 3) % 4], pts[(i + 1) % 4]]) {
+        const len = Math.hypot(o.x - p.x, o.y - p.y) || 1;
+        const arm = Math.min(28, len * 0.2);
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + ((o.x - p.x) / len) * arm, p.y + ((o.y - p.y) / len) * arm);
+      }
+    });
+    ctx.stroke();
   }
 
   /**

@@ -64,3 +64,38 @@ describe("middle brightness (counted instead of sorted)", () => {
     }
   });
 });
+
+import { EDGE_REACH, sideContrast, standsOut } from "./docscan";
+describe("real photos: a page in a sleeve, and a pattern that only looks like edges", () => {
+  const W = 300, H = 300;
+  const page: Quad = [P(60, 60), P(240, 60), P(240, 240), P(60, 240)];
+
+  it("counts an edge a few pixels off the outline (the sleeve's edge next to the paper's)", () => {
+    const edges = new Uint8Array(W * H);
+    for (let t = 60; t <= 240; t++) {
+      edges[56 * W + t] = edges[244 * W + t] = 255; // 4 px outside, top and bottom
+      edges[t * W + 56] = edges[t * W + 244] = 255; // 4 px outside, left and right
+    }
+    expect(edgeSupport(edges, W, H, page).every((s) => s < MIN_EDGE_SUPPORT)).toBe(true);
+    expect(edgeSupport(edges, W, H, page, EDGE_REACH).every((s) => s >= MIN_EDGE_SUPPORT)).toBe(true);
+  });
+
+  it("a white page on a dark table stands out on every side", () => {
+    const gray = new Uint8Array(W * H).fill(70);
+    for (let y = 60; y <= 240; y++) for (let x = 60; x <= 240; x++) gray[y * W + x] = 230;
+    expect(standsOut(sideContrast(gray, W, H, page))).toBe(true);
+  });
+
+  it("a shape traced in a carpet pattern doesn't (the same carpet inside and out)", () => {
+    let seed = 5;
+    const gray = Uint8Array.from({ length: W * H }, () => 60 + ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) % 120));
+    expect(standsOut(sideContrast(gray, W, H, page))).toBe(false);
+  });
+
+  it("a page lit on one side only doesn't count (it must stand out all the way round)", () => {
+    const gray = new Uint8Array(W * H).fill(150);
+    for (let y = 60; y <= 240; y++) for (let x = 60; x <= 240; x++) gray[y * W + x] = 150;
+    for (let y = 0; y < H; y++) for (let x = 0; x < 60; x++) gray[y * W + x] = 40; // dark only to the left
+    expect(standsOut(sideContrast(gray, W, H, page))).toBe(false);
+  });
+});

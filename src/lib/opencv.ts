@@ -5,7 +5,7 @@
  * and is then cached.
  */
 import cvUrl from "@techstark/opencv-js/dist/opencv.js?url";
-import { edgeSupport, MIN_EDGE_SUPPORT, orderCorners, plausibleQuad, touchesBorder, type Quad } from "./docscan";
+import { EDGE_REACH, edgeSupport, MIN_EDGE_SUPPORT, orderCorners, plausibleQuad, sideContrast, standsOut, touchesBorder, type Quad } from "./docscan";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CV = any;
@@ -87,7 +87,8 @@ export function medianOf(values: ArrayLike<number>): number {
  * - paper: bright, colourless areas (Otsu on brightness minus colour), for a card on a busy
  *   background like carpet, where its edges blur into the pattern.
  * The largest outline that is card-shaped (plausibleQuad), doesn't run along the picture's
- * border (touchesBorder) and follows real edges (edgeSupport) wins. Measured on frames made
+ * border (touchesBorder), follows real edges (edgeSupport) and is lighter or darker than its
+ * surroundings all the way round (sideContrast) wins. Measured on frames made
  * from the owner's own carpet, cabinet and chair photos (docs/DECISIONS.md).
  */
 export function findPage(cv: CV, img: ImageData): Quad | null {
@@ -104,8 +105,11 @@ export function findPage(cv: CV, img: ImageData): Quad | null {
   const paperEdges = new cv.Mat();
   const kernel = cv.Mat.ones(3, 3, cv.CV_8U);
   const big = cv.Mat.ones(7, 7, cv.CV_8U);
+  const smooth = new cv.Mat();
   try {
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+    cv.GaussianBlur(gray, smooth, new cv.Size(9, 9), 0); // for comparing inside and outside a side
+    const shade = smooth.data as Uint8Array;
     cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
     // Thresholds from the image's own median brightness, so dim kitchens work too.
     const median = medianOf(gray.data as Uint8Array);
@@ -136,19 +140,16 @@ export function findPage(cv: CV, img: ImageData): Quad | null {
     let bestArea = 0;
     for (const c of [...fromEdges, ...fromPaper]) {
       if (c.area <= bestArea || !plausibleQuad(c.q) || touchesBorder(c.q, W, H)) continue;
-      // Edges all round: of the picture, or of the paper region (which must also mostly sit on picture edges).
-      const sides = edgeSupport(c.paper ? paperEdgeMap : edgeMap, W, H, c.q);
+      // Edges all round (of the picture, or of the paper region), and lighter or darker than what's around it on every side.
+      const sides = edgeSupport(c.paper ? paperEdgeMap : edgeMap, W, H, c.q, EDGE_REACH);
       if (sides.some((x) => x < MIN_EDGE_SUPPORT)) continue;
-      if (c.paper) {
-        const onPicture = edgeSupport(edgeMap, W, H, c.q);
-        if (onPicture.reduce((a, b) => a + b, 0) / 4 < 0.5) continue;
-      }
+      if (!standsOut(sideContrast(shade, W, H, c.q))) continue;
       best = c.q;
       bestArea = c.area;
     }
     return best;
   } finally {
-    [src, gray, edges, rgb, hsv, channels, halfS, paper, paperEdges, kernel, big].forEach((m) => m.delete());
+    [src, gray, edges, rgb, hsv, channels, halfS, paper, paperEdges, kernel, big, smooth].forEach((m) => m.delete());
   }
 }
 

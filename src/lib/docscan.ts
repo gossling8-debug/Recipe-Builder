@@ -260,22 +260,62 @@ export function plausibleQuad(q: Quad): boolean {
 /**
  * How much of each side runs along an edge in the picture (0–1 per side). `edges` is an
  * edge map (non-zero = edge) of w×h. A real card's outline follows its edges all the way
- * round; a wrong shape cuts across the card where there is no edge.
+ * round; a wrong shape cuts across the card where there is no edge. `reach`: an edge up to
+ * this many pixels across from the side still counts (a page in a plastic sleeve has two
+ * edges close together, and the simplified outline can run between them).
  */
-export function edgeSupport(edges: ArrayLike<number>, w: number, h: number, q: Quad, samples = 40): number[] {
+export function edgeSupport(edges: ArrayLike<number>, w: number, h: number, q: Quad, reach = 0, samples = 40): number[] {
   return q.map((p, i) => {
     const b = q[(i + 1) % 4];
+    const len = Math.hypot(b.x - p.x, b.y - p.y) || 1;
+    const nx = -(b.y - p.y) / len, ny = (b.x - p.x) / len; // across the side
     let on = 0, n = 0;
     for (let k = 1; k < samples; k++) {
-      const x = Math.round(p.x + ((b.x - p.x) * k) / samples);
-      const y = Math.round(p.y + ((b.y - p.y) * k) / samples);
+      const x = p.x + ((b.x - p.x) * k) / samples;
+      const y = p.y + ((b.y - p.y) * k) / samples;
       if (x < 0 || y < 0 || x >= w || y >= h) continue;
       n++;
-      if (edges[y * w + x]) on++;
+      for (let d = -reach; d <= reach; d++) {
+        const xx = Math.round(x + nx * d), yy = Math.round(y + ny * d);
+        if (xx >= 0 && yy >= 0 && xx < w && yy < h && edges[yy * w + xx]) {
+          on++;
+          break;
+        }
+      }
     }
     return n ? on / n : 0;
   });
 }
+
+/**
+ * Per side: the average shade just inside minus just outside (`gap` pixels each way). A card
+ * is lighter (or darker) than what it lies on all the way round; a shape traced in a carpet
+ * pattern has the same carpet on both sides.
+ */
+export function sideContrast(gray: ArrayLike<number>, w: number, h: number, q: Quad, gap = 6, samples = 40): number[] {
+  const cx = q.reduce((s, p) => s + p.x, 0) / 4, cy = q.reduce((s, p) => s + p.y, 0) / 4;
+  return q.map((p, i) => {
+    const b = q[(i + 1) % 4];
+    const len = Math.hypot(b.x - p.x, b.y - p.y) || 1;
+    let nx = -(b.y - p.y) / len, ny = (b.x - p.x) / len;
+    if ((cx - (p.x + b.x) / 2) * nx + (cy - (p.y + b.y) / 2) * ny < 0) (nx = -nx), (ny = -ny); // point inward
+    let sum = 0, n = 0;
+    for (let k = 2; k < samples - 1; k++) {
+      const x = p.x + ((b.x - p.x) * k) / samples, y = p.y + ((b.y - p.y) * k) / samples;
+      const xi = Math.round(x + nx * gap), yi = Math.round(y + ny * gap), xo = Math.round(x - nx * gap), yo = Math.round(y - ny * gap);
+      if (xi < 0 || yi < 0 || xi >= w || yi >= h || xo < 0 || yo < 0 || xo >= w || yo >= h) continue;
+      sum += gray[yi * w + xi] - gray[yo * w + xo];
+      n++;
+    }
+    return n ? sum / n : 0;
+  });
+}
+
+/** Lighter than its surroundings on every side, or darker on every side, by at least `min` shades. */
+export const standsOut = (contrast: number[], min = MIN_CONTRAST) => contrast.every((c) => c >= min) || contrast.every((c) => c <= -min);
+export const MIN_CONTRAST = 25;
+/** How far across a side (pixels, at the detection size) an edge still counts. */
+export const EDGE_REACH = 6;
 
 /**
  * Does a side run along the border of the picture? That's the table or chair running out of
