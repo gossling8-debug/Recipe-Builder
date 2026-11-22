@@ -1392,10 +1392,10 @@ main.page section > .h4 { margin: 14px 0 6px; font-size: 15px; font-weight: 600;
 .upgrade-card li { font-size: 15px; }
 .upgrade-card .button-row { display: flex; flex-direction: row; gap: 10px; }
 .upgrade-card .button-row .btn { flex: 1; margin: 0; }
-.owner-funnel { width: 100%; border-collapse: collapse; font-size: 15px; }
-.owner-funnel th { text-align: left; font-weight: 500; padding: 6px 8px 6px 0; }
-.owner-funnel td { padding: 6px 0 6px 8px; text-align: right; white-space: nowrap; }
-.owner-funnel tr + tr { border-top: 1px solid var(--line); }
+.owner-funnel, .owner-appcheck { width: 100%; border-collapse: collapse; font-size: 15px; }
+.owner-funnel th, .owner-appcheck th { text-align: left; font-weight: 500; padding: 6px 8px 6px 0; }
+.owner-funnel td, .owner-appcheck td { padding: 6px 0 6px 8px; text-align: right; white-space: nowrap; }
+.owner-funnel tr + tr, .owner-appcheck tr + tr { border-top: 1px solid var(--line); }
 
 /* Scan a stack of cards */
 .stack-link { margin: 4px 0 12px; }

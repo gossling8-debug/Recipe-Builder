@@ -23,6 +23,8 @@ export interface OwnerStats {
     last7: number;
     groups: { message: string; count: number; lastAt: number; screens: string[]; apps: string[]; stack: string; device: string }[];
   };
+  /** App Check over the last 7 days (watch-only): did requests come from the real app? */
+  appCheck?: Record<"ai" | "call", { verified: number; missing: number; invalid: number }>;
 }
 
 export const ownerStats = () => callable<OwnerStats>("ownerStats");

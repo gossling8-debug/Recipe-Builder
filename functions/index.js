@@ -21,16 +21,18 @@
  *   customers/{uid} { stripeId }   (not readable by the app)
  *   mixVotes/{mixId}_{uid} { mixId, uid, stars, reportedAt, reason, at }   (readable by that person and admins)
  */
-import { onRequest, onCall, HttpsError } from "firebase-functions/v2/https";
+import { onRequest, onCall as onCallUnwatched, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
+import { getAppCheck } from "firebase-admin/app-check";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import Stripe from "stripe";
 import * as functionsV1 from "firebase-functions/v1";
 import { summarize } from "./lib/stats.js";
 import { deleteMixRecipe, deleteUserData, deleteVotesOn } from "./lib/cleanup.js";
 import { inEmulator, testUrl } from "./lib/testHooks.js";
+import { APP_CHECK_SHARDS, appCheckDocIds, callStatus, dayKey, requestStatus, totals } from "./lib/appCheck.js";
 import { nextVote, parseVote, voteDelta } from "./lib/mixVotes.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -44,6 +46,27 @@ const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const PLUS_EMAILS = defineSecret("PLUS_EMAILS");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET"); // "whsec_…" from Stripe's webhook settings; "none" until set up
+
+// App Check, watch-only (lib/appCheck.js): counts per day whether signed-in requests came from
+// the real app. Nothing is turned away. Counts are spread over several documents (one busy
+// document would slow down), and a slow or failed count never holds up a request for long.
+const noteAppCheck = (kind, status) =>
+  Promise.race([
+    db.doc(`appCheckStats/${dayKey()}_${Math.floor(Math.random() * APP_CHECK_SHARDS)}`)
+      .set({ [kind]: { [status]: FieldValue.increment(1) } }, { merge: true })
+      .catch(() => {}),
+    new Promise((r) => setTimeout(r, 1000).unref?.()),
+  ]);
+/** onCall plus the App Check count (signed-in calls only). Same name, so the deploy's list of functions (deploy-backend.yml) still finds every one. */
+const onCall = (o, fn) =>
+  onCallUnwatched(o, async (req, res) => {
+    const note = req.auth ? noteAppCheck("call", callStatus(req)) : null; // alongside the work, finished before the answer goes back
+    try {
+      return await fn(req, res);
+    } finally {
+      await note;
+    }
+  });
 
 // Test-only stand-ins (*_BASE_URL): only in the local emulator with a demo project (lib/testHooks.js).
 const IN_EMULATOR = inEmulator();
@@ -164,6 +187,8 @@ export const ai = onRequest({ ...opts, secrets: [ANTHROPIC_API_KEY, STRIPE_SECRE
   } catch {
     return fail(res, 401, "authentication_error", "Please sign in again.");
   }
+  // App Check is only counted (signed in only, so outside scripts can't make writes for free).
+  await noteAppCheck("ai", await requestStatus(req, (t) => getAppCheck().verifyToken(t)));
 
   const problem = checkRequest(req.body);
   if (problem) return fail(res, 400, "invalid_request_error", problem);
@@ -261,7 +286,7 @@ async function allUsers() {
 
 export const ownerStats = onCall({ ...opts, timeoutSeconds: 60 }, async (req) => {
   await requireAdmin(req);
-  const [users, plans, usage, mix, cookbooks, errors, funnel] = await Promise.all([
+  const [users, plans, usage, mix, cookbooks, errors, funnel, appCheck] = await Promise.all([
     allUsers(),
     db.collection("plans").select("plan", "source", "interval").get(),
     db.collection("aiUsage").select("month", "spent", "uses", "counts", "plan").get(),
@@ -269,10 +294,11 @@ export const ownerStats = onCall({ ...opts, timeoutSeconds: 60 }, async (req) =>
     db.collection("cookbooks").count().get(),
     db.collection("errors").orderBy("at", "desc").limit(500).get(),
     db.collection("funnel").get(),
+    db.getAll(...appCheckDocIds().map((id) => db.doc(`appCheckStats/${id}`))),
   ]);
   const data = (q) => q.docs.map((d) => d.data());
   const withId = (q) => q.docs.map((d) => ({ ...d.data(), uid: d.id })); // to match steps with plans; never returned
-  return summarize({ users, plans: withId(plans), usage: data(usage), mix: data(mix), cookbooks: cookbooks.data().count, errors: data(errors), funnel: withId(funnel) });
+  return { ...summarize({ users, plans: withId(plans), usage: data(usage), mix: data(mix), cookbooks: cookbooks.data().count, errors: data(errors), funnel: withId(funnel) }), appCheck: totals(appCheck.map((d) => d.data())) };
 });
 
 /**

@@ -17,6 +17,13 @@ const PROJECT: FirebaseOptions = {
   appId: "1:902652553131:web:9c474941b8223123e854ee",
 };
 
+/**
+ * App Check (reCAPTCHA Enterprise site key, public like the values above): lets the server
+ * tell requests from the real app apart from scripts using the project's public settings.
+ * Empty = off. Never used with the emulator. (docs/DECISIONS.md)
+ */
+export const APP_CHECK_SITE_KEY = "";
+
 /** The AI relay (Cloud Function "ai"): AI requests go here with the app's own Anthropic key. */
 export const AI_URL = import.meta.env.VITE_FIREBASE_EMULATOR
   ? "http://127.0.0.1:5001/demo-recipe-builder/us-central1/ai"

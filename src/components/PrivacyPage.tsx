@@ -1,5 +1,6 @@
 import Header from "./Header";
 import { href } from "../lib/route";
+import { APP_CHECK_SITE_KEY } from "../lib/firebaseConfig";
 
 export const PRIVACY_UPDATED = "November 15, 2026";
 const CONTACT = "https://github.com/gossling8-debug/Recipe-Builder/issues";
@@ -59,6 +60,13 @@ export default function PrivacyPage() {
           developer can technically view stored data in the Firebase console, and will only do so if needed to fix a problem you report
           or if required by law. Data is not end-to-end encrypted.
         </p>
+        {APP_CHECK_SITE_KEY && (
+          <p>
+            To keep automated abuse out, the app uses Google reCAPTCHA Enterprise (through Firebase App Check), which checks that
+            requests come from the real Cardamix app. It works in the background and sends information about your browser and how
+            it's used to Google, under Google's privacy policy and terms. It doesn't see your recipes.
+          </p>
+        )}
 
         <h2 className="h3">Payments</h2>
         <p>

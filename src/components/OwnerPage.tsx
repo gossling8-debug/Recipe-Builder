@@ -218,6 +218,8 @@ export default function OwnerPage() {
               )}
             </section>
 
+            {s.appCheck && <AppCheckSection counts={s.appCheck} />}
+
             <ConfirmSomeone />
 
             <OwnKeySection />
@@ -335,6 +337,49 @@ function ConfirmSomeone() {
           {note}
         </p>
       )}
+    </section>
+  );
+}
+
+/** App Check, watch-only: how many requests came from the real app over the last 7 days. */
+function AppCheckSection({ counts }: { counts: NonNullable<OwnerStats["appCheck"]> }) {
+  const rows = [
+    ["AI requests", counts.ai],
+    ["Other server requests", counts.call],
+  ] as const;
+  const all = rows.reduce((n, [, c]) => n + c.verified + c.missing + c.invalid, 0);
+  const notVerified = rows.reduce((n, [, c]) => n + c.missing + c.invalid, 0);
+  return (
+    <section>
+      <h2 className="h3">App Check (last 7 days)</h2>
+      <p className="muted small">Signed-in requests to the server: did they come from the Cardamix app?</p>
+      <table className="owner-appcheck">
+        <thead>
+          <tr>
+            <th scope="col">Requests</th>
+            <th scope="col">From the app</th>
+            <th scope="col">No check</th>
+            <th scope="col">Failed check</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([label, c]) => (
+            <tr key={label}>
+              <th scope="row">{label}</th>
+              <td>{c.verified}</td>
+              <td>{c.missing}</td>
+              <td>{c.invalid}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="muted small">
+        {all === 0
+          ? "No requests counted yet."
+          : notVerified === 0
+            ? "Every request came from the app. Requests aren't turned away yet; that's switched on separately."
+            : "Requests without a passing check are still allowed for now. Older copies of the app (before an update) show up as “No check”."}
+      </p>
     </section>
   );
 }
