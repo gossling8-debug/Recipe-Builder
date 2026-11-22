@@ -12,25 +12,25 @@
     "test:rules": "bash rules/run.sh"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.6.0",
+    "@anthropic-ai/sdk": "^1.10.0",
     "@techstark/opencv-js": "^5.0.0-release.1",
-    "firebase": "^13.2.0",
+    "firebase": "^13.4.0",
     "jspdf": "^4.2.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.10.2",
+    "@axe-core/playwright": "4.14.0",
     "@firebase/rules-unit-testing": "6.0.0",
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.65.1",
     "@types/node": "22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.2.1",
+    "@vitejs/plugin-react": "^6.3.0",
     "typescript": "^7.0.2",
-    "vite": "^8.3.6",
-    "vitest": "^5.1.0"
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
   },
   "overrides": {
     "@grpc/grpc-js": "^1.14.0"
