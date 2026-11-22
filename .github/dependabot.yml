@@ -9,6 +9,12 @@ updates:
     groups:
       app-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Everything runs on Node 22 (the server: functions/package.json engines; the build and
+      # tests: node-version in .github/workflows). Newer type definitions would allow features
+      # Node 22 lacks. Remove this when moving to a newer Node (docs/DECISIONS.md).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directory: "/functions"
     schedule: { interval: weekly }
@@ -19,3 +25,9 @@ updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule: { interval: weekly }
+    groups:
+      # Steps that only work as a set are updated together.
+      pages:
+        patterns: ["actions/configure-pages", "actions/upload-pages-artifact", "actions/deploy-pages"]
+      codeql:
+        patterns: ["github/codeql-action*"]

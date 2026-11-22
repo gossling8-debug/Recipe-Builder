@@ -4,6 +4,12 @@ Short records of decisions that aren't obvious from the code — the "load-beari
 Before changing one of these, read why it's there. Newest first; add one for any
 Tier-3 decision.
 
+### Node 22 everywhere, and its type definitions stay on 22 (Nov 2026)
+The server (`functions/package.json` engines) and the build and test workflows use Node 22, so
+`.github/dependabot.yml` ignores major updates of `@types/node`. When moving to a newer Node,
+change all of these together and remove that ignore rule. (The database-rules test job uses
+Node 24 only because its testing library requires it.)
+
 ### Sample recipes: new accounts only, and only once the box is known to be empty (Nov 2026)
 An existing account was offered the samples while its recipes were still downloading in a new
 browser, and one tap added them (reported by the owner). Now an empty list counts as an empty box
