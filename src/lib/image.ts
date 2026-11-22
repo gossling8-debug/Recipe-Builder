@@ -1,3 +1,4 @@
+import { release } from "./canvas";
 import { defaultQuad, detectCard, orderCorners, outputSize, plausibleQuad, scaleQuad, touchesBorder, warp, type Quad } from "./docscan";
 /**
  * Shrinks a phone photo before sending it to Claude or saving it.
@@ -15,7 +16,9 @@ export async function compressPhoto(file: Blob, maxEdge = 1568, quality = 0.85):
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("This browser can't process photos.");
   ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL("image/jpeg", quality);
+  const url = canvas.toDataURL("image/jpeg", quality);
+  release(canvas);
+  return url;
 }
 
 function loadImage(file: Blob): Promise<HTMLImageElement> {
@@ -61,6 +64,7 @@ export async function receiptPieces(file: Blob, maxEdge = 1568, quality = 0.85):
     if (!ctx) throw new Error("This browser can't process photos.");
     ctx.drawImage(img, 0, top, img.width, h, 0, 0, canvas.width, canvas.height);
     out.push(canvas.toDataURL("image/jpeg", quality));
+    release(canvas);
     if (top + h >= img.height) break;
   }
   return out;
@@ -93,6 +97,7 @@ export async function prepareCrop(file: Blob): Promise<CropSource> {
   ctx.filter = "blur(2px)";
   ctx.drawImage(img, 0, 0, sw, sh);
   const px = ctx.getImageData(0, 0, sw, sh).data;
+  release(canvas);
   const gray = new Uint8Array(sw * sh);
   for (let i = 0; i < sw * sh; i++) gray[i] = (px[i * 4] * 0.299 + px[i * 4 + 1] * 0.587 + px[i * 4 + 2] * 0.114) | 0;
   // OpenCV finds real-world cards far better; the simple method is the fallback.
@@ -106,6 +111,7 @@ export async function prepareCrop(file: Blob): Promise<CropSource> {
     const ctx2 = c2.getContext("2d", { willReadFrequently: true })!;
     ctx2.drawImage(img, 0, 0, c2.width, c2.height);
     const q2 = findPage(cv, ctx2.getImageData(0, 0, c2.width, c2.height));
+    release(c2);
     if (q2) return { url, w, h, found: scaleQuad(q2, 1 / s2) };
   } catch {
     /* fall through to the simple method */
@@ -134,6 +140,9 @@ export async function cropToCard(src: CropSource, q: Quad, maxEdge = 1568, quali
   const octx = out.getContext("2d");
   if (!octx) throw new Error("This browser can't process photos.");
   const data = warp(fctx.getImageData(0, 0, src.w, src.h), q, w, h);
+  release(full);
   octx.putImageData(new ImageData(data, w, h), 0, 0);
-  return out.toDataURL("image/jpeg", quality);
+  const url = out.toDataURL("image/jpeg", quality);
+  release(out);
+  return url;
 }

@@ -5,6 +5,8 @@ import { cleanScan, findPage, loadOpenCv, straighten } from "../lib/opencv";
 import type { CropSource } from "../lib/image";
 import CropEditor from "./CropEditor";
 import { grayOf, sharpestIndex } from "../lib/sharpness";
+import { release } from "../lib/canvas";
+import { scaleQuad } from "../lib/docscan";
 
 export interface ScannedPage {
   photo: string; // the finished scan (data: URL)
@@ -24,6 +26,8 @@ const STEADY_FRAMES = 8; // ~1 second of the outline holding still → take the 
 const HOLD_FRAMES = 4; // keep showing the outline through ~half a second of missed frames (no flicker)
 const BURST = 3; // frames taken a moment apart when the picture is taken; the sharpest is kept
 const BURST_GAP_MS = 90;
+/** Captured frames are at most this big (the scan itself is at most 1568), to stay within iPhone Safari's canvas memory. */
+const CAPTURE_EDGE = 2560;
 
 const far = (a: Quad, b: Quad, diag: number) => a.some((p, i) => Math.hypot(p.x - b[i].x, p.y - b[i].y) > 0.15 * diag);
 
@@ -74,6 +78,7 @@ export default function DocumentScanner(props: {
   const [preview, setPreview] = useState<string | null>(null);
   const cvRef = useRef<unknown>(null);
   const live = useRef<Quad | null>(null);
+  const detectCanvas = useRef<HTMLCanvasElement | null>(null); // one, reused for every look
   const shown = useRef<Quad | null>(null);
   const pending = useRef<Quad | null>(null);
   const misses = useRef(0);
@@ -89,6 +94,7 @@ export default function DocumentScanner(props: {
     let stream: MediaStream | null = null;
     let stop = false;
     let timer = 0;
+    const drawn = overlay.current; // freed when the scanner closes
     (async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("This browser can't open the camera here.");
@@ -124,6 +130,8 @@ export default function DocumentScanner(props: {
       stop = true;
       window.clearTimeout(timer);
       stream?.getTracks().forEach((t) => t.stop());
+      release(detectCanvas.current, drawn);
+      detectCanvas.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -134,9 +142,11 @@ export default function DocumentScanner(props: {
     if (!v || !cv || !v.videoWidth) return;
     const s = DETECT_W / v.videoWidth;
     const h = Math.round(v.videoHeight * s);
-    const c = document.createElement("canvas");
-    c.width = DETECT_W;
-    c.height = h;
+    const c = (detectCanvas.current ??= document.createElement("canvas"));
+    if (c.width !== DETECT_W || c.height !== h) {
+      c.width = DETECT_W;
+      c.height = h;
+    }
     const ctx = c.getContext("2d", { willReadFrequently: true })!;
     ctx.drawImage(v, 0, 0, DETECT_W, h);
     const q = findPage(cv, ctx.getImageData(0, 0, DETECT_W, h));
@@ -234,28 +244,32 @@ export default function DocumentScanner(props: {
     if (!v || !v.videoWidth) return;
     capturing.current = true;
     setStatus("Hold still…");
-    const quad = live.current;
+    // Frames at most CAPTURE_EDGE across; the outline is scaled to match.
+    const k = Math.min(1, CAPTURE_EDGE / Math.max(v.videoWidth, v.videoHeight));
+    const fw = Math.round(v.videoWidth * k), fh = Math.round(v.videoHeight * k);
+    const quad = live.current ? scaleQuad(live.current, k) : null;
     // Judge sharpness on the card itself, not the table around it.
-    const xs = quad?.map((p) => p.x) ?? [0, v.videoWidth];
-    const ys = quad?.map((p) => p.y) ?? [0, v.videoHeight];
+    const xs = quad?.map((p) => p.x) ?? [0, fw];
+    const ys = quad?.map((p) => p.y) ?? [0, fh];
     const box = {
       x: Math.max(0, Math.min(...xs)),
       y: Math.max(0, Math.min(...ys)),
-      w: Math.max(3, Math.min(v.videoWidth, Math.max(...xs)) - Math.max(0, Math.min(...xs))),
-      h: Math.max(3, Math.min(v.videoHeight, Math.max(...ys)) - Math.max(0, Math.min(...ys))),
+      w: Math.max(3, Math.min(fw, Math.max(...xs)) - Math.max(0, Math.min(...xs))),
+      h: Math.max(3, Math.min(fh, Math.max(...ys)) - Math.max(0, Math.min(...ys))),
     };
     const frames: HTMLCanvasElement[] = [];
     for (let i = 0; i < BURST; i++) {
       if (i) await new Promise((r) => setTimeout(r, BURST_GAP_MS));
       const c = document.createElement("canvas");
-      c.width = v.videoWidth;
-      c.height = v.videoHeight;
-      c.getContext("2d")!.drawImage(v, 0, 0);
+      c.width = fw;
+      c.height = fh;
+      c.getContext("2d")!.drawImage(v, 0, 0, fw, fh);
       frames.push(c);
     }
     navigator.vibrate?.(20);
     const c = frames[sharpestIndex(frames.map((f) => grayOf(f, box)))];
     const frame: CropSource = { url: c.toDataURL("image/jpeg", 0.92), w: c.width, h: c.height, found: quad };
+    release(...frames);
     setReview({ frame, quad });
     history.current = [];
   }
@@ -288,9 +302,12 @@ export default function DocumentScanner(props: {
       ? insetQuad(quad, 0.02)
       : ([{ x: 0, y: 0 }, { x: frame.w, y: 0 }, { x: frame.w, y: frame.h }, { x: 0, y: frame.h }] as Quad);
     const { w, h } = outputSize(q, props.maxEdge ?? 1568);
-    let page = straighten(cv, full, q, w, h);
-    if (cleanIt) page = cleanScan(cv, page);
-    return page.toDataURL("image/jpeg", props.quality ?? 0.85);
+    const straight = straighten(cv, full, q, w, h);
+    release(full);
+    const page = cleanIt ? cleanScan(cv, straight) : straight;
+    const url = page.toDataURL("image/jpeg", props.quality ?? 0.85);
+    release(straight, page);
+    return url;
   }
 
   function keep() {
