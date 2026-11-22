@@ -4,6 +4,7 @@ import { outputSize } from "../lib/docscan";
 import { cleanScan, findPage, loadOpenCv, straighten } from "../lib/opencv";
 import type { CropSource } from "../lib/image";
 import CropEditor from "./CropEditor";
+import { grayOf, sharpestIndex } from "../lib/sharpness";
 
 export interface ScannedPage {
   photo: string; // the finished scan (data: URL)
@@ -20,6 +21,32 @@ const insetQuad = (q: Quad, by: number): Quad => {
 
 const DETECT_W = 480; // detection runs on a small copy of each frame
 const STEADY_FRAMES = 8; // ~1 second of the outline holding still → take the picture
+const HOLD_FRAMES = 4; // keep showing the outline through ~half a second of missed frames (no flicker)
+const BURST = 3; // frames taken a moment apart when the picture is taken; the sharpest is kept
+const BURST_GAP_MS = 90;
+
+const far = (a: Quad, b: Quad, diag: number) => a.some((p, i) => Math.hypot(p.x - b[i].x, p.y - b[i].y) > 0.15 * diag);
+
+/** Eases the shown outline toward the newest one, so it glides instead of jumping. A big jump (a different card) snaps. */
+export function easeQuad(shown: Quad | null, next: Quad, diag: number, amount = 0.5): Quad {
+  if (!shown || far(shown, next, diag)) return next;
+  return shown.map((p, i) => ({ x: p.x + (next[i].x - p.x) * amount, y: p.y + (next[i].y - p.y) * amount })) as Quad;
+}
+
+/**
+ * The outline to show after a new detection. A shape far from the shown one is believed
+ * only when the next frame agrees, so a one-frame mistake (a shadow, a picture on the
+ * card) never flashes up; nearby moves glide.
+ */
+export function followOutline(
+  state: { shown: Quad | null; pending: Quad | null },
+  found: Quad,
+  diag: number,
+): { shown: Quad | null; pending: Quad | null } {
+  if (state.shown && far(state.shown, found, diag) && !(state.pending && !far(state.pending, found, diag)))
+    return { shown: state.shown, pending: found };
+  return { shown: easeQuad(state.shown, found, diag), pending: null };
+}
 
 /**
  * A live document scanner, like a bank's check scanner or Apple's "Scan
@@ -47,6 +74,9 @@ export default function DocumentScanner(props: {
   const [preview, setPreview] = useState<string | null>(null);
   const cvRef = useRef<unknown>(null);
   const live = useRef<Quad | null>(null);
+  const shown = useRef<Quad | null>(null);
+  const pending = useRef<Quad | null>(null);
+  const misses = useRef(0);
   const history = useRef<Quad[]>([]);
   const capturing = useRef(false);
   const autoRef = useRef(auto);
@@ -119,9 +149,23 @@ export default function DocumentScanner(props: {
     const steady =
       history.current.length >= STEADY_FRAMES &&
       history.current.every((hq) => hq.every((p, i) => Math.hypot(p.x - full![i].x, p.y - full![i].y) < 0.02 * diag));
-    draw(full, steady);
-    setStatus(full ? (autoRef.current ? (steady ? "Hold still…" : "Found it — hold steady") : "Found it — tap the button") : "Point the camera at the card");
-    if (full && steady && autoRef.current && !capturing.current) capture();
+    // What's drawn: eased toward each new outline, and kept through a few missed frames.
+    if (full) {
+      misses.current = 0;
+      ({ shown: shown.current, pending: pending.current } = followOutline({ shown: shown.current, pending: pending.current }, full, diag));
+    } else if (++misses.current > HOLD_FRAMES) shown.current = null;
+    draw(shown.current, steady);
+    if (capturing.current) return;
+    setStatus(
+      shown.current
+        ? autoRef.current
+          ? steady
+            ? "Hold still…"
+            : "Found it — hold steady"
+          : "Found it — tap the button"
+        : "Fit the card inside the corners",
+    );
+    if (full && steady && autoRef.current && !capturing.current) void capture();
   }
 
   function draw(q: Quad | null, steady: boolean) {
@@ -133,33 +177,71 @@ export default function DocumentScanner(props: {
     o.height = r.height;
     const ctx = o.getContext("2d")!;
     ctx.clearRect(0, 0, o.width, o.height);
-    if (!q) return;
     // The video is shown whole ("contain"): work out where it sits.
     const s = Math.min(r.width / v.videoWidth, r.height / v.videoHeight);
     const ox = (r.width - v.videoWidth * s) / 2;
     const oy = (r.height - v.videoHeight * s) / 2;
+    if (!q) {
+      // Nothing found yet: corners to aim at, like a bank's check scanner.
+      const vw = v.videoWidth * s, vh = v.videoHeight * s;
+      const x0 = ox + vw * 0.08, y0 = oy + vh * 0.08, x1 = ox + vw * 0.92, y1 = oy + vh * 0.92;
+      const arm = Math.min(vw, vh) * 0.12;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      for (const [x, y, dx, dy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x1, y1, -1, -1], [x0, y1, 1, -1]]) {
+        ctx.moveTo(x + dx * arm, y);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x, y + dy * arm);
+      }
+      ctx.stroke();
+      return;
+    }
+    // Found: the card shaded blue, like Apple's document scanner; firmer once it's held steady.
     ctx.beginPath();
     q.forEach((p, i) => (i ? ctx.lineTo(ox + p.x * s, oy + p.y * s) : ctx.moveTo(ox + p.x * s, oy + p.y * s)));
     ctx.closePath();
-    ctx.fillStyle = steady ? "rgba(80, 200, 120, 0.25)" : "rgba(242, 179, 127, 0.2)";
-    ctx.strokeStyle = steady ? "#50c878" : "#f2b37f";
-    ctx.lineWidth = 3;
+    ctx.fillStyle = steady ? "rgba(10, 132, 255, 0.38)" : "rgba(10, 132, 255, 0.24)";
+    ctx.strokeStyle = "rgba(10, 132, 255, 0.95)";
+    ctx.lineWidth = steady ? 4 : 3;
+    ctx.lineJoin = "round";
     ctx.fill();
     ctx.stroke();
   }
 
-  /** Takes the picture from the camera at full resolution. */
-  function capture() {
+  /**
+   * Takes the picture from the camera at full resolution: a few frames a moment apart,
+   * keeping the sharpest (the one the phone was held stillest for).
+   */
+  async function capture() {
     const v = video.current;
     if (!v || !v.videoWidth) return;
     capturing.current = true;
+    setStatus("Hold still…");
+    const quad = live.current;
+    // Judge sharpness on the card itself, not the table around it.
+    const xs = quad?.map((p) => p.x) ?? [0, v.videoWidth];
+    const ys = quad?.map((p) => p.y) ?? [0, v.videoHeight];
+    const box = {
+      x: Math.max(0, Math.min(...xs)),
+      y: Math.max(0, Math.min(...ys)),
+      w: Math.max(3, Math.min(v.videoWidth, Math.max(...xs)) - Math.max(0, Math.min(...xs))),
+      h: Math.max(3, Math.min(v.videoHeight, Math.max(...ys)) - Math.max(0, Math.min(...ys))),
+    };
+    const frames: HTMLCanvasElement[] = [];
+    for (let i = 0; i < BURST; i++) {
+      if (i) await new Promise((r) => setTimeout(r, BURST_GAP_MS));
+      const c = document.createElement("canvas");
+      c.width = v.videoWidth;
+      c.height = v.videoHeight;
+      c.getContext("2d")!.drawImage(v, 0, 0);
+      frames.push(c);
+    }
     navigator.vibrate?.(20);
-    const c = document.createElement("canvas");
-    c.width = v.videoWidth;
-    c.height = v.videoHeight;
-    c.getContext("2d")!.drawImage(v, 0, 0);
-    const frame: CropSource = { url: c.toDataURL("image/jpeg", 0.92), w: c.width, h: c.height, found: live.current };
-    setReview({ frame, quad: live.current });
+    const c = frames[sharpestIndex(frames.map((f) => grayOf(f, box)))];
+    const frame: CropSource = { url: c.toDataURL("image/jpeg", 0.92), w: c.width, h: c.height, found: quad };
+    setReview({ frame, quad });
     history.current = [];
   }
 
@@ -235,7 +317,7 @@ export default function DocumentScanner(props: {
           <button className="link-btn small scan-cancel" onClick={props.onCancel}>
             Cancel
           </button>
-          <button className="shutter" aria-label="Take the picture" onClick={() => !capturing.current && capture()} />
+          <button className="shutter" aria-label="Take the picture" onClick={() => !capturing.current && void capture()} />
           <button className={auto ? "chip active scan-auto" : "chip scan-auto"} aria-pressed={auto} onClick={() => setAuto(!auto)}>
             Auto
           </button>

@@ -24,7 +24,9 @@ import {
 import type { Quad } from "../lib/docscan";
 import CropEditor from "./CropEditor";
 import DocumentScanner, { type ScannedPage } from "./DocumentScanner";
-import { listRecipes, newId, saveRecipe, storageErrorMessage } from "../lib/db";
+import { getRecipe, listRecipes, newId, saveRecipe, storageErrorMessage } from "../lib/db";
+import { retakeInto } from "../lib/retake";
+import { clearProgress } from "../lib/progress";
 import TagPicker from "./TagPicker";
 import { cleanTags } from "../lib/schema";
 import { href, navigate } from "../lib/route";
@@ -68,12 +70,18 @@ const CREATE_IDEAS = [
 ];
 
 /** Add a recipe from card photos, a web page, or pasted/typed text. */
-export default function Scanner({ book: bookId }: { book?: string } = {}) {
+export default function Scanner({ book: bookId, retake: retakeId }: { book?: string; retake?: string } = {}) {
   // Opened from a family cookbook's "Add recipes": the new recipe goes into that cookbook.
   const [book, setBook] = useState<Cookbook | null>(null);
   useEffect(() => {
     if (bookId) getCookbook(bookId).then(setBook, () => {});
   }, [bookId]);
+  // "Retake the photo" on a recipe: the new reading replaces that recipe (lib/retake.ts).
+  const [retaking, setRetaking] = useState<SavedRecipe | null | "missing">(null);
+  useEffect(() => {
+    if (retakeId) getRecipe(retakeId).then((r) => setRetaking(r ?? "missing"), () => setRetaking("missing"));
+  }, [retakeId]);
+  const retakeOf = retaking && retaking !== "missing" ? retaking : null;
   // The recipe just read: ask whether it also goes to your recipes / your cookbooks.
   const [added, setAdded] = useState<{
     recipe: SavedRecipe;
@@ -281,6 +289,8 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
           : text.trim().length > 20;
 
   async function read() {
+    // Retaking a recipe that's gone (or not loaded yet): don't quietly add a new one instead.
+    if (retakeId && !retakeOf) return setError("That recipe isn't here any more.");
     setBusy(true);
     setError("");
     try {
@@ -297,7 +307,6 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
       if (recipe.steps.length === 0 && recipe.ingredients.length === 0) {
         throw new Error(recipe.warnings[0] ?? "No recipe was found there.");
       }
-      const id = newId();
       // Smaller copies for the library so storage doesn't fill up.
       const thumbs =
         mode === "photo"
@@ -309,6 +318,14 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
               ),
             )
           : [];
+      if (retakeOf) {
+        // Same recipe, new reading: no duplicate check, no cookbook question.
+        await saveRecipe(retakeInto(retakeOf, recipe, thumbs, usage.cost));
+        clearProgress(retakeOf.id); // ticks were by position in the old ingredient list
+        navigate({ name: "recipe", id: retakeOf.id }, true);
+        return;
+      }
+      const id = newId();
       const saved: SavedRecipe = {
         ...recipe,
         tags: tags.length ? cleanTags(tags) : recipe.tags,
@@ -381,9 +398,11 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
     await commit(saved, into, mineTwin);
   }
 
-  const back = bookId
-    ? href({ name: "family", book: bookId })
-    : href({ name: "library" });
+  const back = retakeId
+    ? href({ name: "recipe", id: retakeId })
+    : bookId
+      ? href({ name: "family", book: bookId })
+      : href({ name: "library" });
   if (twins) {
     return (
       <>
@@ -447,7 +466,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
 
   return (
     <>
-      {addTour && !busy && mode === "photo" && (
+      {addTour && !busy && !retakeId && mode === "photo" && (
         <Tour
           steps={ADD_TOUR_STEPS}
           onDone={() => {
@@ -457,7 +476,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
         />
       )}
       <Header
-        title={book ? `Add to ${book.name}` : "Add a recipe"}
+        title={retakeId ? "Retake the photo" : book ? `Add to ${book.name}` : "Add a recipe"}
         back={busy ? undefined : back}
       />
       <main className="page">
@@ -486,6 +505,16 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
           </div>
         ) : (
           <>
+            {retaking === "missing" && (
+              <div className="callout error">That recipe isn't here any more.</div>
+            )}
+            {retakeOf && (
+              <p className="callout small retake-note">
+                New photos of <strong>{retakeOf.title}</strong>. The new reading
+                replaces the recipe; your star, labels, notes and dish photo stay.
+              </p>
+            )}
+            {!retakeId && (
             <div
               className="segmented mode-switch"
               role="tablist"
@@ -506,6 +535,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
                 </button>
               ))}
             </div>
+            )}
 
             {mode === "photo" && (
               <>
@@ -513,7 +543,7 @@ export default function Scanner({ book: bookId }: { book?: string } = {}) {
                   Lay the card flat in good light and fill the frame. If the
                   recipe continues on the back, add a second photo.
                 </p>
-                {!bookId && photos.length === 0 && (
+                {!bookId && !retakeId && photos.length === 0 && (
                   <a className="plan-strip stack-link" href={href({ name: "stack" })}>
                     <Icon name="camera" size={18} />
                     <span>

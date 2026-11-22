@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 export type Route =
   | { name: "library" }
-  | { name: "scan"; book?: string }
+  | { name: "scan"; book?: string; retake?: string } // retake: read new photos into this recipe
   | { name: "settings" }
   | { name: "shopping" }
   | { name: "pantry" }
@@ -34,6 +34,8 @@ export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#\/?/, "");
   const scan = path.match(/^scan(?:\/([^/]+))?$/);
   if (scan) return scan[1] ? { name: "scan", book: decodeURIComponent(scan[1]) } : { name: "scan" };
+  const retake = path.match(/^retake\/(.+)$/);
+  if (retake) return { name: "scan", retake: decodeURIComponent(retake[1]) };
   if (path === "settings") return { name: "settings" };
   if (path === "shopping") return { name: "shopping" };
   if (path === "pantry") return { name: "pantry" };
@@ -74,6 +76,7 @@ export function parseRoute(hash: string): Route {
 
 export function href(route: Route): string {
   if (route.name === "plus") return route.done ? "#/plus/done" : "#/plus";
+  if (route.name === "scan" && route.retake) return `#/retake/${encodeURIComponent(route.retake)}`;
   if (route.name === "scan" && route.book) return `#/scan/${encodeURIComponent(route.book)}`;
   if (route.name === "import") return `#/import/${route.data}`;
   if (route.name === "print") return `#/print/${encodeURIComponent(route.id)}`;

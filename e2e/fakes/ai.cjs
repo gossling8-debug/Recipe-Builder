@@ -3,6 +3,7 @@
 const http = require("http");
 const PORT = Number(process.env.PORT || 4466);
 let n = 0;
+let unclear = false; // /test/unclear?on=1: the next reading says part of the card was hard to read
 
 const recipe = () => ({
   title: `Test Pie ${++n}`,
@@ -15,12 +16,16 @@ const recipe = () => ({
   ],
   notes: null,
   tags: ["Dessert"],
-  warnings: [],
+  warnings: unclear ? ((unclear = false), ["The second line was hard to read; I guessed \"1 cup flour\"."]) : [],
   origin: { kind: "handwritten", book: null, author: null },
 });
 
 http
   .createServer((req, res) => {
+    if (req.url.startsWith("/test/unclear")) {
+      unclear = new URL(req.url, "http://x").searchParams.get("on") === "1";
+      return res.end("ok");
+    }
     let body = "";
     req.on("data", (c) => (body += c));
     req.on("end", () => {
