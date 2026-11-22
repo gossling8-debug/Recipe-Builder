@@ -69,6 +69,16 @@ function quadCandidates(cv: CV, mask: CV, W: number, H: number): { area: number;
 }
 const MIN_AREA = 0.1; // of the picture
 
+/** The middle value of 0–255 values (counted, not sorted: much faster on a whole picture). */
+export function medianOf(values: ArrayLike<number>): number {
+  const counts = new Array(256).fill(0);
+  for (let i = 0; i < values.length; i++) counts[values[i]]++;
+  const half = values.length >> 1;
+  let seen = 0;
+  for (let v = 0; v < 256; v++) if ((seen += counts[v]) > half) return v;
+  return 255;
+}
+
 /**
  * The page's outline in an image (RGBA), or null. Showing nothing beats showing a wrong shape.
  *
@@ -98,8 +108,7 @@ export function findPage(cv: CV, img: ImageData): Quad | null {
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
     cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
     // Thresholds from the image's own median brightness, so dim kitchens work too.
-    const sorted = Array.from(gray.data as Uint8Array).sort((a, b) => a - b);
-    const median = sorted[sorted.length >> 1];
+    const median = medianOf(gray.data as Uint8Array);
     cv.Canny(gray, edges, Math.max(10, 0.66 * median), Math.min(255, 1.33 * median));
     cv.dilate(edges, edges, kernel, new cv.Point(-1, -1), 2);
     const edgeMap = edges.data as Uint8Array;

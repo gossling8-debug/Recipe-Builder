@@ -51,3 +51,16 @@ describe("the edge of the camera picture isn't a card's edge", () => {
     expect(touchesBorder([P(0, 0), P(400, 30), P(420, 300), P(20, 280)], 720, 1280)).toBe(false);
   });
 });
+
+import { medianOf } from "./opencv";
+describe("middle brightness (counted instead of sorted)", () => {
+  it("gives exactly the same value as sorting", () => {
+    let seed = 11;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) % 256);
+    for (const n of [1, 2, 3, 10, 1001, 40_000]) {
+      const v = Uint8Array.from({ length: n }, rand);
+      const sorted = Array.from(v).sort((a, b) => a - b);
+      expect(medianOf(v)).toBe(sorted[sorted.length >> 1]);
+    }
+  });
+});
