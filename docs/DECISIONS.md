@@ -4,6 +4,18 @@ Short records of decisions that aren't obvious from the code — the "load-beari
 Before changing one of these, read why it's there. Newest first; add one for any
 Tier-3 decision.
 
+### Amounts given only in the steps are shown beside the list line (Nov 2026)
+A magazine page listed "Kosher salt and freshly ground black pepper" and "Good olive oil" with
+no amounts; the steps gave them (2 Tbsp + 1 tsp salt, 1 tsp pepper, 1½ Tbsp oil), and the list
+stayed empty (reported by the owner). The stored list stays exactly as the source printed it:
+the pantry, costs and shopping list read the first number and unit of an amount, so writing
+"2 Tbsp + 1 tsp" into it would undercount (independent review). Instead the app shows what the
+steps use beside the line ("… · 2 Tbsp + 1 tsp in the steps"), adding up amounts in the same
+unit, on screen, in print and in shared text (`src/lib/stepAmounts.ts`). The reading instructions gained only
+one rule: a list line naming two things the steps measure separately ("salt and pepper") becomes
+two ingredients; older readings with one combined line show the amounts per thing ("salt …,
+black pepper …"), never added together. The printed-cookbook PDF (server) doesn't show them yet.
+
 ### Free every scanner canvas as soon as it's used (Nov 2026)
 After scanning, a user's screen went black while the app kept working underneath (they saved a
 recipe blind). iPhone Safari has a small total budget for canvas memory; past it, canvases and

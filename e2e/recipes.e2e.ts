@@ -1,5 +1,5 @@
 import { devices, expect, test } from "@playwright/test";
-import { nextReadingTags, pasteRecipe, signUp } from "./helpers";
+import { nextReadingAmountsInSteps, nextReadingTags, pasteRecipe, signUp } from "./helpers";
 
 test("sample recipes: try them, then remove them", async ({ page }) => {
   await signUp(page, "samples");
@@ -135,4 +135,15 @@ test("a remembered label filter says so, and search looks through every recipe",
   await note.getByRole("button", { name: "Show all" }).click();
   await expect(page.locator(".recipe-row")).toHaveCount(2);
   await expect(note).toHaveCount(0);
+});
+
+test("a list line with no amount shows the amounts the steps give", async ({ page }) => {
+  await signUp(page, "amounts");
+  await nextReadingAmountsInSteps();
+  await pasteRecipe(page);
+  const list = page.locator("ul.ingredients");
+  await expect(list.locator("li", { hasText: "kosher salt" })).toContainText("2 Tbsp + 1 tsp in the steps");
+  await expect(list.locator("li", { hasText: "olive oil" })).toContainText("1½ Tbsp in the steps");
+  // A line with its own amount gets nothing added.
+  await expect(list.locator("li", { hasText: "penne" })).not.toContainText("in the steps");
 });

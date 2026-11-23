@@ -4,6 +4,7 @@ import Icon from "./Icon";
 import { getRecipe } from "../lib/db";
 import { loadProgress } from "../lib/progress";
 import { ingredientText, scaleAmount, stepAmount } from "../lib/quantity";
+import { withStepAmounts } from "../lib/stepAmounts";
 import { href } from "../lib/route";
 import { feature } from "../lib/features";
 import { applySwaps } from "../lib/swaps";
@@ -178,7 +179,7 @@ export default function PrintPage({ id }: { id: string }) {
                   {g.section && <h3>{g.section}</h3>}
                   <ul className="print-ings">
                     {g.items.map((ing, i) => (
-                      <li key={i}>{line(ing, scale)}</li>
+                      <li key={i}>{withStepAmounts(line(ing, scale), r, r.ingredients.indexOf(ing), scale)}</li>
                     ))}
                   </ul>
                 </div>
@@ -270,11 +271,11 @@ function pdfBlocks(saved: SavedRecipe, parts: Set<Part>): PdfBlock[] {
   if (on("ingredients")) {
     out.push({ kind: "h2", text: "Ingredients" });
     let section: string | null = null;
-    for (const ing of r.ingredients) {
+    r.ingredients.forEach((ing, i) => {
       if (ing.section && ing.section !== section) out.push({ kind: "h3", text: ing.section });
       section = ing.section;
-      out.push({ kind: "bullet", text: line(ing, scale) });
-    }
+      out.push({ kind: "bullet", text: withStepAmounts(line(ing, scale), r, i, scale) });
+    });
   }
   if (on("steps")) {
     out.push({ kind: "h2", text: "Directions" });
