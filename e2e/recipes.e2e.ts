@@ -142,8 +142,9 @@ test("a list line with no amount shows the amounts the steps give", async ({ pag
   await nextReadingAmountsInSteps();
   await pasteRecipe(page);
   const list = page.locator("ul.ingredients");
-  await expect(list.locator("li", { hasText: "kosher salt" })).toContainText("2 Tbsp + 1 tsp in the steps");
-  await expect(list.locator("li", { hasText: "olive oil" })).toContainText("1½ Tbsp in the steps");
+  // The steps' amount goes in front, like every other line, with a note that it came from the steps.
+  await expect(list.locator("li", { hasText: "kosher salt" })).toContainText("2 Tbsp + 1 tsp kosher salt · from the steps");
+  await expect(list.locator("li", { hasText: "olive oil" })).toContainText("1½ Tbsp olive oil · from the steps");
   // A line with its own amount gets nothing added.
-  await expect(list.locator("li", { hasText: "penne" })).not.toContainText("in the steps");
+  await expect(list.locator("li", { hasText: "penne" })).not.toContainText("from the steps");
 });

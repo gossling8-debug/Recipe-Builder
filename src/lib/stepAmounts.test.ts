@@ -94,7 +94,25 @@ import { recipeToText } from "./share";
 describe("shared as text", () => {
   it("includes what the steps use", () => {
     const shared = recipeToText({ ...recipe, title: "Skillet Pasta", servings: null, time: null, notes: null, tags: [], warnings: [] } as never);
-    expect(shared).toContain("• kosher salt · 2 Tbsp + 1 tsp in the steps");
+    expect(shared).toContain("• 2 Tbsp + 1 tsp kosher salt (from the steps)");
     expect(shared).toContain("• ½ lb ground sirloin");
+  });
+});
+
+import { listLine } from "./stepAmounts";
+describe("the list line", () => {
+  it("puts the steps' amount in front, like every other line", () => {
+    expect(listLine(recipe, 0)).toEqual({ text: "2 Tbsp + 1 tsp kosher salt", note: "from the steps" });
+    expect(listLine(recipe, 2, 2)).toEqual({ text: "3 Tbsp olive oil", note: "from the steps" });
+  });
+  it("leaves a line with its own amount as it was", () => {
+    expect(listLine(recipe, 3)).toEqual({ text: "½ lb ground sirloin", note: null });
+  });
+  it("an old combined line keeps its words, and the note says which amount is which", () => {
+    const old = {
+      ingredients: [ing("Kosher salt and freshly ground black pepper")],
+      steps: [{ segments: [seg("salt", 0, "1 tsp"), seg(" and "), seg("black pepper", 0, "1 tsp")] }],
+    };
+    expect(listLine(old, 0)).toEqual({ text: "Kosher salt and freshly ground black pepper", note: "salt 1 tsp, black pepper 1 tsp in the steps" });
   });
 });

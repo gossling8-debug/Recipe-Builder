@@ -3,8 +3,8 @@ import Header from "./Header";
 import Icon from "./Icon";
 import { getRecipe } from "../lib/db";
 import { loadProgress } from "../lib/progress";
-import { ingredientText, scaleAmount, stepAmount } from "../lib/quantity";
-import { withStepAmounts } from "../lib/stepAmounts";
+import { scaleAmount, stepAmount } from "../lib/quantity";
+import { listLineText } from "../lib/stepAmounts";
 import { href } from "../lib/route";
 import { feature } from "../lib/features";
 import { applySwaps } from "../lib/swaps";
@@ -15,7 +15,6 @@ import { realServings } from "../lib/autoPlan";
 import { printOrShare, recipePdf, type PdfBlock } from "../lib/printPdf";
 import { Loading } from "./LogoLoader";
 
-const line = (ing: Ingredient, scale: number) => ingredientText(ing, scale);
 
 /** The parts of a recipe that can be printed. */
 type Part = "photo" | "info" | "ingredients" | "steps" | "amounts" | "cardNotes" | "myNotes" | "nutrition" | "cost";
@@ -179,7 +178,7 @@ export default function PrintPage({ id }: { id: string }) {
                   {g.section && <h3>{g.section}</h3>}
                   <ul className="print-ings">
                     {g.items.map((ing, i) => (
-                      <li key={i}>{withStepAmounts(line(ing, scale), r, r.ingredients.indexOf(ing), scale)}</li>
+                      <li key={i}>{listLineText(r, r.ingredients.indexOf(ing), scale)}</li>
                     ))}
                   </ul>
                 </div>
@@ -274,7 +273,7 @@ function pdfBlocks(saved: SavedRecipe, parts: Set<Part>): PdfBlock[] {
     r.ingredients.forEach((ing, i) => {
       if (ing.section && ing.section !== section) out.push({ kind: "h3", text: ing.section });
       section = ing.section;
-      out.push({ kind: "bullet", text: withStepAmounts(line(ing, scale), r, i, scale) });
+      out.push({ kind: "bullet", text: listLineText(r, i, scale) });
     });
   }
   if (on("steps")) {
