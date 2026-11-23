@@ -186,13 +186,25 @@ export default function Library() {
     : filter === "everyone" ? (tastes ? filter : "all")
     : filter !== "all" && !tags.includes(filter) ? "all" : filter;
 
+  const filterOptions: [string, string][] = [
+    ["all", "All"],
+    ...(hasPantry ? [["canmake", "Can make now"] as [string, string]] : []),
+    ...(avoiding ? [["safe", "Fits my avoid list"] as [string, string]] : []),
+    ...(tastes ? [["everyone", "Everyone eats"] as [string, string]] : []),
+    ...tags.map((t) => [t, t] as [string, string]),
+  ];
+  const filterLabel = filterOptions.find(([v]) => v === activeFilter)?.[1] ?? activeFilter;
+
   const q = query.trim().toLowerCase();
   // Search: every word must match, in any order; the matching ingredient lines are shown under each result.
   const found = new Map(q ? all.map((r) => [r.id, searchRecipe(r, q, scope)] as const) : []);
+  // A search looks through every recipe, whatever filter is on (a remembered filter hid a new
+  // recipe from search, and nobody could tell why).
+  const filtering = activeFilter !== "all" && !q;
   const shown = all
     .filter((r) => !q || found.get(r.id)?.match)
     .filter((r) =>
-      activeFilter === "all" ? true
+      !filtering ? true
       : activeFilter === "favorites" ? r.favorite
       : activeFilter === "safe" ? avoidReasons(r).length === 0
       : activeFilter === "canmake" ? canMakeNow.has(r.id)
@@ -409,13 +421,7 @@ export default function Library() {
         )}
         {all.length > 0 && (hasFavorites || tags.length > 0 || avoiding || hasPantry || tastes) && (
           <div className="filters" role="group" aria-label="Show">
-            {[
-              ["all", "All"],
-              ...(hasPantry ? [["canmake", "Can make now"]] : []),
-              ...(avoiding ? [["safe", "Fits my avoid list"]] : []),
-              ...(tastes ? [["everyone", "Everyone eats"]] : []),
-              ...tags.map((t) => [t, t]),
-            ].map(([value, label]) => (
+            {filterOptions.map(([value, label]) => (
               <button
                 key={value}
                 className={activeFilter === value ? "tag on" : "tag"}
@@ -429,7 +435,19 @@ export default function Library() {
         )}
         {all.length > 1 && (
           <div className="list-toolbar">
-            <span className="muted small">{plural(shown.length, "recipe")}</span>
+            {filtering ? (
+              // A filter is on (and remembered between visits): say so, and how to see everything.
+              <span className="small filter-note" role="status">
+                Showing only <strong>{filterLabel}</strong>: {shown.length} of {all.length} ·{" "}
+                <button className="link-btn small" onClick={() => choose("filter", "all")}>
+                  Show all
+                </button>
+              </span>
+            ) : (
+              <span className="muted small">
+                {q && activeFilter !== "all" ? `${shown.length} ${shown.length === 1 ? "match" : "matches"} in all recipes` : plural(shown.length, "recipe")}
+              </span>
+            )}
             <label className="sort">
               <span className="muted small">Sort</span>
               <select value={sort} onChange={(e) => choose("sort", e.target.value)}>
