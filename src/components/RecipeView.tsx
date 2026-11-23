@@ -309,7 +309,7 @@ export default function RecipeView({
                     />
                     <span>
                       {ingredientLine(recipe.ingredients[i], scale)}
-                      {/* No amount in the list, but the steps give one (recipes read before the reader filled these in). */}
+                      {/* No amount in the list (it stays as printed): what the steps use. */}
                       {fromSteps.has(i) && <span className="muted small from-steps"> · {fromSteps.get(i)} in the steps</span>}
                       {avoidedAt.has(i) && <span className="avoid-flag">Avoid · {avoidedAt.get(i)!.join(", ")}</span>}
                       {swaps.has(i) && (

@@ -11,7 +11,7 @@ stayed empty (reported by the owner). The stored list stays exactly as the sourc
 the pantry, costs and shopping list read the first number and unit of an amount, so writing
 "2 Tbsp + 1 tsp" into it would undercount (independent review). Instead the app shows what the
 steps use beside the line ("… · 2 Tbsp + 1 tsp in the steps"), adding up amounts in the same
-unit, on screen and in print (`src/lib/stepAmounts.ts`). The reading instructions gained only
+unit, on screen, in print and in shared text (`src/lib/stepAmounts.ts`). The reading instructions gained only
 one rule: a list line naming two things the steps measure separately ("salt and pepper") becomes
 two ingredients; older readings with one combined line show the amounts per thing ("salt …,
 black pepper …"), never added together. The printed-cookbook PDF (server) doesn't show them yet.

@@ -1,4 +1,4 @@
-import { formatNumber, parseNumber, scaleAmount } from "./quantity";
+import { fixPlurals, formatNumber, parseNumber, scaleAmount } from "./quantity";
 import type { ScannedRecipe } from "./schema";
 
 /**
@@ -18,31 +18,50 @@ export interface StepTotal {
   amount: string;
 }
 
-const NUMBER = /^\s*((?:\d+\s+)?\d+\s*\/\s*\d+|\d*[½⅓⅔¼¾⅛⅜⅝⅞]|\d+(?:\.\d+)?)\s*(.*)$/;
-const UNIT_KEY: Record<string, string> = { tablespoon: "tbsp", tbs: "tbsp", tbl: "tbsp", teaspoon: "tsp", t: "tsp", c: "cup", pound: "lb", lbs: "lb", ounce: "oz" };
-const unitKey = (u: string) => {
-  const k = u.trim().toLowerCase().replace(/\.$/, "").replace(/s$/, "");
-  return UNIT_KEY[k] ?? k;
+const NUMBER = /^\s*((?:\d+\s+)?\d+\s*\/\s*\d+|\d*\s?[½⅓⅔¼¾⅛⅜⅝⅞]|\d+(?:\.\d+)?)\s*(.*)$/;
+const RANGE = /[\d½⅓⅔¼¾⅛⅜⅝⅞]\s*(?:-|–|—|to)\s*[\d½⅓⅔¼¾⅛⅜⅝⅞]/i;
+const UNIT_KEY: Record<string, string> = {
+  tablespoon: "tbsp", tbs: "tbsp", tbl: "tbsp", tb: "tbsp", teaspoon: "tsp", ts: "tsp", c: "cup",
+  pound: "lb", lb: "lb", ounce: "oz", gram: "g", gr: "g", milliliter: "ml", millilitre: "ml",
 };
+function unitKey(u: string): string {
+  const raw = u.trim().replace(/\.$/, "");
+  // Handwritten cards: "T" is a tablespoon, "t" a teaspoon.
+  if (raw === "T") return "tbsp";
+  if (raw === "t") return "tsp";
+  const k = raw.toLowerCase();
+  return UNIT_KEY[k] ?? UNIT_KEY[k.replace(/s$/, "")] ?? k.replace(/s$/, "");
+}
 const isAmount = (a: string) => /[\d½⅓⅔¼¾⅛⅜⅝⅞]/.test(a);
 const nameKey = (t: string) => t.trim().toLowerCase().replace(/^the\s+/, "").replace(/[.,;:!]+$/, "");
+/** "kosher salt" and "salt" are the same thing on a combined line: group by the last word. */
+const thingKey = (t: string) => nameKey(t).split(/\s+/).pop() ?? "";
 
-/** "2 Tbsp" + "1 tsp" + "1 tsp" → "2 Tbsp + 2 tsp". Amounts that aren't "number unit" stay as written. */
+/**
+ * "2 Tbsp" + "1 tsp" + "1 tsp" → "2 Tbsp + 2 tsp". Ranges ("1-2 tsp") and amounts that aren't
+ * "number unit" stay as written; an estimate ("≈ ¼ cup") is added up and keeps its "≈".
+ */
 export function combineAmounts(amounts: string[]): string {
-  const parts: { key: string | null; value: number; unit: string; text: string }[] = [];
+  const parts: { key: string | null; value: number; unit: string; text: string; approx: boolean }[] = [];
   for (const a of amounts) {
-    const m = a.match(NUMBER);
+    const approx = /^\s*[≈~]/.test(a);
+    const plain = a.replace(/^\s*[≈~]\s*/, "");
+    const m = RANGE.test(plain) ? null : plain.match(NUMBER);
     const value = m ? parseNumber(m[1].replace(/\s*\/\s*/, "/")) : NaN;
     if (!m || !(value > 0)) {
-      parts.push({ key: null, value: 0, unit: "", text: a.trim() });
+      parts.push({ key: null, value: 0, unit: "", text: a.trim(), approx: false });
       continue;
     }
     const unit = m[2].trim();
     const same = parts.find((p) => p.key !== null && p.key === unitKey(unit));
-    if (same) same.value += value;
-    else parts.push({ key: unitKey(unit), value, unit, text: "" });
+    if (same) {
+      same.value += value;
+      same.approx ||= approx;
+    } else parts.push({ key: unitKey(unit), value, unit, text: "", approx });
   }
-  return parts.map((p) => (p.key === null ? p.text : `${formatNumber(p.value)}${p.unit ? ` ${p.unit}` : ""}`)).join(" + ");
+  return parts
+    .map((p) => (p.key === null ? p.text : `${p.approx ? "≈ " : ""}${fixPlurals(`${formatNumber(p.value)}${p.unit ? ` ${p.unit}` : ""}`)}`))
+    .join(" + ");
 }
 
 /** The steps' amounts for list line `index`, scaled; empty if the line has its own amount or the steps give none. */
@@ -56,14 +75,21 @@ export function stepTotals(recipe: Pick<ScannedRecipe, "ingredients" | "steps">,
     for (const seg of step.segments) {
       const a = seg.ingredient_index === index ? seg.amount?.trim() : "";
       if (!a || !isAmount(a)) continue;
-      const key = combined ? nameKey(seg.text) : "";
+      const key = combined ? thingKey(seg.text) : "";
       const g = groups.get(key) ?? { label: nameKey(seg.text), amounts: [] };
       g.amounts.push(scaleAmount(a, scale));
       groups.set(key, g);
     }
-  const out = [...groups.values()].map((g) => ({ label: combined && groups.size > 1 ? g.label : null, amount: combineAmounts(g.amounts) }));
+  // On a combined line, always say which thing an amount is for (even if only one has one).
+  const out = [...groups.values()].map((g) => ({ label: combined ? g.label : null, amount: combineAmounts(g.amounts) }));
   return out;
 }
 
 /** One line of text: "2 Tbsp + 1 tsp" or "salt 2 Tbsp + 1 tsp, black pepper 1 tsp". */
 export const stepTotalsText = (totals: StepTotal[]) => totals.map((t) => (t.label ? `${t.label} ${t.amount}` : t.amount)).join(", ");
+
+/** An ingredient line plus what the steps use, when the list gives no amount: "kosher salt · 2 Tbsp + 1 tsp in the steps". */
+export function withStepAmounts(line: string, recipe: Pick<ScannedRecipe, "ingredients" | "steps">, index: number, scale = 1): string {
+  const t = stepTotalsText(stepTotals(recipe, index, scale));
+  return t ? `${line} · ${t} in the steps` : line;
+}

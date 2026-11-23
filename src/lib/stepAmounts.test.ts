@@ -55,3 +55,46 @@ describe("amounts from the steps, for list lines without one", () => {
     expect(stepTotals(recipe, 9)).toEqual([]);
   });
 });
+
+describe("adding up amounts the way cards write them", () => {
+  it("keeps a range as written, never summed", () => {
+    expect(combineAmounts(["1-2 tsp"])).toBe("1-2 tsp");
+    expect(combineAmounts(["1 to 2 tsp", "1 to 2 tsp"])).toBe("1 to 2 tsp + 1 to 2 tsp");
+  });
+  it("reads '1 ½' with a space as one and a half", () => {
+    expect(combineAmounts(["1 ½ tsp", "1 ½ tsp"])).toBe("3 tsp");
+  });
+  it("tells a handwritten T (tablespoon) from t (teaspoon)", () => {
+    expect(combineAmounts(["1 T", "1 tsp"])).toBe("1 T + 1 tsp");
+    expect(combineAmounts(["1 t", "1 tsp"])).toBe("2 t");
+  });
+  it("adds up other spellings of the same unit, and says plurals right", () => {
+    expect(combineAmounts(["1 Tbs", "1 Tbsp"])).toBe("2 Tbs");
+    expect(combineAmounts(["100 g", "50 grams"])).toBe("150 g");
+    expect(combineAmounts(["1 cup", "1 cup"])).toBe("2 cups");
+  });
+  it("adds up estimates and keeps the ≈", () => {
+    expect(combineAmounts(["≈ ¼ cup", "≈ ¼ cup"])).toBe("≈ ½ cup");
+  });
+});
+
+describe("an old combined line", () => {
+  it("always says which thing an amount is for, and treats 'kosher salt' and 'salt' as one", () => {
+    const old = {
+      ingredients: [ing("Salt and pepper")],
+      steps: [
+        { segments: [seg("kosher salt", 0, "1 tsp"), seg(" then "), seg("salt", 0, "1 tsp"), seg(" and "), seg("pepper", 0, "to taste")] },
+      ],
+    };
+    expect(text(old, 0)).toBe("kosher salt 2 tsp");
+  });
+});
+
+import { recipeToText } from "./share";
+describe("shared as text", () => {
+  it("includes what the steps use", () => {
+    const shared = recipeToText({ ...recipe, title: "Skillet Pasta", servings: null, time: null, notes: null, tags: [], warnings: [] } as never);
+    expect(shared).toContain("• kosher salt · 2 Tbsp + 1 tsp in the steps");
+    expect(shared).toContain("• ½ lb ground sirloin");
+  });
+});
