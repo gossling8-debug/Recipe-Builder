@@ -5,6 +5,27 @@ const PORT = Number(process.env.PORT || 4466);
 let n = 0;
 let unclear = false; // /test/unclear?on=1: the next reading says part of the card was hard to read
 let nextTags = null; // /test/tags?t=Dinner,Beef: the next reading's labels
+let amountsInSteps = false; // /test/stepamounts: the next reading lists salt and oil with no amount; the steps give them
+const seg = (text, ingredient_index = null, amount = null) => ({ text, ingredient_index, amount });
+const stepAmountsRecipe = () => ({
+  title: `Skillet Pasta ${++n}`,
+  servings: "Serves 4",
+  time: null,
+  ingredients: [
+    { quantity: "", unit: "", name: "kosher salt", preparation: null, section: null },
+    { quantity: "", unit: "", name: "olive oil", preparation: null, section: null },
+    { quantity: "3/4", unit: "lb", name: "penne", preparation: null, section: null },
+  ],
+  steps: [
+    { segments: [seg("Bring water with "), seg("salt", 0, "2 Tbsp"), seg(" to a boil.")] },
+    { segments: [seg("Heat "), seg("olive oil", 1, "1½ Tbsp"), seg(". Stir in "), seg("salt", 0, "1 tsp"), seg(".")] },
+    { segments: [seg("Cook the "), seg("penne", 2, "3/4 lb"), seg(".")] },
+  ],
+  notes: null,
+  tags: ["Dinner"],
+  warnings: [],
+  origin: { kind: "magazine", book: null, author: null },
+});
 
 const recipe = () => ({
   title: `Test Pie ${++n}`,
@@ -23,6 +44,10 @@ const recipe = () => ({
 
 http
   .createServer((req, res) => {
+    if (req.url.startsWith("/test/stepamounts")) {
+      amountsInSteps = true;
+      return res.end("ok");
+    }
     if (req.url.startsWith("/test/tags")) {
       nextTags = (new URL(req.url, "http://x").searchParams.get("t") || "").split(",").filter(Boolean);
       return res.end("ok");
@@ -44,7 +69,7 @@ http
           model: b.model,
           stop_reason: "end_turn",
           stop_sequence: null,
-          content: [{ type: "text", text: JSON.stringify(recipe()) }],
+          content: [{ type: "text", text: JSON.stringify(amountsInSteps ? ((amountsInSteps = false), stepAmountsRecipe()) : recipe()) }],
           usage: { input_tokens: 2000, output_tokens: 300 },
         }),
       );

@@ -4,6 +4,17 @@ Short records of decisions that aren't obvious from the code — the "load-beari
 Before changing one of these, read why it's there. Newest first; add one for any
 Tier-3 decision.
 
+### Amounts only in the steps go into the list (Nov 2026)
+A magazine page listed "Kosher salt and freshly ground black pepper" and "Good olive oil" with
+no amounts; the steps gave them (2 Tbsp + 1 tsp salt, 1 tsp pepper, 1½ Tbsp oil), and the list
+stayed empty (reported by the owner). The reading instructions (`src/lib/claude.ts`) now say:
+split a line naming two ingredients the steps measure separately, and when the list has no
+amount but the steps do, put the steps' amount in the list (added up in one unit, or joined with
+" + " and what each part is for). Amounts come only from the source, never estimated. Recipes
+read before this show the steps' amounts beside the list line ("… in the steps",
+`src/lib/stepAmounts.ts`). Not testable here against the real AI (its key is only on the
+server); the owner re-scans the page to check.
+
 ### Free every scanner canvas as soon as it's used (Nov 2026)
 After scanning, a user's screen went black while the app kept working underneath (they saved a
 recipe blind). iPhone Safari has a small total budget for canvas memory; past it, canvases and
