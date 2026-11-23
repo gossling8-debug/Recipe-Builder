@@ -3,7 +3,7 @@ import Fold from "./Fold";
 import { feature } from "../lib/features";
 import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/schema";
 import { formatNumber, ingredientText, scaleAmount, stepAmount } from "../lib/quantity";
-import { amountsFromSteps } from "../lib/stepAmounts";
+import { stepTotals, stepTotalsText } from "../lib/stepAmounts";
 import { toggleIn, useProgress } from "../lib/progress";
 import Icon from "./Icon";
 import TagPicker from "./TagPicker";
@@ -116,6 +116,8 @@ export default function RecipeView({
   const unused = unusedIngredients(recipe);
   const avoided = feature("avoid") ? findAvoided(recipe.ingredients, loadAvoid(), new Set(swaps.keys())) : [];
   const avoidedAt = new Map(avoided.map((m) => [m.index, m.reasons]));
+  // List lines with no amount: what the steps use (lib/stepAmounts.ts).
+  const fromSteps = new Map(recipe.ingredients.map((_, i) => [i, stepTotalsText(stepTotals(recipe, i, scale))] as const).filter(([, t]) => t));
   const conversions = feature("conversions") ? conversionsFor(original.ingredients, scale) : []; // works from the card's own units
 
   return (
@@ -308,12 +310,7 @@ export default function RecipeView({
                     <span>
                       {ingredientLine(recipe.ingredients[i], scale)}
                       {/* No amount in the list, but the steps give one (recipes read before the reader filled these in). */}
-                      {amountsFromSteps(recipe, i).length > 0 && (
-                        <span className="muted small from-steps">
-                          {" · "}
-                          {amountsFromSteps(recipe, i).map((a) => scaleAmount(a, scale)).join(" + ")} in the steps
-                        </span>
-                      )}
+                      {fromSteps.has(i) && <span className="muted small from-steps"> · {fromSteps.get(i)} in the steps</span>}
                       {avoidedAt.has(i) && <span className="avoid-flag">Avoid · {avoidedAt.get(i)!.join(", ")}</span>}
                       {swaps.has(i) && (
                         <span className="swap-note">

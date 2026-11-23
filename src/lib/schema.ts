@@ -12,7 +12,7 @@ import * as z from "zod/v4";
 export const IngredientSchema = z.object({
   quantity: z
     .string()
-    .describe('Amount as written, e.g. "2", "1 1/2", "½". If the list gives none but the steps do, the steps\' amount (several in different units joined with " + ", e.g. "2 Tbsp + 1 tsp"). Empty string if the source gives none (e.g. "salt to taste").'),
+    .describe('Amount as written, e.g. "2", "1 1/2", "½". Empty string if none (e.g. "salt to taste").'),
   unit: z.string().describe('Unit as written, e.g. "cups", "tbsp", "oz". Empty string if none.'),
   name: z.string().describe('Ingredient name, e.g. "all-purpose flour".'),
   preparation: z

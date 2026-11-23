@@ -4,6 +4,7 @@ import Icon from "./Icon";
 import { getRecipe } from "../lib/db";
 import { loadProgress } from "../lib/progress";
 import { ingredientText, scaleAmount, stepAmount } from "../lib/quantity";
+import { stepTotals, stepTotalsText } from "../lib/stepAmounts";
 import { href } from "../lib/route";
 import { feature } from "../lib/features";
 import { applySwaps } from "../lib/swaps";
@@ -178,7 +179,11 @@ export default function PrintPage({ id }: { id: string }) {
                   {g.section && <h3>{g.section}</h3>}
                   <ul className="print-ings">
                     {g.items.map((ing, i) => (
-                      <li key={i}>{line(ing, scale)}</li>
+                      <li key={i}>
+                        {line(ing, scale)}
+                        {/* No amount in the list: what the steps use (lib/stepAmounts.ts). */}
+                        {((t) => (t ? ` · ${t} in the steps` : ""))(stepTotalsText(stepTotals(r, r.ingredients.indexOf(ing), scale)))}
+                      </li>
                     ))}
                   </ul>
                 </div>
