@@ -1,4 +1,4 @@
-import { fixPlurals, formatNumber, parseNumber, scaleAmount } from "./quantity";
+import { fixPlurals, formatNumber, ingredientText, parseNumber, scaleAmount } from "./quantity";
 import type { ScannedRecipe } from "./schema";
 
 /**
@@ -88,8 +88,23 @@ export function stepTotals(recipe: Pick<ScannedRecipe, "ingredients" | "steps">,
 /** One line of text: "2 Tbsp + 1 tsp" or "salt 2 Tbsp + 1 tsp, black pepper 1 tsp". */
 export const stepTotalsText = (totals: StepTotal[]) => totals.map((t) => (t.label ? `${t.label} ${t.amount}` : t.amount)).join(", ");
 
-/** An ingredient line plus what the steps use, when the list gives no amount: "kosher salt · 2 Tbsp + 1 tsp in the steps". */
-export function withStepAmounts(line: string, recipe: Pick<ScannedRecipe, "ingredients" | "steps">, index: number, scale = 1): string {
-  const t = stepTotalsText(stepTotals(recipe, index, scale));
-  return t ? `${line} · ${t} in the steps` : line;
+/**
+ * An ingredient-list line, with the steps' amount in front like every other line when the list
+ * gives none ("2 Tbsp + 1 tsp kosher salt", note "from the steps"). An old combined line
+ * ("Salt and pepper") can't take one amount in front, so it keeps its words and the note says
+ * which amount is which ("salt 2 Tbsp + 1 tsp, pepper 1 tsp in the steps").
+ */
+export function listLine(recipe: Pick<ScannedRecipe, "ingredients" | "steps">, index: number, scale = 1): { text: string; note: string | null } {
+  const ing = recipe.ingredients[index];
+  const plain = ingredientText(ing, scale);
+  const totals = stepTotals(recipe, index, scale);
+  if (totals.length === 1 && !totals[0].label) return { text: `${totals[0].amount} ${plain}`, note: "from the steps" };
+  if (totals.length) return { text: plain, note: `${stepTotalsText(totals)} in the steps` };
+  return { text: plain, note: null };
+}
+
+/** The same as one piece of text, for print and sharing: "2 Tbsp + 1 tsp kosher salt (from the steps)". */
+export function listLineText(recipe: Pick<ScannedRecipe, "ingredients" | "steps">, index: number, scale = 1): string {
+  const { text, note } = listLine(recipe, index, scale);
+  return note ? `${text} (${note})` : text;
 }

@@ -10,7 +10,7 @@ no amounts; the steps gave them (2 Tbsp + 1 tsp salt, 1 tsp pepper, 1½ Tbsp oil
 stayed empty (reported by the owner). The stored list stays exactly as the source printed it:
 the pantry, costs and shopping list read the first number and unit of an amount, so writing
 "2 Tbsp + 1 tsp" into it would undercount (independent review). Instead the app shows what the
-steps use beside the line ("… · 2 Tbsp + 1 tsp in the steps"), adding up amounts in the same
+steps use in front of the line like any other amount ("2 Tbsp + 1 tsp kosher salt · from the steps"), adding up amounts in the same
 unit, on screen, in print and in shared text (`src/lib/stepAmounts.ts`). The reading instructions gained only
 one rule: a list line naming two things the steps measure separately ("salt and pepper") becomes
 two ingredients; older readings with one combined line show the amounts per thing ("salt …,

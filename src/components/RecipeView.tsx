@@ -1,9 +1,9 @@
 import RecipeTips from "./RecipeTips";
 import Fold from "./Fold";
 import { feature } from "../lib/features";
-import { unusedIngredients, type Ingredient, type ScannedRecipe } from "../lib/schema";
-import { formatNumber, ingredientText, scaleAmount, stepAmount } from "../lib/quantity";
-import { stepTotals, stepTotalsText } from "../lib/stepAmounts";
+import { unusedIngredients, type ScannedRecipe } from "../lib/schema";
+import { formatNumber, scaleAmount, stepAmount } from "../lib/quantity";
+import { listLine } from "../lib/stepAmounts";
 import { toggleIn, useProgress } from "../lib/progress";
 import Icon from "./Icon";
 import TagPicker from "./TagPicker";
@@ -25,7 +25,6 @@ const SCALES: [number, string][] = [
   [3, "3×"],
 ];
 
-const ingredientLine = (ing: Ingredient, scale: number): string => ingredientText(ing, scale);
 
 /**
  * The cook-friendly view: the usual ingredient list on top, then steps with
@@ -117,7 +116,7 @@ export default function RecipeView({
   const avoided = feature("avoid") ? findAvoided(recipe.ingredients, loadAvoid(), new Set(swaps.keys())) : [];
   const avoidedAt = new Map(avoided.map((m) => [m.index, m.reasons]));
   // List lines with no amount: what the steps use (lib/stepAmounts.ts).
-  const fromSteps = new Map(recipe.ingredients.map((_, i) => [i, stepTotalsText(stepTotals(recipe, i, scale))] as const).filter(([, t]) => t));
+  const lines = recipe.ingredients.map((_, i) => listLine(recipe, i, scale));
   const conversions = feature("conversions") ? conversionsFor(original.ingredients, scale) : []; // works from the card's own units
 
   return (
@@ -308,9 +307,9 @@ export default function RecipeView({
                       onChange={() => update((p) => ({ ...p, have: toggleIn(p.have, i) }))}
                     />
                     <span>
-                      {ingredientLine(recipe.ingredients[i], scale)}
-                      {/* No amount in the list (it stays as printed): what the steps use. */}
-                      {fromSteps.has(i) && <span className="muted small from-steps"> · {fromSteps.get(i)} in the steps</span>}
+                      {lines[i].text}
+                      {/* No amount in the list (it stays as printed): the steps' amount is in front, and this says so. */}
+                      {lines[i].note && <span className="muted small from-steps"> · {lines[i].note}</span>}
                       {avoidedAt.has(i) && <span className="avoid-flag">Avoid · {avoidedAt.get(i)!.join(", ")}</span>}
                       {swaps.has(i) && (
                         <span className="swap-note">
