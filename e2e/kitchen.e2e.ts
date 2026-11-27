@@ -39,7 +39,8 @@ async function tap(chip: Locator) {
           return `${el.tagName}.${el.className} [${Math.round(r.left)}-${Math.round(r.right)}] pos=${c.position} ws=${c.whiteSpace} minW=${c.minWidth} text=${(el.textContent || "").trim().slice(0, 40)}`;
         }),
     );
-    console.log("TAP-WIDE", JSON.stringify({ scrollWidth: document === undefined ? 0 : await chip.evaluate(() => document.documentElement.scrollWidth), wide }));
+    const scrollWidth = await chip.evaluate(() => document.documentElement.scrollWidth);
+    console.log("TAP-WIDE", JSON.stringify({ scrollWidth, wide }));
     throw e;
   }
 }
