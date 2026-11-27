@@ -4,6 +4,15 @@ Short records of decisions that aren't obvious from the code — the "load-beari
 Before changing one of these, read why it's there. Newest first; add one for any
 Tier-3 decision.
 
+### Your kitchen: recipes Cardamix writes may use your devices, only when they suit the dish (Nov 2026)
+Setup and Settings ask which devices you have beyond the basics (air fryer, slow cooker,
+Instant Pot, stand mixer, food processor, Dutch oven, grill, sous vide; `src/lib/kitchen.ts`,
+synced like the avoid list). "Create a recipe" and "Cook with what I have" are told "My kitchen
+also has: …" and may use one when it makes the dish easier, faster or better, never just because
+it's there, and never one you didn't tick. Not used to hide or filter recipes: a recipe only
+sometimes says what it needs, so filtering would hide the wrong ones. Not testable here against
+the real AI (its key is only on the server).
+
 ### Amounts given only in the steps are shown beside the list line (Nov 2026)
 A magazine page listed "Kosher salt and freshly ground black pepper" and "Good olive oil" with
 no amounts; the steps gave them (2 Tbsp + 1 tsp salt, 1 tsp pepper, 1½ Tbsp oil), and the list

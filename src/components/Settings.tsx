@@ -1,4 +1,6 @@
 import EatersSection from "./EatersSection";
+import { loadKitchen, saveKitchen } from "../lib/kitchen";
+import KitchenPicker from "./KitchenPicker";
 import { useEffect, useRef, useState } from "react";
 import FeaturesSection from "./FeaturesSection";
 import { feature, hasPlus } from "../lib/features";
@@ -54,6 +56,13 @@ export default function Settings() {
   const [textSize, setTextSize] = useState<TextSize>(getTextSize());
   const [theme, setTheme] = useState<Theme>(getTheme());
   const [avoid, setAvoid] = useState<AvoidList>(loadAvoid);
+  const [kitchen, setKitchen] = useState(loadKitchen);
+  // Another device may change the list while Settings is open: show the synced one (else a tap here would save over it).
+  useEffect(() => {
+    const on = () => setKitchen(loadKitchen());
+    window.addEventListener("state-synced", on);
+    return () => window.removeEventListener("state-synced", on);
+  }, []);
   const [modelId, setModelId] = useState(getModel().id);
   const usage = loadUsage();
   const avgFor = (id: string) => {
@@ -193,6 +202,12 @@ export default function Settings() {
             <AddToHomeScreen />
           </section>
         )}
+
+        <section>
+          <h2 className="h3">Your kitchen</h2>
+          <p className="muted small">Recipes Cardamix writes for you can use these when they suit the dish. Everyone has a stove and oven.</p>
+          <KitchenPicker value={kitchen} onChange={(ids) => (setKitchen(ids), saveKitchen(ids))} />
+        </section>
 
         {feature("tastes") && <EatersSection />}
 

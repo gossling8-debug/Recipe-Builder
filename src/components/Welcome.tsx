@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { loadKitchen, saveKitchen } from "../lib/kitchen";
+import KitchenPicker from "./KitchenPicker";
 import { getPeople, setPeople } from "../lib/autoPlan";
 import { ALLERGEN_GROUPS, loadAvoid, saveAvoid } from "../lib/avoid";
 import { FEATURES, setSwitchedOn, switchedOn, type Feature } from "../lib/features";
@@ -17,18 +19,19 @@ const HELP: { group: Feature["group"]; label: string; what: string }[] = [
 const groupOn = (g: Feature["group"]) => FEATURES.filter((f) => f.group === g).some((f) => switchedOn(f.id));
 const setGroup = (g: Feature["group"], on: boolean) => FEATURES.filter((f) => f.group === g).forEach((f) => setSwitchedOn(f.id, on));
 
-/** First open with an empty recipe box: four quick questions, each skippable. */
+/** First open with an empty recipe box: a few quick questions, each skippable. */
 export default function Welcome({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [people, setPeopleState] = useState(getPeople);
   const [help, setHelp] = useState(() => Object.fromEntries(HELP.map((h) => [h.group, groupOn(h.group)])) as Record<string, boolean>);
   const [avoid, setAvoid] = useState(loadAvoid);
+  const [kitchen, setKitchen] = useState(loadKitchen);
   const done = () => {
     finishWelcome();
     onDone();
   };
   // The avoid question only matters if Health is on.
-  const steps = ["people", "help", ...(help.Health ? ["avoid"] : []), "start"];
+  const steps = ["people", "kitchen", "help", ...(help.Health ? ["avoid"] : []), "start"];
   const current = steps[Math.min(step, steps.length - 1)];
   const next = () => setStep((s) => s + 1);
 
@@ -57,6 +60,25 @@ export default function Welcome({ onDone }: { onDone: () => void }) {
           <div className="button-row">
             <button className="btn primary" onClick={() => (setPeople(people), next())}>
               Next
+            </button>
+          </div>
+        </>
+      )}
+
+      {current === "kitchen" && (
+        <>
+          <h1 className="page-title">What's in your kitchen?</h1>
+          <p className="muted small">
+            Recipes Cardamix writes for you can use these when they suit the dish. Everyone has a stove and oven; tap anything else
+            you have, or skip.
+          </p>
+          <KitchenPicker value={kitchen} onChange={(ids) => (setKitchen(ids), saveKitchen(ids))} />
+          <div className="button-row">
+            <button className="btn primary" onClick={next}>
+              {kitchen.length ? "Next" : "Skip"}
+            </button>
+            <button className="btn" onClick={() => setStep((s) => s - 1)}>
+              Back
             </button>
           </div>
         </>

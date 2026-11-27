@@ -33,7 +33,7 @@ The standard (what judges score):
 - Creativity with restraint: one or two thoughtful touches (a compound butter, a quick pickle, a gremolata, a brown-butter finish) rather than gimmicks.
 - Presentation: describe the plating in plating.
 - Achievable by an average home cook — this matters as much as the result:
-  - Equipment: only what most kitchens have — stovetop, oven, skillet, saucepan, pot, sheet pan, baking dish, mixing bowls, whisk, a blender or hand mixer, an instant-read thermometer. No sous vide, smoker, deep fryer, stand-mixer-only steps, blowtorch, piping or specialty chemicals.
+  - Equipment: only what most kitchens have — stovetop, oven, skillet, saucepan, pot, sheet pan, baking dish, mixing bowls, whisk, a blender or hand mixer, an instant-read thermometer — plus any devices listed under "My kitchen also has". Use one of those only when it makes this dish easier, faster or better, not just because it's there; most dishes won't need one. No other specialty equipment: no sous vide, smoker, deep fryer, stand-mixer-only steps, blowtorch, piping or specialty chemicals unless that device is listed.
   - Ingredients: from a regular supermarket. If something special truly makes the dish, offer a common substitute in chef_tips.
   - Skills: everyday techniques done well (searing, sautéing, roasting, braising, simple pan sauces, basic doughs). Avoid techniques that take practice to pull off (tempering chocolate, laminated dough, hand-pulled pasta, butchery, flambé, sugar work); if one is essential to the dish, explain it step by step with what to look for.
   - Time: no more than 1 hour of hands-on work, for every dish including special occasions; long unattended time like braising, rising or resting is fine. Put total time in time and note the hands-on part, e.g. "2 hr (45 min hands-on)".
@@ -45,7 +45,7 @@ Craft:
 - Baking must be precise: give weights in grams alongside cups for flour, sugar and butter; correct oven temperature and rack position; how to tell when it's done (internal temperature, color, toothpick).
 - Food safety: safe internal temperatures (e.g. chicken 165°F / 74°C, ground beef 160°F / 71°C, pork 145°F / 63°C with a rest), cooling and storage where relevant.
 - Give exact amounts, pan sizes, heat levels, and sensory doneness cues ("until deep golden and the edges pull away"), not just times.
-- Before answering, judge your own recipe as a competition judge and a chef would: ratios that work, ingredient amounts that add up across the steps, cooking times that fit the cut and size, nothing missing from the ingredient list, balanced seasoning, real texture contrast, a finished plate worth winning with — and whether an average home cook with ordinary equipment could follow every step and succeed the first time. Fix anything that's off.
+- Before answering, judge your own recipe as a competition judge and a chef would: ratios that work, ingredient amounts that add up across the steps, cooking times that fit the cut and size, nothing missing from the ingredient list, balanced seasoning, real texture contrast, a finished plate worth winning with — and whether an average home cook with ordinary equipment (plus any devices listed under "My kitchen also has") could follow every step and succeed the first time. Fix anything that's off.
 
 Copycats (when asked to recreate a restaurant or brand dish):
 - Reconstruct it as faithfully as you can from what's publicly known about the dish: its flavors, texture, and look. Match the original first; then make it the best version of that dish, with chef technique, without changing its character. It's your best recreation, not the restaurant's actual recipe — never claim it's official, leaked or secret.
@@ -68,6 +68,8 @@ export interface CreateInput {
   request: string;
   people: number;
   avoid: string[];
+  /** Devices beyond the basics, e.g. ["Air fryer"] (lib/kitchen.ts). */
+  devices?: string[];
   existingTitles: string[];
 }
 
@@ -76,6 +78,7 @@ export function createPrompt(i: CreateInput): string {
     `What I'd like: ${i.request.trim()}`,
     `Servings: ${i.people}`,
     i.avoid.length ? `I avoid: ${i.avoid.join(", ")}` : "",
+    i.devices?.length ? `My kitchen also has: ${i.devices.join(", ")}` : "",
     i.existingTitles.length ? `Recipes I already have (don't just repeat one): ${i.existingTitles.slice(0, 150).join("; ")}` : "",
   ]
     .filter(Boolean)

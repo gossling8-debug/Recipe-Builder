@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { kitchenLabels } from "../lib/kitchen";
 import { getPeople } from "../lib/autoPlan";
 import { ALLERGEN_GROUPS, isActive, loadAvoid } from "../lib/avoid";
 import { costOf, getModel } from "../lib/models";
@@ -33,6 +34,7 @@ export default function CookWithWhatIHave() {
         avoid: labels,
         people: getPeople(),
         request,
+        devices: kitchenLabels(),
         existingTitles: existing.map((x) => x.title),
       });
       const id = newId();

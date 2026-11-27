@@ -11,7 +11,7 @@
 const PREFIX = "recipe-builder.";
 const SYNCED = new Set([
   "week", "plans", "units", "textSize", "theme", "staples", "shopping", "receipts", "prices", "spendingFrom", "budget",
-  "pantry", "leftovers", "people", "avoid", "featuresOff", "model", "usage", "waitForTap",
+  "pantry", "leftovers", "people", "avoid", "kitchen", "featuresOff", "model", "usage", "waitForTap",
   "thaw.notFrozen", "thaw.done", "welcomeDone", "notDuplicates", "store", "storeFavorites", "tourDone", "fastFood", "leftoverDays", "sharedShopping", "rescued", "eaters",
 ]);
 const SYNCED_PREFIXES = ["progress."];

@@ -4,6 +4,10 @@ export const STRIPE = process.env.STRIPE_URL || "http://127.0.0.1:43200";
 export const AI = process.env.AI_URL || "http://127.0.0.1:4466";
 /** The test AI's next reading says part of the card was hard to read. */
 export const nextReadingUnclear = () => fetch(`${AI}/test/unclear?on=1`);
+/** The text of the last message the test AI was sent. */
+export const lastAiMessage = async (): Promise<string> => (await fetch(`${AI}/test/last`)).text();
+/** Forget the last message, so a test only sees what it sends next. */
+export const clearLastAiMessage = () => fetch(`${AI}/test/last?reset=1`);
 /** The test AI's next reading lists salt and olive oil with no amount; the steps give them. */
 export const nextReadingAmountsInSteps = () => fetch(`${AI}/test/stepamounts`);
 /** The test AI's next reading gets these labels (instead of "Dessert"). */

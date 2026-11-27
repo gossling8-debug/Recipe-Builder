@@ -26,6 +26,7 @@ import CropEditor from "./CropEditor";
 import DocumentScanner, { type ScannedPage } from "./DocumentScanner";
 import { getRecipe, listRecipes, newId, saveRecipe, storageErrorMessage } from "../lib/db";
 import { retakeInto } from "../lib/retake";
+import { kitchenLabels } from "../lib/kitchen";
 import { clearProgress } from "../lib/progress";
 import TagPicker from "./TagPicker";
 import { cleanTags } from "../lib/schema";
@@ -374,6 +375,7 @@ export default function Scanner({ book: bookId, retake: retakeId }: { book?: str
       request: wish,
       people: getPeople(),
       avoid: labels,
+      devices: kitchenLabels(),
       existingTitles: existing.map((x) => x.title),
     });
     const saved: SavedRecipe = {
