@@ -45,7 +45,11 @@ const recipe = () => ({
 
 http
   .createServer((req, res) => {
-    if (req.url.startsWith("/test/last")) return res.end(lastMessage);
+    if (req.url.startsWith("/test/last")) {
+      const out = lastMessage;
+      if (req.url.includes("reset=1")) lastMessage = "";
+      return res.end(out);
+    }
     if (req.url.startsWith("/test/stepamounts")) {
       amountsInSteps = true;
       return res.end("ok");

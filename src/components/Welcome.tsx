@@ -72,9 +72,9 @@ export default function Welcome({ onDone }: { onDone: () => void }) {
             Recipes Cardamix writes for you can use these when they suit the dish. Everyone has a stove and oven; tap anything else
             you have, or skip.
           </p>
-          <KitchenPicker value={kitchen} onChange={setKitchen} />
+          <KitchenPicker value={kitchen} onChange={(ids) => (setKitchen(ids), saveKitchen(ids))} />
           <div className="button-row">
-            <button className="btn primary" onClick={() => (saveKitchen(kitchen), next())}>
+            <button className="btn primary" onClick={next}>
               {kitchen.length ? "Next" : "Skip"}
             </button>
             <button className="btn" onClick={() => setStep((s) => s - 1)}>

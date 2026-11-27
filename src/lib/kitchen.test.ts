@@ -22,6 +22,13 @@ describe("your kitchen", () => {
     expect(loadKitchen()).toEqual(["airFryer"]);
   });
 
+  it("doesn't erase devices a newer version of the app added (the list syncs between phones)", () => {
+    localStorage.setItem("recipe-builder.kitchen", JSON.stringify(["airFryer", "riceCooker"]));
+    saveKitchen(["grill"]);
+    expect(JSON.parse(localStorage.getItem("recipe-builder.kitchen")!)).toEqual(["grill", "riceCooker"]);
+    expect(loadKitchen()).toEqual(["grill"]);
+  });
+
   it("names them for the AI in a fixed order", () => {
     expect(kitchenLabels(["slowCooker", "airFryer"])).toEqual(["Air fryer", "Slow cooker"]);
     expect(kitchenLabels([])).toEqual([]);

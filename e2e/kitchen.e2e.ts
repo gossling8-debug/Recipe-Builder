@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { lastAiMessage, newEmail, signUp } from "./helpers";
+import { clearLastAiMessage, lastAiMessage, newEmail, signUp } from "./helpers";
 
 test("setup asks what's in your kitchen, and Settings keeps it", async ({ page }) => {
   // Sign up, but go through setup instead of skipping it.
@@ -34,6 +34,7 @@ test("Create a recipe tells the AI which devices you have", async ({ page }) => 
   await page.goto("./#/scan");
   await page.getByRole("tab", { name: "Create" }).click();
   await page.getByPlaceholder(/Crispy-skin salmon/).fill("Weeknight beef stew");
+  await clearLastAiMessage(); // only what this click sends counts
   await page.getByRole("button", { name: "Create recipe" }).click();
   await expect.poll(lastAiMessage, { timeout: 30_000 }).toContain("My kitchen also has: Instant Pot / pressure cooker");
 });

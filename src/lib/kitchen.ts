@@ -33,7 +33,16 @@ export function loadKitchen(): DeviceId[] {
 export function saveKitchen(ids: DeviceId[]): void {
   memory = ids.filter((x) => known.has(x));
   try {
-    localStorage.setItem(KEY, JSON.stringify(memory)); // stateSync notices and syncs it
+    // Keep devices a newer version of the app added that this one doesn't know, so an
+    // out-of-date phone doesn't erase them everywhere when the list syncs.
+    let unknown: string[] = [];
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY) ?? "[]") as unknown[];
+      unknown = raw.filter((x): x is string => typeof x === "string" && !known.has(x));
+    } catch {
+      /* damaged: nothing to keep */
+    }
+    localStorage.setItem(KEY, JSON.stringify([...memory, ...unknown])); // stateSync notices and syncs it
   } catch {
     /* kept for this session */
   }
