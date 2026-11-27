@@ -39,14 +39,27 @@ test("Create a recipe tells the AI which devices you have", async ({ page }) => 
   await expect.poll(lastAiMessage, { timeout: 30_000 }).toContain("My kitchen also has: Instant Pot / pressure cooker");
 });
 
-test("a long email address doesn't make Settings wider than the phone", async ({ page }) => {
-  // An email has no spaces to wrap at; a long one used to push the page wider than the screen,
-  // so the phone zoomed the whole page out (found by these tests on GitHub's machines).
-  await signUp(page, "averyveryverylongnamewithnowheretowrap"); // no "." to wrap at; under the 64-character limit before "@"
+test("a long email address doesn't make pages wider than the phone", async ({ page }) => {
+  // An email has no spaces to wrap at; a long one pushed pages wider than the screen, so the phone
+  // zoomed the whole page out (found by these tests on GitHub's machines). Compare with the phone's
+  // real width: when a page is too wide, its own idea of the screen width grows to match.
+  const phone = page.viewportSize()!.width;
+  const pageWidth = () => page.evaluate(() => document.documentElement.scrollWidth);
+  await page.goto("./");
+  await page.locator(".account-screen form").waitFor({ timeout: 30_000 });
+  await page.fill("input[type=email]", newEmail("averyveryverylongnamewithnowheretowrap")); // no "." to wrap at
+  await page.fill(".password-row input", "secret1");
+  await page.click("button[type=submit]");
+  await page.getByRole("button", { name: "Skip setup" }).click({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Skip tour" }).click({ timeout: 15_000 });
+
+  // "We sent a link to <email>" on the confirm-your-email screen.
+  await page.goto("./#/scan");
+  await expect(page.getByRole("button", { name: "I've confirmed it" })).toBeVisible();
+  expect(await pageWidth()).toBeLessThanOrEqual(phone);
+
+  // "Signed in as <email>" in Settings.
   await page.goto("./#/settings");
   await expect(page.getByText("Signed in as")).toBeVisible();
-  // Compare with the phone's real width: when the page is too wide, the phone zooms out and the page's
-  // own idea of the screen width grows to match, so that can't be the yardstick.
-  const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-  expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
+  expect(await pageWidth()).toBeLessThanOrEqual(phone);
 });
