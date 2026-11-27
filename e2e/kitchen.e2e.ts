@@ -27,18 +27,19 @@ async function tap(chip: Locator) {
       };
     });
     console.log("TAP-DIAG", JSON.stringify(info));
-    // Does the page move by itself? Chip top, scroll position, page height and section heights, every 200 ms.
-    for (let i = 0; i < 10; i++) {
-      const snap = await chip.evaluate((el) => ({
-        y: Math.round(el.getBoundingClientRect().top),
-        scrollY: Math.round(scrollY),
-        height: document.documentElement.scrollHeight,
-        sections: [...document.querySelectorAll("main section")].map((x) => Math.round(x.getBoundingClientRect().height)).join(","),
-        focused: document.activeElement ? `${document.activeElement.tagName}.${document.activeElement.className}` : null,
-      }));
-      console.log("TAP-MOVE", i, JSON.stringify(snap));
-      await chip.page().waitForTimeout(200);
-    }
+    // What is wider than the phone (390)? Innermost elements past it, with their widths and styles.
+    const wide = await chip.evaluate(() =>
+      [...document.querySelectorAll("body *")]
+        .filter((el) => el.getBoundingClientRect().right > 391)
+        .filter((el) => ![...el.children].some((c) => c.getBoundingClientRect().right > 391))
+        .slice(0, 12)
+        .map((el) => {
+          const r = el.getBoundingClientRect();
+          const c = getComputedStyle(el);
+          return `${el.tagName}.${el.className} [${Math.round(r.left)}-${Math.round(r.right)}] pos=${c.position} ws=${c.whiteSpace} minW=${c.minWidth} text=${(el.textContent || "").trim().slice(0, 40)}`;
+        }),
+    );
+    console.log("TAP-WIDE", JSON.stringify({ scrollWidth: document === undefined ? 0 : await chip.evaluate(() => document.documentElement.scrollWidth), wide }));
     throw e;
   }
 }
