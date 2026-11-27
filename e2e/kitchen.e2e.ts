@@ -1,5 +1,35 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { clearLastAiMessage, lastAiMessage, newEmail, signUp } from "./helpers";
+
+/**
+ * Tap a chip the way a person would: scrolled into the middle of the screen first. Scrolling
+ * only "into view" can leave it at the very edge, under the fixed top bar or bottom tab bar,
+ * and on slower machines (GitHub's) the tap then lands on the bar instead.
+ */
+async function tap(chip: Locator) {
+  await chip.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  try {
+    await chip.click({ timeout: 15_000 });
+  } catch (e) {
+    // Temporary diagnostic (GitHub-only failure): what is under the tap point, and where things are.
+    const info = await chip.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      const css = getComputedStyle(el);
+      return {
+        chip: [r.x, r.y, r.width, r.height].map(Math.round),
+        viewport: [innerWidth, innerHeight, Math.round(scrollY), devicePixelRatio],
+        atCentre: top ? `${top.tagName}.${top.className}` : null,
+        chipStyle: { display: css.display, pointerEvents: css.pointerEvents, zoom: (css as unknown as { zoom: string }).zoom, position: css.position },
+        bodyZoom: (getComputedStyle(document.body) as unknown as { zoom: string }).zoom,
+        textSize: document.documentElement.dataset.textSize ?? null,
+        ua: navigator.userAgent,
+      };
+    });
+    console.log("TAP-DIAG", JSON.stringify(info));
+    throw e;
+  }
+}
 
 test("setup asks what's in your kitchen, and Settings keeps it", async ({ page }) => {
   // Sign up, but go through setup instead of skipping it.
@@ -11,7 +41,7 @@ test("setup asks what's in your kitchen, and Settings keeps it", async ({ page }
   await page.getByRole("button", { name: "Next" }).click({ timeout: 30_000 }); // how many people
   await expect(page.getByRole("heading", { name: "What's in your kitchen?" })).toBeVisible();
   const devices = page.getByRole("group", { name: "Kitchen devices" });
-  await devices.getByRole("button", { name: "Air fryer" }).click();
+  await tap(devices.getByRole("button", { name: "Air fryer" }));
   await expect(devices.getByRole("button", { name: "Air fryer" })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: "Skip setup" }).click();
@@ -21,7 +51,7 @@ test("setup asks what's in your kitchen, and Settings keeps it", async ({ page }
   await page.goto("./#/settings");
   const inSettings = page.getByRole("group", { name: "Kitchen devices" });
   await expect(inSettings.getByRole("button", { name: "Air fryer" })).toHaveAttribute("aria-pressed", "true");
-  await inSettings.getByRole("button", { name: "Slow cooker" }).click();
+  await tap(inSettings.getByRole("button", { name: "Slow cooker" }));
   await page.reload();
   await expect(page.getByRole("group", { name: "Kitchen devices" }).getByRole("button", { name: "Slow cooker" })).toHaveAttribute("aria-pressed", "true");
 });
@@ -29,7 +59,7 @@ test("setup asks what's in your kitchen, and Settings keeps it", async ({ page }
 test("Create a recipe tells the AI which devices you have", async ({ page }) => {
   await signUp(page, "devices");
   await page.goto("./#/settings");
-  await page.getByRole("group", { name: "Kitchen devices" }).getByRole("button", { name: "Instant Pot / pressure cooker" }).click();
+  await tap(page.getByRole("group", { name: "Kitchen devices" }).getByRole("button", { name: "Instant Pot / pressure cooker" }));
 
   await page.goto("./#/scan");
   await page.getByRole("tab", { name: "Create" }).click();
