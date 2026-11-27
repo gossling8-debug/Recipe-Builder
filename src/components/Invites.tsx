@@ -47,7 +47,7 @@ export function EmailInviteForm({
     <div className="email-invite">
       {sent && (
         <div className="callout small">
-          Invite sent to <strong>{sent}</strong>. It'll be waiting for them next time they open Cardamix (once they've confirmed that email).
+          Invite sent to <strong className="email">{sent}</strong>. It'll be waiting for them next time they open Cardamix (once they've confirmed that email).
         </div>
       )}
       <label className="field">

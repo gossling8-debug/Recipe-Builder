@@ -41,7 +41,7 @@ export default function CopyrightPage() {
           Anyone can report a recipe in The Mix with <strong>Report → Copied from someone else</strong>. To send a formal copyright notice
           {email ? (
             <>
-              , email <a href={`mailto:${email}`}>{email}</a>
+              , email <a className="email" href={`mailto:${email}`}>{email}</a>
             </>
           ) : (
             <> (our address for notices is being set up — until then, use Report in The Mix)</>

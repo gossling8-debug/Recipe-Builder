@@ -46,7 +46,7 @@ export default function CloudSection() {
     <section>
       <h2 className="h3">Account</h2>
       <p>
-        Signed in as <strong>{s.email}</strong>
+        Signed in as <strong className="email">{s.email}</strong>
       </p>
       <ChangeEmail label="Change email" />
       <p className={s.status === "error" ? "small cloud-status error" : "small cloud-status"} role="status">
