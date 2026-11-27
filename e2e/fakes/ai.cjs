@@ -5,6 +5,7 @@ const PORT = Number(process.env.PORT || 4466);
 let n = 0;
 let unclear = false; // /test/unclear?on=1: the next reading says part of the card was hard to read
 let nextTags = null; // /test/tags?t=Dinner,Beef: the next reading's labels
+let lastMessage = ""; // /test/last: the text of the last request's user message
 let amountsInSteps = false; // /test/stepamounts: the next reading lists salt and oil with no amount; the steps give them
 const seg = (text, ingredient_index = null, amount = null) => ({ text, ingredient_index, amount });
 const stepAmountsRecipe = () => ({
@@ -44,6 +45,7 @@ const recipe = () => ({
 
 http
   .createServer((req, res) => {
+    if (req.url.startsWith("/test/last")) return res.end(lastMessage);
     if (req.url.startsWith("/test/stepamounts")) {
       amountsInSteps = true;
       return res.end("ok");
@@ -60,6 +62,8 @@ http
     req.on("data", (c) => (body += c));
     req.on("end", () => {
       const b = JSON.parse(body || "{}");
+      const user = (b.messages ?? []).filter((m) => m.role === "user").pop();
+      lastMessage = typeof user?.content === "string" ? user.content : (user?.content ?? []).map((c) => c.text ?? "").join("\n");
       res.setHeader("content-type", "application/json");
       res.end(
         JSON.stringify({

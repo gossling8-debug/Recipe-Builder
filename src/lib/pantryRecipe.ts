@@ -30,6 +30,7 @@ Rules:
 - Salt, pepper, water and a little cooking oil can be assumed. Anything else not in the pantry goes in not_in_pantry; use at most 2 such items, and none if you can.
 - Use realistic amounts that the pantry actually has. Size it for the number of people given, and put that in servings, e.g. "Serves 4".
 - Keep it doable on a weeknight unless the cook asks for something else. Put total time (and oven temperature if any) in time.
+- Equipment: what most kitchens have (stovetop, oven, pans, a blender or hand mixer), plus any devices listed under "My kitchen also has". Use one of those only when it makes this dish easier, faster or better, not just because it's there. Never require a device that isn't listed.
 - Write clear, short steps, one main action each. Each step is a list of segments whose texts, joined in order, read as the step. Whenever a step adds or uses an ingredient, put the words naming it in their own segment with that ingredient's ingredient_index and the amount used in that step (e.g. "2 cups"; "half of the 1 cup" and then "remaining" if it's divided).
 - notes: one or two short serving or storage tips. tags: 1–3 categories like "Dinner", "Side", "Breakfast".
 - warnings: leave empty unless something genuinely needs the cook's attention (e.g. "check the chicken is fully thawed").
@@ -41,6 +42,8 @@ export interface PantryPromptInput {
   people: number;
   request: string;
   existingTitles: string[];
+  /** Devices beyond the basics, e.g. ["Air fryer"] (lib/kitchen.ts). */
+  devices?: string[];
   now?: number;
 }
 
@@ -60,6 +63,7 @@ export function pantryPrompt(i: PantryPromptInput): string {
     "",
     `Cooking for: ${i.people} ${i.people === 1 ? "person" : "people"}`,
     i.avoid.length ? `I avoid: ${i.avoid.join(", ")}` : "",
+    i.devices?.length ? `My kitchen also has: ${i.devices.join(", ")}` : "",
     i.request.trim() ? `What I'd like: ${i.request.trim()}` : "What I'd like: anything good",
     i.existingTitles.length ? `Recipes I already have: ${i.existingTitles.slice(0, 150).join("; ")}` : "",
   ]
